@@ -10,11 +10,11 @@
       group: "{{ ansible_user_gid }}"
       mode: 0775
     with_items:
-       - "{{ ubersmith_root }}/conf/mysql"
-       - "{{ ubersmith_root }}/conf/cron"
-       - "{{ ubersmith_root }}/conf/ssl"
-       - "{{ ubersmith_root }}/logs"
-       - "{{ ubersmith_root }}/logs/appliance"
+       - "{{ appliance_home }}/conf/mysql"
+       - "{{ appliance_home }}/conf/cron"
+       - "{{ appliance_home }}/conf/ssl"
+       - "{{ appliance_home }}/logs"
+       - "{{ appliance_home }}/logs/appliance"
     tags: 
       - mysql_config
       - httpd_config
@@ -25,13 +25,15 @@
     register: timezone_file
     tags:
       - compose_override_template
+    when: ansible_os_family != "Darwin"
+
 
   # Create the main Docker Compose file, which defines Ubersmith services as containers
   # and includes their configurations. This file may change with every release.     
   - name: create docker compose file
     template:
       src: docker-compose.yml.j2
-      dest: {{ ubersmith_root }}/docker-compose.yml
+      dest: "{{ appliance_home }}/docker-compose.yml"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0600
@@ -44,7 +46,7 @@
   - name: create docker compose override file
     template:
       src: docker-compose.override.yml.j2
-      dest: {{ ubersmith_root }}/docker-compose.override.yml
+      dest: "{{ appliance_home }}/docker-compose.override.yml"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0600
@@ -56,7 +58,7 @@
   - name: copy dockercfg
     copy:
       src: dot_dockercfg
-      dest: /root/.dockercfg
+      dest: "{{ ansible_user_dir }}/.dockercfg"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0600  
@@ -65,7 +67,7 @@
   - name: copy backup script
     copy:
       src: backup_rrds.sh
-      dest: {{ ubersmith_root }}
+      dest: "{{ appliance_home }}"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0700
@@ -73,13 +75,13 @@
   - name: run docker compose pull
     command: docker-compose -p ubersmith pull
     args:
-      chdir:  {{ ubersmith_root }}
+      chdir: "{{ appliance_home }}"
     tags:
       - compose_pull
 
   - name: run docker compose up -d
     command: docker-compose -p ubersmith up -d
     args:
-      chdir:  {{ ubersmith_root }}
+      chdir: "{{ appliance_home }}"
     tags:
       - compose_up

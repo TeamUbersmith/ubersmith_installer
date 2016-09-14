@@ -124,7 +124,7 @@
   - name: copy dockercfg
     copy:
       src: dot_dockercfg
-      dest: "/{{ ansible_user_dir }}/.dockercfg"
+      dest: "{{ ansible_user_dir }}/.dockercfg"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0600

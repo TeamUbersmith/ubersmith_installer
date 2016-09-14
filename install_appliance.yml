@@ -1,10 +1,20 @@
 ---
 
   - hosts: local
-    become: yes
+    # become: yes
     any_errors_fatal: true
 
     vars_prompt:
+      - name: "appliance_home"
+        prompt: "Choose an installation directory for Ubersmith's Appliance'"
+        default: "/usr/local/ubersmith"
+        private: no
       - name: "app_virtual_host"
         prompt: "Enter the domain name associated with your Ubersmith installation"
         default: "example.com"
+        private: no
+    
+
+    roles:
+      - common
+      - appliance

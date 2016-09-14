@@ -44,7 +44,7 @@ services:
       - app_web
   app_backup:
     image: quay.io/ubersmith/xtrabackup:2.4.2
-    hostname: app_backups.{{ app_virtual_host }}
+    hostname: backups.appliance.{{ app_virtual_host }}
     environment:
       MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
       DATABASE_HOST: ubersmith_app_db_1

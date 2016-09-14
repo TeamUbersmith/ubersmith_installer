@@ -2,9 +2,14 @@ version: '2'
 services:
   app_web:
     volumes:
-      - "{{ ubersmith_root }}/logs/appliance:/var/www/appliance_root/logs"
+    {% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stdout }}:/etc/localtime"
+    {% endif %}
+      - "{{ appliance_home }}/logs/appliance:/var/www/appliance_root/logs"
   app_db:
     volumes:
-      - "{{ ubersmith_root }}/conf/mysql:/etc/mysql/conf.d"
+      - "{{ appliance_home }}/conf/mysql:/etc/mysql/conf.d"
+    {% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stdout }}:/etc/localtime"
+    {% endif %}
+
