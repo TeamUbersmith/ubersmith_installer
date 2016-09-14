@@ -1,0 +1,10 @@
+version: '2'
+services:
+  app_web:
+    volumes:
+      - "{{ ubersmith_root }}/logs/appliance:/var/www/appliance_root/logs"
+      - "{{ timezone_file.stdout }}:/etc/localtime"
+  app_db:
+    volumes:
+      - "{{ ubersmith_root }}/conf/mysql:/etc/mysql/conf.d"
+      - "{{ timezone_file.stdout }}:/etc/localtime"

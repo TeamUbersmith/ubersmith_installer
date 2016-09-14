@@ -1,0 +1,13 @@
+---
+
+  - name: verify docker is installed
+    command: docker -v
+    register: docker_result
+    failed_when: docker_result.rc != 0
+
+  # - name: create local ubersmith unix user account
+  #   user:
+  #     name: ubersmith
+  #     comment: "Ubersmith Application User"
+  #   tags:
+  #     - uber_user

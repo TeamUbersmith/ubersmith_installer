@@ -1,0 +1,104 @@
+version: '2'
+services:
+  solr:
+    image: quay.io/ubersmith/solr:4.10.4
+    hostname: solr.{{ virtual_host }}
+    restart: unless-stopped
+    volumes:
+      - "search:/opt/solr"
+  db:
+    image: quay.io/ubersmith/db:5.6
+    hostname: database.{{ virtual_host }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
+      MYSQL_USER: ubersmith
+      MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
+      MYSQL_DATABASE: ubersmith
+    volumes:
+      - "database:/var/lib/mysql"
+      - "/etc/mysql/conf.d"
+  web:
+    image: quay.io/ubersmith/ubersmith:4.0.5.0.0
+    hostname: {{ virtual_host }}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
+      DATABASE_HOST: "ubersmith_db_1"
+      UBER_HOSTNAME: {{ virtual_host }}
+      LOCK_BACKEND: mysql
+    volumes:
+      - "logs:/var/www/ubersmith_root/logs"
+      - "webroot:/var/www/ubersmith_root"
+    volumes_from:
+      - solr
+    logging:
+      driver: "gelf"
+      options:
+        gelf-address: udp://graylog.ubersmith.com:12201
+        tag: "container-{{ virtual_host }}"
+  php:
+    image: quay.io/ubersmith/php:5.6
+    hostname: {{ virtual_host }}
+    restart: unless-stopped
+    volumes_from:
+      - web
+  cron:
+    image: quay.io/ubersmith/cron:1.0
+    hostname: {{ virtual_host }}
+    restart: unless-stopped
+    volumes_from:
+      - web
+  mail:
+    image: quay.io/ubersmith/mail:1.0
+    hostname: {{ virtual_host }}
+    restart: unless-stopped
+    ports:
+      - "25:25"
+    volumes:
+      - "mail:/var/log"
+    volumes_from:
+      - web
+  rwhois:
+    image: quay.io/ubersmith/xinetd:1.0
+    hostname: {{ virtual_host }}
+    restart: unless-stopped
+    ports:
+      - "4321:4321"
+    volumes_from:
+      - web
+  zk:
+    image: quay.io/ubersmith/zk:3.5.1-alpha
+    hostname: zk.{{ virtual_host }}
+    environment:
+      MYID: 1
+    ports:
+      - "2181"
+    volumes:
+      - zk:/tmp/zookeeper
+  backup:
+    image: quay.io/ubersmith/xtrabackup:2.4.2
+    hostname: backups.{{ virtual_host }}
+    environment:
+      MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
+      DATABASE_HOST: ubersmith_db_1
+    volumes:
+      - "backup:/backup"
+    volumes_from:
+      - db
+    depends_on:
+      - db
+      
+volumes:
+  backup: {}
+  database: {}
+  logs: {}
+  mail: {}
+  search: {}
+  webroot: {}
+  zk: {}

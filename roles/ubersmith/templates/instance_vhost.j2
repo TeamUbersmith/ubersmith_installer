@@ -1,0 +1,148 @@
+<VirtualHost *:80>
+  ServerAdmin {{ admin_email }}
+  DocumentRoot {{ ubersmith_root }}/app/www
+  ServerName {{ virtual_host }}
+  ServerAlias www.{{ virtual_host }}
+  IncludeOptional {{ ubersmith_root }}/conf/httpd/*.{{ virtual_host }}.conf
+  SetEnvIf Request_URI "^/(images|css|js|locale|admin/minidash.php)" dontlog
+  SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+  LogFormat "%h %l %{UberUser}n %{UberElapsed}n %{UberSessionWait}n %{UberSessionLock}n %{UberQueryTime}n %{UberQueryTime2}n %t \"%r\" %>s %b" ubersmith
+  ErrorLog {{ ubersmith_root }}/logs/error_log
+  CustomLog {{ ubersmith_root }}/logs/access_log ubersmith env=!dontlog
+{#  ProxyPassMatch ^/(.*\.php(/.*)?)$ fcgi://{{ fcgi_host }}:9000/var/www/ubersmith_root/app/www/$1
+#}  
+  Options +FollowSymLinks
+  DirectoryIndex index.php
+  LimitRequestBody 53000000
+
+  SetEnvIf Content-Type "(.*)" HTTP_CONTENT_TYPE=$1
+  
+  <IfModule mod_rewrite.c>
+    RedirectMatch 404 ^/app/.*$
+    RewriteEngine On
+    
+    RewriteCond %{REQUEST_URI} \.js\.php$
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f
+    RewriteRule ^(.*)$ fcgi://{{ fcgi_host }}:9000%{DOCUMENT_ROOT}/js/js.includer.php?_u=$1 [L,QSA,P]
+
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-d
+    RewriteRule ^(.*)$ fcgi://{{ fcgi_host }}:9000%{DOCUMENT_ROOT}/index.php?_u=$1 [L,QSA,P]
+
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} -f
+    RewriteRule ^/(.*\.(?:php|ico)(/.*)?)$ fcgi://{{ fcgi_host }}:9000%{DOCUMENT_ROOT}/$1 [L,QSA,P]
+
+    SetEnv MOD_REWRITE true
+
+    # Uncomment the lines below to enable HTTP auth for PHP CGI
+    # RewriteCond %{HTTP:Authorization} ^Basic
+    # RewriteRule ^(.*) $1?http_authorization=%{HTTP:Authorization} [L,QSA]
+  </IfModule>
+  
+</VirtualHost>
+
+<VirtualHost *:443>
+  ServerAdmin {{ admin_email }}
+  DocumentRoot {{ ubersmith_root }}/app/www
+  ServerName {{ virtual_host }}
+  ServerAlias www.{{ virtual_host }}
+  IncludeOptional {{ ubersmith_root }}/conf/httpd/*.{{ virtual_host }}.ssl.conf
+  SetEnvIf Request_URI "^/(images|css|js|locale|admin/minidash.php)" dontlog
+  SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+  LogFormat "%h %l %{UberUser}n %{UberElapsed}n %{UberSessionWait}n %{UberSessionLock}n %{UberQueryTime}n %{UberQueryTime2}n %t \"%r\" %>s %b" ubersmith
+  ErrorLog {{ ubersmith_root }}/logs/error_log
+  CustomLog {{ ubersmith_root }}/logs/access_log ubersmith env=!dontlog
+{#  ProxyPassMatch ^/(.*\.php(/.*)?)$ fcgi://{{ fcgi_host }}:9000/var/www/ubersmith_root/app/www/$1
+#}  
+  SSLCertificateFile {{ ubersmith_root }}/conf/ssl/{{ virtual_host }}.pem
+  SSLCertificateKeyFile {{ ubersmith_root }}/conf/ssl/{{ virtual_host }}.key
+  SSLProtocol all -SSLv2 -SSLv3 -TLSv1
+  SSLCipherSuite ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA
+  SSLHonorCipherOrder on
+  SSLCompression off
+  
+  SSLEngine On
+  
+  Header add Strict-Transport-Security "max-age=15768000"
+  
+  Options +FollowSymLinks
+  DirectoryIndex index.php
+  LimitRequestBody 53000000
+  
+  SetEnvIf Content-Type "(.*)" HTTP_CONTENT_TYPE=$1
+
+  <IfModule mod_rewrite.c>
+    RedirectMatch 404 ^/app/.*$
+    RewriteEngine On
+
+    RewriteCond %{REQUEST_URI} \.js\.php$
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f
+    RewriteRule ^(.*)$ fcgi://{{ fcgi_host }}:9000%{DOCUMENT_ROOT}/js/js.includer.php?_u=$1 [L,QSA,P]
+
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-d
+    RewriteRule ^(.*)$ fcgi://{{ fcgi_host }}:9000%{DOCUMENT_ROOT}/index.php?_u=$1 [L,QSA,P]
+
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} -f
+    RewriteRule ^/(.*\.(?:php|ico)(/.*)?)$ fcgi://{{ fcgi_host }}:9000%{DOCUMENT_ROOT}/$1 [L,QSA,P]
+
+    SetEnv MOD_REWRITE true
+
+    # Uncomment the lines below to enable HTTP auth for PHP CGI
+    # RewriteCond %{HTTP:Authorization} ^Basic
+    # RewriteRule ^(.*) $1?http_authorization=%{HTTP:Authorization} [L,QSA]
+  </IfModule>
+  
+</VirtualHost>
+
+<Directory {{ ubersmith_root }}/app/www >
+	AllowOverride None
+	
+	<LimitExcept POST GET>
+		Require all denied
+	</LimitExcept>
+</Directory>
+
+<Directory ~ "{{ ubersmith_root }}/app/www/(api|css|ipn|js|rssgen)">
+	Options -Indexes
+</Directory>
+
+<Directory ~ "{{ ubersmith_root }}/app/www/(cron|include\/sb\/modules|order\/templates)">
+	Require all denied
+</Directory>
+
+<Directory {{ ubersmith_root }}/app/www/images/>
+	Options -Indexes
+
+	<FilesMatch "\.(ico|jpg|jpeg|png|gif)$">
+	  Header set Cache-Control "private, max-age=7200"
+	</FilesMatch>
+</Directory>
+
+<Directory {{ ubersmith_root }}/app/www/include/>
+	Require all denied
+
+	<FilesMatch "\.(css|style)$">
+		Require all granted
+	</FilesMatch>
+</Directory>
+
+<Directory {{ ubersmith_root }}/app/www/locale/>
+	Options -Indexes
+
+	<FilesMatch "^(language\.ini|ubersmith\.mo|ubersmith\.po)$">
+		Require all denied
+	</FilesMatch>
+</Directory>
+
+<FilesMatch "^(php\.ini|config\.ini\.php|token\.xml\.php|update_translations\.php)$">
+	Require all denied
+</FilesMatch>
+
+{#<Files "favicon.ico">
+  ForceType application/x-httpd-php
+</Files>#}
+
+<IfModule mod_headers.c>
+	SetEnv MOD_HEADERS true
+</IfModule>

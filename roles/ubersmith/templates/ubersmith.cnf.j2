@@ -1,0 +1,12 @@
+# Ubersmith Specific MySQL Settings
+
+[mysqld]
+thread_cache_size  = 16
+max_allowed_packet = 64M
+
+# 30% of Available Memory at install time 
+innodb_buffer_pool_size        = {{ (ansible_memfree_mb * 0.3)|round|int }}M
+innodb_flush_method            = O_DIRECT
+innodb_flush_log_at_trx_commit = 2
+innodb_log_file_size           = 128M
+local-infile                   = 0

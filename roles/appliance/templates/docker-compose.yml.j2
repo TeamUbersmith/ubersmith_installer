@@ -1,0 +1,63 @@
+version: '2'
+services:
+  app_db:
+    image: quay.io/ubersmith/appliance_db:5.6
+    hostname: database.appliance.{{ app_virtual_host }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
+      MYSQL_USER: uberapp
+      MYSQL_PASSWORD: "{{ mysql_appliance_password }}"
+      MYSQL_DATABASE: uberapp
+    volumes:
+      - "app_database:/var/lib/mysql"
+  app_web:
+    image: quay.io/ubersmith/appliance:4.0.0.2.0
+    hostname: appliance.{{ app_virtual_host }}
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+      - "8443:443"
+    environment:
+      UBER_HOSTNAME: appliance.{{ app_virtual_host }}
+      MYSQL_PASSWORD: "{{ mysql_appliance_password }}"
+      DATABASE_USER: uberapp
+      DATABASE_HOST: ubersmith_app_db_1
+      DATABASE_NAME: uberapp
+    volumes:
+      - "rrds:/var/www/appliance_root/rrds"
+      - "app_logs:/var/www/appliance_root/logs"
+    logging:
+      driver: "gelf"
+      options:
+        gelf-address: udp://graylog.ubersmith.com:12201
+        tag: "app-container-{{ app_virtual_host }}"
+    depends_on:
+      - app_db
+  app_cron:
+    image: quay.io/ubersmith/appliance_cron:2.0
+    hostname: cron.appliance.{{ app_virtual_host }}
+    restart: unless-stopped
+    volumes_from:
+      - app_web
+  app_backup:
+    image: quay.io/ubersmith/xtrabackup:2.4.2
+    hostname: app_backups.{{ app_virtual_host }}
+    environment:
+      MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
+      DATABASE_HOST: ubersmith_app_db_1
+    volumes:
+      - "app_backup:/backup"
+    volumes_from:
+      - app_db
+    depends_on:
+      - app_db
+      
+volumes:
+  app_database: {}
+  app_logs: {}
+  app_backup: {}
+  rrds: {}
+  

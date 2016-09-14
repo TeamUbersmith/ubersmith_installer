@@ -1,0 +1,54 @@
+version: '2'
+services:
+  cron:
+    # volumes:
+      # - "{{ ubersmith_home }}/conf/cron:/etc/cron.d"
+  db:
+    volumes:
+      - "{{ ubersmith_home }}/conf/mysql:/etc/mysql/conf.d"
+      - "{{ timezone_file.stdout }}:/etc/localtime"
+  # php:
+  #   volumes:
+  #     - "{{ ubersmith_home }}/conf/php/www.conf:/etc/php/5.6/fpm/pool.d/www.conf"
+  web:
+    volumes:
+      - "{{ ubersmith_home }}/logs/ubersmith:/var/www/ubersmith_root/logs"
+      - "{{ ubersmith_home }}/conf/ssl:/var/www/ubersmith_root/conf/ssl"
+      - "{{ ubersmith_home }}/conf/httpd:/var/www/ubersmith_root/conf/httpd"
+      - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
+      - "{{ ubersmith_home }}/conf/httpd/sites-enabled:/etc/apache2/sites-enabled"
+      - "{{ timezone_file.stdout }}:/etc/localtime"
+    # environment:
+    #   MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
+    #   DATABASE_HOST: "ubersmith_db_1"
+    #   USAGE_DATABASE: usage
+    #   USAGE_DATABASE_HOST: remote_db
+    #   USAGE_DATABASE_USERNAME: usage_guy
+    #   USAGE_DATABASE_PASSWORD: usage_password
+  mail:
+    volumes:
+      - "{{ timezone_file.stdout }}:/var/spool/postfix/etc/localtime"
+      # - "{{ ubersmith_home }}/conf/mail/aliases:/etc/aliases"
+    environment:
+      - "POSTCONF_SMTPD_TLS_CERT_FILE=/etc/ssl/certs/{{ virtual_host }}.pem"
+      - "POSTCONF_SMTPD_TLS_KEY_FILE=/etc/ssl/private/{{ virtual_host }}.key" 
+      - POSTCONF_SMTPD_USE_TLS=yes
+  # rwhois:
+  #   volumes:
+  #     - "{{ ubersmith_home }}/conf/rwhois:/etc/xinetd.d"
+  # zk:
+  #   network_mode: "host"
+  #   ports:
+  #     - "2181:2181"
+  #     - "2888:2888"
+  #     - "3888:3888"
+  #     - "8090:8090"
+  #   environment:
+  #     MYID: 1
+  #     SERVERS: 10.2.0.20,10.2.0.21
+
+  # Notes:
+  # Zookeeper:
+  #   Network mode 'host' is needed due to ZK's weird binding strategy
+  #   http://mail-archives.apache.org/mod_mbox//zookeeper-dev/201503.mbox/%3C1427331641.57328.YahooMailBasic@web142804.mail.bf1.yahoo.com%3E
+  #   Need to have 2181/2888/3888 listening publicly

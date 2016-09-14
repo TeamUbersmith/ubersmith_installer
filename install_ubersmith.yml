@@ -1,0 +1,23 @@
+---
+
+  - hosts: local
+    # become: yes
+    any_errors_fatal: true
+
+    vars_prompt:
+      - name: "ubersmith_home"
+        prompt: "Choose an installation directory for Ubersmith"
+        default: "/usr/local/ubersmith"
+        private: no
+      - name: "virtual_host"
+        prompt: "Enter the address where you will be hosting Ubersmith"
+        default: "ubersmith.example.com"
+        private: no
+      - name: "admin_email"
+        prompt: "Enter the email address of the Ubersmith administrator"
+        default: "admin@example.org"
+        private: no
+    
+    roles:
+      - common
+      - ubersmith

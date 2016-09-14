@@ -1,0 +1,10 @@
+---
+
+  - hosts: local
+    become: yes
+    any_errors_fatal: true
+
+    vars_prompt:
+      - name: "app_virtual_host"
+        prompt: "Enter the domain name associated with your Ubersmith installation"
+        default: "example.com"

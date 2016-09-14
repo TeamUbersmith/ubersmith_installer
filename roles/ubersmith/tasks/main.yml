@@ -1,0 +1,169 @@
+---
+  
+  # Stop and disable MTAs; Ubersmith provides its own mail service
+  # If this fails, it's okay, but the Ubersmith mail container won't start
+  # if an MTA is still running and/or 25/tcp is in use.
+  - name: stop and disable mail transfer agents
+    service:
+      name: "{{item}}"
+      enabled: no
+      state: stopped
+    with_items:
+      - postfix
+      - sendmail
+      - exim4
+    ignore_errors: yes
+    tags:
+      - disable_mtas
+  
+  # Create the directory structure required for Ubersmith to store configuration data
+  # and other related files
+  - name: create ubersmith configuration directories
+    file: 
+      path: "{{ item }}"
+      state: directory
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: 0775
+    with_items:
+       - "{{ ubersmith_home }}/logs/ubersmith"
+       - "{{ ubersmith_home }}/conf/mail"
+       - "{{ ubersmith_home }}/conf/mysql"
+       - "{{ ubersmith_home }}/conf/ssl"
+       - "{{ ubersmith_home }}/conf/httpd"
+       - "{{ ubersmith_home }}/conf/httpd/sites-enabled"
+       - "{{ ubersmith_home }}/conf/php"
+       - "{{ ubersmith_home }}/conf/cron"
+       - "{{ ubersmith_home }}/conf/rwhois"
+       - "{{ ubersmith_home }}/app/custom"
+       - "{{ ubersmith_home }}/app/custom/include"
+       - "{{ ubersmith_home }}/app/custom/include/service_modules"
+       - "{{ ubersmith_home }}/app/custom/include/device_modules"
+       - "{{ ubersmith_home }}/app/custom/include/order_modules"
+    tags: 
+      - mysql_config
+      - httpd_config
+      - upgrade
+  
+  # The Apache Virtual Host entry is created on the local filesystem to facilitate
+  # editing without having to enter the container. A restart of the 'web' container is
+  # required if this file is modified.
+  - name: create ubersmith apache virtual host configuration file
+    template: 
+      src: instance_vhost.j2 
+      dest: "{{ ubersmith_home }}/conf/httpd/sites-enabled/{{ virtual_host }}.conf"
+  
+  # The Mysql configuration file is created on the local filesystem to facilitate
+  # editing without having to enter the container. A restart of the 'db' container is
+  # required if this file is modified.  
+  - name: create mysql configuration overrides
+    template:
+      src: ubersmith.cnf.j2
+      dest: "{{ ubersmith_home }}/conf/mysql/ubersmith.cnf"
+    tags:
+      - mysql_config
+  
+  # The xinetd configuration file for rwhois  is created on the local filesystem to
+  # facilitate editing without having to enter the container. A restart of the 'rwhois'
+  # container is required if this file is modified.
+  - name: create rwhois configuration file
+    template:
+      src: rwhois.j2
+      dest: "{{ ubersmith_home }}/conf/rwhois/rwhois"
+    tags:
+      - rwhois
+      - upgrade
+  
+  # Create a self signed certificate for temporary use to secure HTTP and SMTP traffic.
+  # These files should be replaced with a certificate and key provided by an authorized CA.
+  # The 'web' and 'mail' containers need to be restarted if these files are modified.
+  - name: create self signed certificates
+    command: "openssl req -new -x509 -days 365 -sha1 -newkey rsa:1024 -nodes -keyout {{ virtual_host }}.key -out {{ virtual_host }}.pem -subj '/O=Ubersmith/OU=Hosting/CN={{ virtual_host }}'"
+    args:
+      chdir: "{{ ubersmith_home }}/conf/ssl"
+      creates: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.pem"
+  
+  # Get the system's timezone data for use in Docker Compose files 
+  - name: readlink /etc/localtime and register timezone_file
+    shell: readlink -f /etc/localtime
+    register: timezone_file
+    tags:
+      - compose_override_template
+      - upgrade
+
+  # Create the main Docker Compose file, which defines Ubersmith services as containers
+  # and includes their configurations. This file may change with every release.
+  - name: create docker compose file
+    template:
+      src: docker-compose.yml.j2
+      dest: "{{ ubersmith_home }}/docker-compose.yml"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: 0600
+      backup: yes
+    tags:
+      - compose_template
+      - upgrade
+  
+  # Create the override Docker Compose file. This file contains site specific changes and
+  # will not be modified by future upgrades.
+  - name: create docker compose override file
+    template:
+      src: docker-compose.override.yml.j2
+      dest: "{{ ubersmith_home }}/docker-compose.override.yml"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: 0600
+      backup: yes
+    tags:
+      - compose_override_template
+
+  # Copy a customer use token for downloading private Ubersmith images.
+  - name: copy dockercfg
+    copy:
+      src: dot_dockercfg
+      dest: /root/.dockercfg
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: 0600
+    tags:
+      - upgrade
+
+  # Copy a helper script which allows Ubersmith containers to be restarted. 
+  - name: copy ubersmith_restart
+    copy:
+      src: ubersmith_restart.sh
+      dest: "{{ ubersmith_home }}"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: 0700
+    tags:
+      - upgrade
+  
+  # Copy a helper script which allows Ubersmith containers to be started. 
+  - name: copy ubersmith_start
+    copy:
+      src: ubersmith_start.sh
+      dest: "{{ ubersmith_home }}"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: 0700
+    tags:
+      - upgrade
+  
+  # Retrieve Ubersmith images from the repository.
+  - name: run docker compose pull
+    command: docker-compose -p ubersmith pull
+    args:
+      chdir:  "{{ ubersmith_home }}"
+    tags:
+      - compose_pull
+      - upgrade
+  
+  - name: run docker compose up -d
+    command: docker-compose -p ubersmith up -d
+    args:
+      chdir:  "{{ ubersmith_home }}"
+    tags:
+      - compose_pull
+      - upgrade
