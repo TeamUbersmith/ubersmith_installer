@@ -13,6 +13,7 @@
       - sendmail
       - exim4
     ignore_errors: yes
+    when: ansible_os_family != "Darwin"
     tags:
       - disable_mtas
   
