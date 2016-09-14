@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
 echo "Installing Ansible..."
-pip install ansible -qU
+pip install ansible -qU --user
 echo "Installing Ubersmith..."
 ansible-playbook -i ./hosts -c local install_ubersmith.yml

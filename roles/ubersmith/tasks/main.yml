@@ -90,6 +90,7 @@
     tags:
       - compose_override_template
       - upgrade
+    when: ansible_os_family != "Darwin"
 
   # Create the main Docker Compose file, which defines Ubersmith services as containers
   # and includes their configurations. This file may change with every release.
@@ -122,7 +123,7 @@
   - name: copy dockercfg
     copy:
       src: dot_dockercfg
-      dest: /root/.dockercfg
+      dest: "/{{ ansible_user_dir }}/.dockercfg"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0600
@@ -160,7 +161,7 @@
       - compose_pull
       - upgrade
   
-  - name: run docker compose up -d
+  - name: run docker compose up -d web cron db mail php rwhois solr
     command: docker-compose -p ubersmith up -d
     args:
       chdir:  "{{ ubersmith_home }}"
