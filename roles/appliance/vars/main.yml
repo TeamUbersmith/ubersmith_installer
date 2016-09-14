@@ -1,0 +1,5 @@
+---
+
+appliance_root: /var/www/appliance_root
+mysql_root_password: "{{ lookup('password', '/tmp/' + ansible_fqdn + '_root_db_pass') }}"
+mysql_appliance_password: "{{ lookup('password', '/tmp/' + ansible_fqdn + '_appliance_db_pass') }}"
