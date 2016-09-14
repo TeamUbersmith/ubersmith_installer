@@ -154,7 +154,7 @@
       - upgrade
   
   # Retrieve Ubersmith images from the repository.
-  - name: run docker compose pull
+  - name: pull ubersmith images
     command: docker-compose -p ubersmith pull
     args:
       chdir:  "{{ ubersmith_home }}"
@@ -162,10 +162,9 @@
       - compose_pull
       - upgrade
   
-  - name: run docker compose up -d web cron db mail php rwhois solr
-    command: docker-compose -p ubersmith up -d
+  - name: start ubersmith
+    command: docker-compose -p ubersmith up -d web cron db mail php rwhois solr
     args:
       chdir:  "{{ ubersmith_home }}"
     tags:
-      - compose_pull
       - upgrade
