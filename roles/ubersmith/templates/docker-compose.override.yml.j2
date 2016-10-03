@@ -30,11 +30,11 @@ services:
     #   USAGE_DATABASE_USERNAME: usage_guy
     #   USAGE_DATABASE_PASSWORD: usage_password
   mail:
-  {% if ansible_os_family != 'Darwin' %}
+{% if ansible_os_family != 'Darwin' %}
     volumes:
       - "{{ timezone_file.stdout }}:/var/spool/postfix/etc/localtime"
       # - "{{ ubersmith_home }}/conf/mail/aliases:/etc/aliases"
-  {% endif %}
+{% endif %}
     environment:
       - "POSTCONF_SMTPD_TLS_CERT_FILE=/etc/ssl/certs/{{ virtual_host }}.pem"
       - "POSTCONF_SMTPD_TLS_KEY_FILE=/etc/ssl/private/{{ virtual_host }}.key" 

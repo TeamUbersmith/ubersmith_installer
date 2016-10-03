@@ -2,4 +2,5 @@
 
   fcgi_host: ubersmith_php_1
   ubersmith_root: /var/www/ubersmith_root
+  mysql_root_password: "{{ lookup('password', '/tmp/' + inventory_hostname + '_root_db_pass') }}"
   mysql_ubersmith_password: "{{ lookup('password', '/tmp/' + ansible_fqdn + '_ubersmith_db_pass') }}"
