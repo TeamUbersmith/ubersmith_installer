@@ -2,14 +2,14 @@ version: '2'
 services:
   app_web:
     volumes:
-    {% if ansible_os_family != 'Darwin' %}
+{% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stdout }}:/etc/localtime"
-    {% endif %}
+{% endif %}
       - "{{ appliance_home }}/logs/appliance:/var/www/appliance_root/logs"
   app_db:
     volumes:
       - "{{ appliance_home }}/conf/mysql:/etc/mysql/conf.d"
-    {% if ansible_os_family != 'Darwin' %}
+{% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stdout }}:/etc/localtime"
-    {% endif %}
+{% endif %}
 

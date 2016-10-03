@@ -19,9 +19,9 @@ services:
       - "{{ ubersmith_home }}/conf/httpd:/var/www/ubersmith_root/conf/httpd"
       - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
       - "{{ ubersmith_home }}/conf/httpd/sites-enabled:/etc/apache2/sites-enabled"
-      {% if ansible_os_family != 'Darwin' %}
+{% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stdout }}:/etc/localtime"
-      {% endif %}
+{% endif %}
     # environment:
     #   MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
     #   DATABASE_HOST: "ubersmith_db_1"

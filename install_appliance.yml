@@ -14,7 +14,6 @@
         default: "example.com"
         private: no
     
-
     roles:
       - common
       - appliance
