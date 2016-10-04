@@ -161,6 +161,8 @@
     tags:
       - compose_pull
       - upgrade
+    environment:
+      PATH: "{{ ansible_user_dir }}/.local/bin/:$PATH"
   
   - name: start ubersmith
     command: docker-compose -p ubersmith up -d web cron db mail php rwhois solr

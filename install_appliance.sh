@@ -5,10 +5,12 @@ set -e
 # sudo yum install gcc libffi-devel python-devel openssl-devel
 # sudo apt-get install build-essential libssl-dev libffi-dev python-dev
 
+export PATH="~/.local/bin:$PATH"
+
 echo "Checking for pip..."
 if command -v pip >/dev/null 2>&1; then
     echo "Installing Ansible..."
-    pip install ansible -qU --user
+    pip install ansible -q --upgrade --user
 else
     if command -v easy_install 2>/dev/null; then
         easy_install --user pip
@@ -18,6 +20,7 @@ else
         exit 1
     fi
     echo "Installing Ansible..."
-    pip install ansible -qU --user
+    pip install ansible -q --upgrade --user
 fi
+echo "Installing Ubersmith Appliance..."
 ansible-playbook -i ./hosts -c local install_appliance.yml

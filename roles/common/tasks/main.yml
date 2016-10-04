@@ -1,15 +1,22 @@
 ---
 
   - name: verify docker is installed
-    command: command -v docker
+    shell: command -v docker
     register: docker_result
-    failed_when: docker_result.rc != 0
+    # failed_when: docker_result.rc != 0
+    ignore_errors: true
+
+  - name: output error when docker is not installed
+    fail:
+      msg: "Docker does not appear to be installed. Please install Docker (https://docs.docker.com/engine/installation/)."
+    when: docker_result.rc != 0
 
   - name: install docker-compose
     pip:
       name: docker-compose
       state: latest
       extra_args: "--user"
+      executable: "{{ ansible_user_dir }}/.local/bin/pip"
 
   # - name: create local ubersmith unix user account
   #   user:
