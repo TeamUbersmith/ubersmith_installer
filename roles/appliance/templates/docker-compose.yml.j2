@@ -1,7 +1,7 @@
 version: '2'
 services:
   app_db:
-    image: quay.io/ubersmith/appliance_db:5.6
+    image: quay.io/ubersmith/appliance_db:{{ containers.appliance_db_version }}
     hostname: database.appliance.{{ app_virtual_host }}
     restart: unless-stopped
     ports:
@@ -14,7 +14,7 @@ services:
     volumes:
       - "app_database:/var/lib/mysql"
   app_web:
-    image: quay.io/ubersmith/appliance:4.0.0.2.0
+    image: quay.io/ubersmith/appliance:{{ containers.appliance_web_version }}
     hostname: appliance.{{ app_virtual_host }}
     restart: unless-stopped
     ports:
@@ -29,21 +29,16 @@ services:
     volumes:
       - "rrds:/var/www/appliance_root/rrds"
       - "app_logs:/var/www/appliance_root/logs"
-    logging:
-      driver: "gelf"
-      options:
-        gelf-address: udp://graylog.ubersmith.com:12201
-        tag: "app-container-{{ app_virtual_host }}"
     depends_on:
       - app_db
   app_cron:
-    image: quay.io/ubersmith/appliance_cron:2.0
+    image: quay.io/ubersmith/appliance_cron:{{ containers.appliance_cron_version }}
     hostname: cron.appliance.{{ app_virtual_host }}
     restart: unless-stopped
     volumes_from:
       - app_web
   app_backup:
-    image: quay.io/ubersmith/xtrabackup:2.4.2
+    image: quay.io/ubersmith/xtrabackup:{{ containers.backup_version }}
     hostname: backups.appliance.{{ app_virtual_host }}
     environment:
       MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
