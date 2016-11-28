@@ -28,10 +28,13 @@ services:
       - "80:80"
       - "443:443"
     environment:
+      MYSQL_USER: ubersmith
       MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
+      MYSQL_DATABASE: ubersmith
       DATABASE_HOST: "ubersmith_db_1"
       UBER_HOSTNAME: {{ virtual_host }}
       LOCK_BACKEND: mysql
+      MAINTENANCE: 0
     volumes:
       - "logs:/var/www/ubersmith_root/logs"
       - "webroot:/var/www/ubersmith_root"
