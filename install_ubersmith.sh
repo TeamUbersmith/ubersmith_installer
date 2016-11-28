@@ -5,8 +5,8 @@ set -e
 # sudo yum install gcc libffi-devel python-devel openssl-devel
 # sudo apt-get install build-essential libssl-dev libffi-dev python-dev
 
-export PYTHONUSERBASE="~/.local"
-export PATH="~/.local/bin:$PATH"
+export PYTHONUSERBASE="$HOME/.local"
+export PATH="$HOME/.local/bin:$PATH"
 
 echo "Checking for pip..."
 if command -v pip >/dev/null 2>&1; then
