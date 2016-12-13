@@ -5,6 +5,7 @@ set -e
 # sudo yum install gcc libffi-devel python-devel openssl-devel
 # sudo apt-get install build-essential libssl-dev libffi-dev python-dev
 
+export PYTHONUSERBASE="$HOME/.local"
 export PATH="$HOME/.local/bin:$PATH"
 
 echo "Checking for pip..."
