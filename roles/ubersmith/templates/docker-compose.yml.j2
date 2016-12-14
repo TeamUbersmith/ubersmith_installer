@@ -35,6 +35,7 @@ services:
       UBER_HOSTNAME: {{ virtual_host }}
       LOCK_BACKEND: mysql
       MAINTENANCE: 0
+      HTTPS_FORCE: 1
     volumes:
       - "logs:/var/www/ubersmith_root/logs"
       - "webroot:/var/www/ubersmith_root"
