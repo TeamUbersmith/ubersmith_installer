@@ -1,5 +1,17 @@
 ---
-  
+  # Store the configuration values specified during the deploy for use during
+  # future upgrades.
+  - name: set up ini_file for future use
+    ini_file:
+      path: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
+      section: ubersmith_installer
+      option: "{{ item.var }}"
+      value: "{{ item.val }}"
+    with_items:
+      - { var: 'ubersmith_home', val: "{{ ubersmith_home }}" }
+      - { var: 'virtual_host', val: "{{ virtual_host }}" } 
+      - { var: 'admin_email', val: "{{ admin_email }}" }
+
   # Stop and disable MTAs; Ubersmith provides its own mail service
   # If this fails, it's okay, but the Ubersmith mail container won't start
   # if an MTA is still running and/or 25/tcp is in use.
@@ -45,7 +57,7 @@
       - mysql_config
       - httpd_config
       - upgrade
-  
+    
   # The Apache Virtual Host entry is created on the local filesystem to facilitate
   # editing without having to enter the container. A restart of the 'web' container is
   # required if this file is modified.
@@ -73,7 +85,6 @@
       dest: "{{ ubersmith_home }}/conf/rwhois/rwhois"
     tags:
       - rwhois
-      - upgrade
   
   # Create a self signed certificate for temporary use to secure HTTP and SMTP traffic.
   # These files should be replaced with a certificate and key provided by an authorized CA.
@@ -163,7 +174,7 @@
       - upgrade
     environment:
       PATH: "{{ ansible_user_dir }}/.local/bin/:$PATH"
-  
+
   - name: start ubersmith
     command: docker-compose -p ubersmith up -d web cron db mail php rwhois solr
     args:
