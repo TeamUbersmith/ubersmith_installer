@@ -20,13 +20,5 @@
       name: docker-compose
       state: latest
       extra_args: "--user"
-      # executable: "{{ ansible_user_dir }}/.local/bin/pip"
     tags:
       - upgrade
-
-  # - name: create local ubersmith unix user account
-  #   user:
-  #     name: ubersmith
-  #     comment: "Ubersmith Application User"
-  #   tags:
-  #     - uber_user

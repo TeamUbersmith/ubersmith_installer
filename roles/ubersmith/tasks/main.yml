@@ -150,8 +150,7 @@
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0700
-    tags:
-      - upgrade
+
   
   # Copy a helper script which allows Ubersmith containers to be started. 
   - name: copy ubersmith_start
@@ -161,8 +160,6 @@
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0700
-    tags:
-      - upgrade
   
   # Retrieve Ubersmith images from the repository.
   - name: pull ubersmith images
@@ -174,10 +171,49 @@
       - upgrade
     environment:
       PATH: "{{ ansible_user_dir }}/.local/bin/:$PATH"
-
-  - name: start ubersmith
-    command: docker-compose -p ubersmith up -d web cron db mail php rwhois solr
+  
+  # Only when upgrading, stop existing Ubersmith containers.
+  - name: stop existing containers
+    command: docker-compose -p ubersmith stop
     args:
       chdir:  "{{ ubersmith_home }}"
     tags:
+      - upgrade_only
+
+  # Only when upgrading, remove  existing Ubersmith containers.
+  - name: remove existing docker containers
+    command: docker-compose -p ubersmith rm -f
+    args:
+      chdir:  "{{ ubersmith_home }}"
+    tags:
+      - upgrade_only
+
+  # Only when upgrading, get the list of docker volumes, so the webroot
+  # can be replaced by the new version of Ubersmith.
+  - name: get existing docker volumes
+    shell: "docker volume ls -q"
+    register: volume_output
+    tags:
+      - upgrade_only
+
+  - name: remove ubersmith webroot volume if present
+    command: docker volume rm ubersmith_webroot
+    args:
+      chdir:  "{{ ubersmith_home }}"
+    when: volume_output.stdout.find('ubersmith_webroot') != -1
+    tags:
+      - upgrade_only
+
+  # For both new deploys and upgrades, start Ubersmith.
+  - name: run ubersmith_start.sh
+    command: "{{ ubersmith_home }}"/ubersmith_start.sh
+    args:
+      chdir: "{{ ubersmith_home }}"
+    tags:
       - upgrade
+
+  # Only when upgrading, clean up dangling images to conserve disk space.
+  - name: docker image cleanup
+    shell: "docker rmi -f $(docker images -q -f dangling=true)"
+    tags:
+      - upgrade_only

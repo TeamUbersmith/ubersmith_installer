@@ -42,19 +42,3 @@ services:
   # rwhois:
   #   volumes:
   #     - "{{ ubersmith_home }}/conf/rwhois:/etc/xinetd.d"
-  # zk:
-  #   network_mode: "host"
-  #   ports:
-  #     - "2181:2181"
-  #     - "2888:2888"
-  #     - "3888:3888"
-  #     - "8090:8090"
-  #   environment:
-  #     MYID: 1
-  #     SERVERS: 10.2.0.20,10.2.0.21
-
-  # Notes:
-  # Zookeeper:
-  #   Network mode 'host' is needed due to ZK's weird binding strategy
-  #   http://mail-archives.apache.org/mod_mbox//zookeeper-dev/201503.mbox/%3C1427331641.57328.YahooMailBasic@web142804.mail.bf1.yahoo.com%3E
-  #   Need to have 2181/2888/3888 listening publicly

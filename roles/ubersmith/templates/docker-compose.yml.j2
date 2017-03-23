@@ -72,15 +72,6 @@ services:
       - "4321:4321"
     volumes_from:
       - web
-  zk:
-    image: quay.io/ubersmith/zk:{{ containers.zk_version }}
-    hostname: zk.{{ virtual_host }}
-    environment:
-      MYID: 1
-    ports:
-      - "2181"
-    volumes:
-      - zk:/tmp/zookeeper
   backup:
     image: quay.io/ubersmith/xtrabackup:{{ containers.backup_version }}
     hostname: backups.{{ virtual_host }}
@@ -102,4 +93,3 @@ volumes:
   mailspool: {}
   search: {}
   webroot: {}
-  zk: {}
