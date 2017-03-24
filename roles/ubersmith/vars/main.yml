@@ -16,4 +16,3 @@
     cron_version: 3.0
     mail_version: 1.1
     rwhois_version: 1.1
-    zk_version: "3.5.1-alpha"
