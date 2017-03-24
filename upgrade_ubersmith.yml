@@ -4,9 +4,9 @@
     any_errors_fatal: true
 
     vars:
-      ubersmith_home: lookup('ini', "ubersmith_home section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini")
-      virtual_host: lookup('ini', "virtual_host section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini")
-      admin_email: lookup('ini', "admin_email section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini")
+      ubersmith_home: "{{ lookup('ini', 'ubersmith_home section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
+      virtual_host: "{{ lookup('ini', 'virtual_host section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
+      admin_email: "{{ lookup('ini', 'admin_email section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini'') }}"
     
     roles:
       - common

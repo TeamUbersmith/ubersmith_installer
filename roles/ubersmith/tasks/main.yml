@@ -3,7 +3,7 @@
   # future upgrades.
   - name: set up ini_file for future use
     ini_file:
-      path: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
+      dest: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
       section: ubersmith_installer
       option: "{{ item.var }}"
       value: "{{ item.val }}"
@@ -206,14 +206,8 @@
 
   # For both new deploys and upgrades, start Ubersmith.
   - name: run ubersmith_start.sh
-    command: "{{ ubersmith_home }}"/ubersmith_start.sh
+    command: "{{ ubersmith_home }}/ubersmith_start.sh"
     args:
       chdir: "{{ ubersmith_home }}"
     tags:
       - upgrade
-
-  # Only when upgrading, clean up dangling images to conserve disk space.
-  - name: docker image cleanup
-    shell: "docker rmi -f $(docker images -q -f dangling=true)"
-    tags:
-      - upgrade_only
