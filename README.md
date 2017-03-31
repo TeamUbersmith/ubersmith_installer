@@ -9,7 +9,7 @@ and some OS level dependencies to be installed.
 
 ## Debian 8 / Ubuntu LTS
 
-`sudo apt-get install build-essential libssl-dev libffi-dev python-dev`
+`sudo apt-get install build-essential libssl-dev libffi-dev python-dev python-setuptools`
 
 ## Install
 
