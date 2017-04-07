@@ -20,5 +20,6 @@
       name: docker-compose
       state: latest
       extra_args: "--user"
+      version: 1.12.0
     tags:
       - upgrade
