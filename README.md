@@ -25,3 +25,5 @@ See [our documentation](https://docs.ubersmith.com/display/UbersmithDocumentatio
 # Caveats
 
 Do not install the OS provided `pip` packages for Ubuntu and Debian as the version of `pip` provided is older and has difficulty installing the dependencies for the Ubersmith installer. `python-setuptools` will install the `easy_install` utility, which will allow the installer to install a more contemporary version of `pip`.
+
+Dependencies installed by `pip` will installed using the `--user` option, which will install to the Python user install directory for your platform; typically `~/.local/`. (See the Python documentation for site.USER_BASE for full details.) This allows for the installer to be executed as a non-`root` user.
