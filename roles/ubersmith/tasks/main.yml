@@ -9,7 +9,7 @@
       value: "{{ item.val }}"
     with_items:
       - { var: 'ubersmith_home', val: "{{ ubersmith_home }}" }
-      - { var: 'virtual_host', val: "{{ virtual_host }}" } 
+      - { var: 'virtual_host', val: "{{ virtual_host }}" }
       - { var: 'admin_email', val: "{{ admin_email }}" }
 
   # Stop and disable MTAs; Ubersmith provides its own mail service
@@ -28,11 +28,11 @@
     when: ansible_os_family != "Darwin"
     tags:
       - disable_mtas
-  
+
   # Create the directory structure required for Ubersmith to store configuration data
   # and other related files
   - name: create ubersmith configuration directories
-    file: 
+    file:
       path: "{{ item }}"
       state: directory
       owner: "{{ ansible_user_id }}"
@@ -53,29 +53,29 @@
        - "{{ ubersmith_home }}/app/custom/include/service_modules"
        - "{{ ubersmith_home }}/app/custom/include/device_modules"
        - "{{ ubersmith_home }}/app/custom/include/order_modules"
-    tags: 
+    tags:
       - mysql_config
       - httpd_config
       - upgrade
-    
+
   # The Apache Virtual Host entry is created on the local filesystem to facilitate
   # editing without having to enter the container. A restart of the 'web' container is
   # required if this file is modified.
   - name: create ubersmith apache virtual host configuration file
-    template: 
-      src: instance_vhost.j2 
+    template:
+      src: instance_vhost.j2
       dest: "{{ ubersmith_home }}/conf/httpd/sites-enabled/{{ virtual_host }}.conf"
-  
+
   # The Mysql configuration file is created on the local filesystem to facilitate
   # editing without having to enter the container. A restart of the 'db' container is
-  # required if this file is modified.  
+  # required if this file is modified.
   - name: create mysql configuration overrides
     template:
       src: ubersmith.cnf.j2
       dest: "{{ ubersmith_home }}/conf/mysql/ubersmith.cnf"
     tags:
       - mysql_config
-  
+
   # The xinetd configuration file for rwhois  is created on the local filesystem to
   # facilitate editing without having to enter the container. A restart of the 'rwhois'
   # container is required if this file is modified.
@@ -85,7 +85,7 @@
       dest: "{{ ubersmith_home }}/conf/rwhois/rwhois"
     tags:
       - rwhois
-  
+
   # Create a self signed certificate for temporary use to secure HTTP and SMTP traffic.
   # These files should be replaced with a certificate and key provided by an authorized CA.
   # The 'web' and 'mail' containers need to be restarted if these files are modified.
@@ -94,8 +94,8 @@
     args:
       chdir: "{{ ubersmith_home }}/conf/ssl"
       creates: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.pem"
-  
-  # Get the system's timezone data for use in Docker Compose files 
+
+  # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
     shell: readlink -f /etc/localtime
     register: timezone_file
@@ -117,7 +117,7 @@
     tags:
       - compose_template
       - upgrade
-  
+
   # Create the override Docker Compose file. This file contains site specific changes and
   # will not be modified by future upgrades.
   - name: create docker compose override file
@@ -142,7 +142,7 @@
     tags:
       - upgrade
 
-  # Copy a helper script which allows Ubersmith containers to be restarted. 
+  # Copy a helper script which allows Ubersmith containers to be restarted.
   - name: copy ubersmith_restart
     copy:
       src: ubersmith_restart.sh
@@ -151,8 +151,7 @@
       group: "{{ ansible_user_gid }}"
       mode: 0700
 
-  
-  # Copy a helper script which allows Ubersmith containers to be started. 
+  # Copy a helper script which allows Ubersmith containers to be started.
   - name: copy ubersmith_start
     copy:
       src: ubersmith_start.sh
@@ -160,7 +159,7 @@
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0700
-  
+
   # Retrieve Ubersmith images from the repository.
   - name: pull ubersmith images
     command: docker-compose -p ubersmith pull
@@ -171,7 +170,7 @@
       - upgrade
     environment:
       PATH: "{{ ansible_user_dir }}/.local/bin/:$PATH"
-  
+
   # Only when upgrading, stop existing Ubersmith containers.
   - name: stop existing containers
     command: docker-compose -p ubersmith stop

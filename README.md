@@ -15,7 +15,13 @@ and some OS level dependencies to be installed.
 
 Run `./install_ubersmith.sh` to install Ubersmith Core.
 
-Run `./install_appliance.sh` to install the Ubersmith Appliance.
+Follow the prompts to complete the installation.
+
+On a separate host, run `./install_appliance.sh` to install the Ubersmith Appliance.
 
 Ubersmith Core and the Ubersmith Appliance should not be deployed to the same host.
 See [our documentation](https://docs.ubersmith.com/display/UbersmithDocumentation/Ubersmith%27s+System+Requirements) for more details and system requirements.
+
+# Caveats
+
+Do not install the OS provided `pip` packages for Ubuntu and Debian as the version of `pip` provided is older and has difficulty installing the dependencies for the Ubersmith installer. `python-setuptools` will install the `easy_install` utility, which will allow the installer to install a more contemporary version of `pip`.
