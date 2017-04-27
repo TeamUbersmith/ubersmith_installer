@@ -7,6 +7,12 @@ and some OS level dependencies to be installed.
 
 `sudo yum install gcc libffi-devel python-devel openssl-devel`
 
+If the installer is unable to install `pip`, you may need the [EPEL yum repository](https://fedoraproject.org/wiki/EPEL).
+
+Once EPEL is configured, run:
+
+`sudo yum install python-pip`
+
 ## Debian 8 / Ubuntu LTS
 
 `sudo apt-get install build-essential libssl-dev libffi-dev python-dev python-setuptools`
