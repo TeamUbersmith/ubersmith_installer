@@ -1,4 +1,15 @@
 ---
+  # Store the configuration values specified during the deploy for use during
+  # future upgrades.
+  - name: set up ini_file for future use
+    ini_file:
+      dest: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
+      section: ubersmith_installer
+      option: "{{ item.var }}"
+      value: "{{ item.val }}"
+    with_items:
+      - { var: 'appliance_home', val: "{{ appliance_home }}" }
+      - { var: 'app_virtual_host', val: "{{ app_virtual_host }}" }
 
   # Create the directory structure required for Ubersmith to store configuration data
   # and other related files
@@ -26,6 +37,7 @@
     register: timezone_file
     tags:
       - compose_override_template
+      - upgrade
     when: ansible_os_family != "Darwin"
 
 
@@ -41,6 +53,7 @@
       backup: yes
     tags:
       - compose_template
+      - upgrade
 
   # Create the override Docker Compose file. This file contains site specific changes and
   # will not be modified by future upgrades.
@@ -55,8 +68,9 @@
     tags:
       - compose_file
 
-  # Copy a customer use token for downloading private Ubersmith images.
-  - name: copy dockercfg
+  # Copy a customer use token for downloading private Ubersmith images. This isn't
+  # really a security feature so much as it keeps busybodies from poking around in
+  # our quay.io repository.  - name: copy dockercfg
     copy:
       src: dot_dockercfg
       dest: "{{ ansible_user_dir }}/.dockercfg"
@@ -79,6 +93,7 @@
       chdir: "{{ appliance_home }}"
     tags:
       - compose_pull
+      - upgrade
 
   - name: run docker compose up -d
     command: docker-compose -p ubersmith up -d
@@ -86,3 +101,4 @@
       chdir: "{{ appliance_home }}"
     tags:
       - compose_up
+      - upgrade
