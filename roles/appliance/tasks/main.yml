@@ -68,16 +68,6 @@
     tags:
       - compose_file
 
-  # Copy a customer use token for downloading private Ubersmith images. This isn't
-  # really a security feature so much as it keeps busybodies from poking around in
-  # our quay.io repository.  - name: copy dockercfg
-    copy:
-      src: dot_dockercfg
-      dest: "{{ ansible_user_dir }}/.dockercfg"
-      owner: "{{ ansible_user_id }}"
-      group: "{{ ansible_user_gid }}"
-      mode: 0600
-
   # Copy a helper script which creates a backup of Ubersmith's RRDs.
   - name: copy backup script
     copy:
