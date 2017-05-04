@@ -77,6 +77,7 @@
       group: "{{ ansible_user_gid }}"
       mode: 0700
 
+  # Retrieve Ubersmith images from the repository.  
   - name: run docker compose pull
     command: docker-compose -p ubersmith pull
     args:
@@ -92,3 +93,11 @@
     tags:
       - compose_up
       - upgrade
+
+  # Only when upgrading, run the upgrade script.
+  - name: run upgrade.php
+    command: docker exec ubersmith_app_web_1 php /var/www/appliance_root/www/upgrade.php
+    args:
+      chdir:  "{{ ubersmith_home }}"
+    tags:
+      - upgrade_only

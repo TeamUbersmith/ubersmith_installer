@@ -9,8 +9,6 @@
   LogFormat "%h %l %{UberUser}n %{UberElapsed}n %{UberSessionWait}n %{UberSessionLock}n %{UberQueryTime}n %{UberQueryTime2}n %t \"%r\" %>s %b" ubersmith
   ErrorLog {{ ubersmith_root }}/logs/error_log
   CustomLog {{ ubersmith_root }}/logs/access_log ubersmith env=!dontlog
-{#  ProxyPassMatch ^/(.*\.php(/.*)?)$ fcgi://{{ fcgi_host }}:9000/var/www/ubersmith_root/app/www/$1
-#}  
   Options +FollowSymLinks
   DirectoryIndex index.php
   LimitRequestBody 53000000
@@ -34,9 +32,6 @@
 
     SetEnv MOD_REWRITE true
 
-    # Uncomment the lines below to enable HTTP auth for PHP CGI
-    # RewriteCond %{HTTP:Authorization} ^Basic
-    # RewriteRule ^(.*) $1?http_authorization=%{HTTP:Authorization} [L,QSA]
   </IfModule>
   
 </VirtualHost>
@@ -52,8 +47,7 @@
   LogFormat "%h %l %{UberUser}n %{UberElapsed}n %{UberSessionWait}n %{UberSessionLock}n %{UberQueryTime}n %{UberQueryTime2}n %t \"%r\" %>s %b" ubersmith
   ErrorLog {{ ubersmith_root }}/logs/error_log
   CustomLog {{ ubersmith_root }}/logs/access_log ubersmith env=!dontlog
-{#  ProxyPassMatch ^/(.*\.php(/.*)?)$ fcgi://{{ fcgi_host }}:9000/var/www/ubersmith_root/app/www/$1
-#}  
+ 
   SSLCertificateFile {{ ubersmith_root }}/conf/ssl/{{ virtual_host }}.pem
   SSLCertificateKeyFile {{ ubersmith_root }}/conf/ssl/{{ virtual_host }}.key
   SSLProtocol all -SSLv2 -SSLv3 -TLSv1
@@ -88,9 +82,6 @@
 
     SetEnv MOD_REWRITE true
 
-    # Uncomment the lines below to enable HTTP auth for PHP CGI
-    # RewriteCond %{HTTP:Authorization} ^Basic
-    # RewriteRule ^(.*) $1?http_authorization=%{HTTP:Authorization} [L,QSA]
   </IfModule>
   
 </VirtualHost>
@@ -138,10 +129,6 @@
 <FilesMatch "^(php\.ini|config\.ini\.php|token\.xml\.php|update_translations\.php)$">
 	Require all denied
 </FilesMatch>
-
-{#<Files "favicon.ico">
-  ForceType application/x-httpd-php
-</Files>#}
 
 <IfModule mod_headers.c>
 	SetEnv MOD_HEADERS true
