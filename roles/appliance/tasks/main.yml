@@ -98,6 +98,6 @@
   - name: run upgrade.php
     command: docker exec ubersmith_app_web_1 php /var/www/appliance_root/www/upgrade.php
     args:
-      chdir:  "{{ ubersmith_home }}"
+      chdir:  "{{ appliance_home }}"
     tags:
       - upgrade_only

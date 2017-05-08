@@ -24,4 +24,4 @@ else
     pip install ansible -q --upgrade --user
 fi
 echo "Installing Ubersmith Appliance..."
-ansible-playbook -i ./hosts -c local install_appliance.yml
+ansible-playbook -i ./hosts -c local --skip-tags upgrade_only install_appliance.yml
