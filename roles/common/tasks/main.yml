@@ -3,7 +3,6 @@
   - name: verify docker is installed
     shell: command -v docker
     register: docker_result
-    # failed_when: docker_result.rc != 0
     ignore_errors: true
     tags:
       - upgrade
@@ -12,6 +11,19 @@
     fail:
       msg: "Docker does not appear to be installed. Please install Docker (https://docs.docker.com/engine/installation/)."
     when: docker_result.rc != 0
+    tags:
+      - upgrade
+
+  - name: verify docker version
+    shell: docker version --format '{{ '{{' }} .Server.Version {{ '}}' }}'
+    register: docker_version
+    tags:
+      - upgrade
+
+  - name: output error when docker is too old
+    fail:
+      msg: "The Docker version installed is too old. Please upgrade Docker (https://docs.docker.com/engine/installation/)."
+    when: docker_version.stdout[:5] | version_compare(docker_ok_version, '<=' )
     tags:
       - upgrade
 
