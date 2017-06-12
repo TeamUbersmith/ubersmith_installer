@@ -53,6 +53,8 @@
        - "{{ ubersmith_home }}/app/custom/include/service_modules"
        - "{{ ubersmith_home }}/app/custom/include/device_modules"
        - "{{ ubersmith_home }}/app/custom/include/order_modules"
+       - "{{ ubersmith_home }}/app/custom/.well-known"
+       - "{{ ubersmith_home }}/app/custom/.well-known/acme-challenge"
     tags:
       - mysql_config
       - httpd_config
