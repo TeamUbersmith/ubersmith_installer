@@ -92,7 +92,7 @@
   # These files should be replaced with a certificate and key provided by an authorized CA.
   # The 'web' and 'mail' containers need to be restarted if these files are modified.
   - name: create self signed certificates
-    command: "openssl req -new -x509 -days 365 -sha1 -newkey rsa:1024 -nodes -keyout {{ virtual_host }}.key -out {{ virtual_host }}.pem -subj '/O=Ubersmith/OU=Hosting/CN={{ virtual_host }}'"
+    command: "openssl req -new -x509 -days 365 -sha1 -newkey rsa:2048 -nodes -keyout {{ virtual_host }}.key -out {{ virtual_host }}.pem -subj '/O=Ubersmith/OU=Hosting/CN={{ virtual_host }}'"
     args:
       chdir: "{{ ubersmith_home }}/conf/ssl"
       creates: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.pem"
