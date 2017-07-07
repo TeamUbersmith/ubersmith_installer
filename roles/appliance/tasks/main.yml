@@ -101,3 +101,10 @@
       chdir:  "{{ appliance_home }}"
     tags:
       - upgrade_only
+
+  # Cleanup unused Docker images to preserve disk space.
+  - name: docker image cleanup
+    shell: "docker rmi -f $(docker images -q -f dangling=true)"
+    ignore_errors: yes
+    tags:
+      - upgrade_only
