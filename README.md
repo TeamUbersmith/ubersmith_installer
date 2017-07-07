@@ -32,7 +32,7 @@ See [our documentation](https://docs.ubersmith.com/display/UbersmithDocumentatio
 
 This upgrade utility is not compatible with Ubersmith 3.x.
 
-Presently, this utility can only be used to upgrade new installations of Ubersmith 4.x, but we’re hoping to make the upgrade routines work for existing 4.x installations as well.
+Presently, this utility is only capable of upgrading installations that were deployed using the installation utility. We plan to expand this support for installations of Ubersmith provided by our Support / Operations team.
 
 Do not install the OS provided `pip` packages for Ubuntu and Debian as the version of `pip` provided is older and has difficulty installing the dependencies for the Ubersmith installer. `python-setuptools` will install the `easy_install` utility, which will allow the installer to install a more contemporary version of `pip`.
 
