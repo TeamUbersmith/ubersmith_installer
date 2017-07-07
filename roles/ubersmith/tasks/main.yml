@@ -201,3 +201,15 @@
       chdir: "{{ ubersmith_home }}"
     tags:
       - upgrade
+
+  # For upgrades, run the updatedb.php script which performs the upgrade process.
+  - name: run updatedb.php
+    command: docker exec ubersmith_php_1 php /var/www/ubersmith_root/app/www/setup/updatedb.php ubersmith --debug
+    tags:
+      - upgrade_only
+
+  # For upgrades, remove the setup/ directory, allowing Ubersmith to start.
+  - name: remove setup
+    command: docker exec ubersmith_web_1 rm -rf /var/www/ubersmith_root/app/www/setup
+    tags:
+      - upgrade_only 
