@@ -8,7 +8,7 @@
   ubersmith_version: 4.1.1
 
   containers:
-    backup_version: 2.4.6
+    backup_version: 2.4
     solr_version: 4.10.4
     db_version: 5.6
     web_version: "{{ ubersmith_version }}.0.0"
