@@ -5,9 +5,7 @@ and some OS level dependencies to be installed.
 
 ## CentOS 7
 
-`sudo yum install gcc libffi-devel python-devel openssl-devel`
-
-If the installer is unable to install `pip`, you may need the [EPEL yum repository](https://fedoraproject.org/wiki/EPEL).
+`sudo yum install gcc libffi-devel python-devel openssl-devel epel-release`
 
 Once EPEL is configured, run:
 
