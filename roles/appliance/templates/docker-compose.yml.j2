@@ -27,6 +27,7 @@ services:
       DATABASE_HOST: ubersmith_app_db_1
       DATABASE_NAME: uberapp
     volumes:
+      - "app_webroot:/var/www/appliance_root"
       - "rrds:/var/www/appliance_root/rrds"
       - "app_logs:/var/www/appliance_root/logs"
     depends_on:
@@ -53,6 +54,7 @@ services:
 volumes:
   app_database: {}
   app_logs: {}
+  app_webroot: {}
   app_backup: {}
   rrds: {}
   
