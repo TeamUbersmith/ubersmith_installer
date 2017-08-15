@@ -61,7 +61,6 @@ services:
       - "25:25"
     volumes:
       - "mail:/var/log"
-      - "mailspool:/var/spool/postfix"
     volumes_from:
       - web
   rwhois:
@@ -90,6 +89,5 @@ volumes:
   database: {}
   logs: {}
   mail: {}
-  mailspool: {}
   search: {}
   webroot: {}
