@@ -83,7 +83,9 @@ services:
       - db
     depends_on:
       - db
-      
+  redis:
+    image: redis:3.0
+          
 volumes:
   backup: {}
   database: {}
