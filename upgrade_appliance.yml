@@ -3,6 +3,22 @@
   - hosts: local
     any_errors_fatal: true
 
+    pre_tasks:
+
+      - name: Check for .ubersmith_installer.ini
+        stat:
+          path: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
+        register: installer_config
+        tags:
+          - upgrade
+
+      - name: Fail if installer configuration is not present  
+        fail:
+          msg: "Ubersmith installer configuration file is not present, please run configure.sh"
+        when: installer_config.stat.exists == false
+        tags:
+          - upgrade
+        
     vars:
       appliance_home: "{{ lookup('ini', 'appliance_home section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
       app_virtual_host: "{{ lookup('ini', 'app_virtual_host section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"

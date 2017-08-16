@@ -1,0 +1,46 @@
+---
+
+  - hosts: local
+    any_errors_fatal: true
+
+    vars_prompt:
+      - name: "ubersmith_home"
+        prompt: "Current path in use by Ubersmith / Appliance"
+        default: "/usr/local/ubersmith"
+        private: no
+      - name: "virtual_host"
+        prompt: "Enter the address in use by Ubersmith / Appliance"
+        default: "ubersmith.example.com"
+        private: no
+      - name: "admin_email"
+        prompt: "Enter the email address of the Ubersmith administrator"
+        default: "admin@example.org"
+        private: no
+
+    tasks:
+     
+      - name: check specified path
+        stat: 
+          path: "{{ ubersmith_home }} + /docker-compose.yml"
+        register: my_path
+
+      - name: confirm specified path is correct
+        fail:
+          msg: "Provided path does not contain an existing Ubersmith installation!"
+        when:
+          my_path.stat.exists == false
+
+      # Store the configuration values specified during the deploy for use during
+      # future upgrades.
+      - name: set up ini_file for future use
+        ini_file:
+          dest: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
+          section: ubersmith_installer
+          option: "{{ item.var }}"
+          value: "{{ item.val }}"
+        with_items:
+          - { var: 'ubersmith_home', val: "{{ ubersmith_home }}" }
+          - { var: 'virtual_host', val: "{{ virtual_host }}" }
+          - { var: 'admin_email', val: "{{ admin_email }}" }
+          - { var: 'appliance_home', val: "{{ ubersmith_home }}" }
+          - { var: 'app_virtual_host', val: "{{ virtual_host }}" }
