@@ -13,9 +13,7 @@ services:
     ports:
       - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
       MYSQL_USER: ubersmith
-      MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
       MYSQL_DATABASE: ubersmith
     volumes:
       - "database:/var/lib/mysql"
@@ -29,7 +27,6 @@ services:
       - "443:443"
     environment:
       MYSQL_USER: ubersmith
-      MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
       MYSQL_DATABASE: ubersmith
       DATABASE_HOST: "ubersmith_db_1"
       UBER_HOSTNAME: {{ virtual_host }}
@@ -75,7 +72,6 @@ services:
     image: quay.io/ubersmith/xtrabackup:{{ containers.backup_version }}
     hostname: backups.{{ virtual_host }}
     environment:
-      MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
       DATABASE_HOST: ubersmith_db_1
     volumes:
       - "backup:/backup"

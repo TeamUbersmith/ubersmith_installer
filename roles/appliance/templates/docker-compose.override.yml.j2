@@ -1,15 +1,22 @@
 version: '2'
 services:
   app_web:
+    environment:
+      MYSQL_PASSWORD: "{{ mysql_appliance_password }}"
     volumes:
 {% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stdout }}:/etc/localtime"
 {% endif %}
       - "{{ appliance_home }}/logs/appliance:/var/www/appliance_root/logs"
   app_db:
+    environment:
+      MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
+      MYSQL_PASSWORD: "{{ mysql_appliance_password }}"
     volumes:
       - "{{ appliance_home }}/conf/mysql:/etc/mysql/conf.d"
 {% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stdout }}:/etc/localtime"
 {% endif %}
-
+  app_backup:
+    environment:
+      MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
