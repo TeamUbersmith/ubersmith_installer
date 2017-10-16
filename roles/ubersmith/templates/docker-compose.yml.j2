@@ -11,20 +11,18 @@ services:
     hostname: database.{{ virtual_host }}
     restart: unless-stopped
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     environment:
       MYSQL_USER: ubersmith
       MYSQL_DATABASE: ubersmith
     volumes:
       - "database:/var/lib/mysql"
+      - "pmm_client:/usr/local/percona"
       - "/etc/mysql/conf.d"
   web:
     image: quay.io/ubersmith/ubersmith:{{ containers.web_version }}
     hostname: {{ virtual_host }}
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
     environment:
       MYSQL_USER: ubersmith
       MYSQL_DATABASE: ubersmith
@@ -42,6 +40,8 @@ services:
     image: quay.io/ubersmith/php:{{ containers.php_version }}
     hostname: {{ virtual_host }}
     restart: unless-stopped
+    volumes:
+      - "/usr/local/ubersmith/logs/rsyslog/log:/dev/log"
     volumes_from:
       - web
   cron:
@@ -60,6 +60,10 @@ services:
       - "mail:/var/log"
     volumes_from:
       - web
+    networks:
+      default:
+        aliases:
+          - ubersmith.mail
   rwhois:
     image: quay.io/ubersmith/xinetd:{{ containers.rwhois_version }}
     hostname: {{ virtual_host }}
@@ -68,24 +72,52 @@ services:
       - "4321:4321"
     volumes_from:
       - web
+  redis:
+    image: redis:3.0
+    restart: unless-stopped
   backup:
     image: quay.io/ubersmith/xtrabackup:{{ containers.backup_version }}
     hostname: backups.{{ virtual_host }}
     environment:
       DATABASE_HOST: ubersmith_db_1
     volumes:
-      - "backup:/backup"
+      - "/usr/local/ubersmith/backup:/backup"
     volumes_from:
       - db
     depends_on:
       - db
-  redis:
-    image: redis:3.0
-          
+  rsyslog:
+    image: quay.io/ubersmith/rsyslog:1.0
+    hostname: rsyslog.{{ metadata.virtual_host }}
+    volumes:
+      - "/usr/local/ubersmith/logs/rsyslog/:/var/run/rsyslog/dev/"
+  pmm:
+    image: percona/pmm-server:{{ containers.pmm_version }}
+    hostname: pmm.{{ metadata.virtual_host }}
+    ports:
+      - "8443:443"
+    volumes:
+       - pmm_prometheus:/opt/prometheus/data
+       - pmm_consul:/opt/consul-data
+       - pmm_mysql:/var/lib/mysql
+       - pmm_grafana:/var/lib/grafana
+       - "/usr/local/ubersmith/conf/ssl/{{ metadata.virtual_host }}.pem:/etc/nginx/ssl/server.crt"
+       - "/usr/local/ubersmith/conf/ssl/{{ metadata.virtual_host }}.key:/etc/nginx/ssl/server.key"
+  haproxy:
+    image: haproxy:1.7-alpine
+    volumes:
+       - "/usr/local/ubersmith/conf/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro"
+    ports:
+      - "3306"
+      - "3307"
 volumes:
-  backup: {}
   database: {}
+  pmm_client: {}
   logs: {}
   mail: {}
   search: {}
   webroot: {}
+  pmm_prometheus: {}
+  pmm_consul: {}
+  pmm_mysql: {}
+  pmm_grafana: {}

@@ -16,6 +16,9 @@ services:
   #   volumes:
   #     - "{{ ubersmith_home }}/conf/php/www.conf:/etc/php/5.6/fpm/pool.d/www.conf"
   web:
+    ports:
+      - "80:80"
+      - "443:443"
     environment:
       MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
     volumes:
