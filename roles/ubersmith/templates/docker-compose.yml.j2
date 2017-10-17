@@ -104,7 +104,7 @@ services:
        - "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.pem:/etc/nginx/ssl/server.crt"
        - "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.key:/etc/nginx/ssl/server.key"
   haproxy:
-    image: haproxy:1.7-alpine
+    image: haproxy:{{ containers.haproxy_version }}
     volumes:
        - "{{ ubersmith_home }}/conf/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro"
     ports:
