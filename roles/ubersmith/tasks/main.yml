@@ -333,7 +333,8 @@
       job: "{{ ansible_user_dir }}/.local/bin/ansible-playbook -i 'localhost,' -c local {{ ubersmith_home }}/le_renewal.yml"
       user: "{{ ansible_user }}"
       day: "*/2"
-    when: 
+    when:
+      - le_pem.stat.exists
       - ansible_os_family != "Darwin"
       - ansible_os_family != "Windows"
 
