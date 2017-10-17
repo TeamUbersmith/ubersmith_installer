@@ -222,6 +222,7 @@
     command: "openssl req -nodes -newkey rsa:4096 -keyout {{ virtual_host }}.le.key -out {{ virtual_host }}.le.csr -subj '/O=Ubersmith/OU=Hosting/CN={{ virtual_host }}'"
     args:
       chdir: "{{ ubersmith_home }}/conf/ssl"
+      creates: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.key"
     when: ansible_os_family != "Windows"
     tags:
       - letsencrypt
