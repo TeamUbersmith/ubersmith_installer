@@ -318,8 +318,7 @@
     template:
       src: le_renewal.yml.j2
       dest: "{{ ubersmith_home }}/le_renewal.yml"
-      owner: root
-      group: root
+      owner: "{{ ansible_user }}"
       mode: 0600
       backup: yes
     when: le_pem.stat.exists
