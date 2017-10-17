@@ -88,12 +88,12 @@ services:
       - db
   rsyslog:
     image: quay.io/ubersmith/rsyslog:1.0
-    hostname: rsyslog.{{ metadata.virtual_host }}
+    hostname: rsyslog.{{ virtual_host }}
     volumes:
       - "/usr/local/ubersmith/logs/rsyslog/:/var/run/rsyslog/dev/"
   pmm:
     image: percona/pmm-server:{{ containers.pmm_version }}
-    hostname: pmm.{{ metadata.virtual_host }}
+    hostname: pmm.{{ virtual_host }}
     ports:
       - "8443:443"
     volumes:
@@ -101,8 +101,8 @@ services:
        - pmm_consul:/opt/consul-data
        - pmm_mysql:/var/lib/mysql
        - pmm_grafana:/var/lib/grafana
-       - "/usr/local/ubersmith/conf/ssl/{{ metadata.virtual_host }}.pem:/etc/nginx/ssl/server.crt"
-       - "/usr/local/ubersmith/conf/ssl/{{ metadata.virtual_host }}.key:/etc/nginx/ssl/server.key"
+       - "/usr/local/ubersmith/conf/ssl/{{ virtual_host }}.pem:/etc/nginx/ssl/server.crt"
+       - "/usr/local/ubersmith/conf/ssl/{{ virtual_host }}.key:/etc/nginx/ssl/server.key"
   haproxy:
     image: haproxy:1.7-alpine
     volumes:
