@@ -1,0 +1,34 @@
+---
+  - hosts: all
+        
+    tasks:
+
+      - name: generate let's encrypt request
+        letsencrypt:
+          account_key: "{{ ubersmith_home }}//conf/ssl/le_account.key"
+          csr: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.csr"
+          dest: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.pem"
+          acme_directory: https://acme-v01.api.letsencrypt.org/directory
+        register: le_challenge
+    
+      - name: copy let's encrypt challenge data into webroot
+        copy:
+          {% raw %}dest: "{% endraw %}{{ ubersmith_home }}{% raw %}/app/custom/{{ le_challenge['challenge_data']['{% endraw %}{{ virtual_host }}{% raw %}']['http-01']['resource'] }}{% endraw %}"
+          {% raw %}content: "{{ le_challenge['challenge_data']['{% endraw %}{{ virtual_host }}{% raw %}']['http-01']['resource_value'] }}{% endraw %}"
+        when: le_challenge|changed
+      
+      - name: docker cp let's encrypt challenge data into webroot
+        {% raw %}command: "docker cp {% endraw %}{{ ubersmith_home }}{% raw %}/app/custom/{{ le_challenge['challenge_data']['{% endraw %}{{ virtual_host }}{% raw %}']['http-01']['resource'] }} ubersmith_web_1:/var/www/ubersmith_root/app/www/{{ le_challenge['challenge_data']['{% endraw %}{{ virtual_host }}{% raw %}']['http-01']['resource'] }}{% endraw %}"
+
+      - name: let's encrypt wrapup 
+        letsencrypt:
+          account_key: "{{ ubersmith_home }}/conf/ssl/le_account.key"
+          csr: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.csr"
+          dest: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.pem"
+          acme_directory: https://acme-v01.api.letsencrypt.org/directory
+          data: {% raw %}"{{ le_challenge }}{% endraw %}"
+        ignore_errors: yes
+
+      - name: restart web container
+        command: docker restart ubersmith_web_1
+        when: le_challenge|changed

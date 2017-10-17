@@ -41,7 +41,7 @@ services:
     hostname: {{ virtual_host }}
     restart: unless-stopped
     volumes:
-      - "/usr/local/ubersmith/logs/rsyslog/log:/dev/log"
+      - "{{ ubersmith_home }}/logs/rsyslog/log:/dev/log"
     volumes_from:
       - web
   cron:
@@ -81,7 +81,7 @@ services:
     environment:
       DATABASE_HOST: ubersmith_db_1
     volumes:
-      - "/usr/local/ubersmith/backup:/backup"
+      - "{{ ubersmith_home }}/backup:/backup"
     volumes_from:
       - db
     depends_on:
@@ -90,7 +90,7 @@ services:
     image: quay.io/ubersmith/rsyslog:1.0
     hostname: rsyslog.{{ virtual_host }}
     volumes:
-      - "/usr/local/ubersmith/logs/rsyslog/:/var/run/rsyslog/dev/"
+      - "{{ ubersmith_home }}/logs/rsyslog/:/var/run/rsyslog/dev/"
   pmm:
     image: percona/pmm-server:{{ containers.pmm_version }}
     hostname: pmm.{{ virtual_host }}
@@ -101,12 +101,12 @@ services:
        - pmm_consul:/opt/consul-data
        - pmm_mysql:/var/lib/mysql
        - pmm_grafana:/var/lib/grafana
-       - "/usr/local/ubersmith/conf/ssl/{{ virtual_host }}.pem:/etc/nginx/ssl/server.crt"
-       - "/usr/local/ubersmith/conf/ssl/{{ virtual_host }}.key:/etc/nginx/ssl/server.key"
+       - "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.pem:/etc/nginx/ssl/server.crt"
+       - "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.key:/etc/nginx/ssl/server.key"
   haproxy:
     image: haproxy:1.7-alpine
     volumes:
-       - "/usr/local/ubersmith/conf/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro"
+       - "{{ ubersmith_home }}/conf/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro"
     ports:
       - "3306"
       - "3307"
