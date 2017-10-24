@@ -280,6 +280,7 @@
     register: le_pem
     tags:
       - letsencrypt
+      - le_renewal
       - le_virtual_host_update
   
   # Update Apache's virtual host configuration to use the newly issued certificate.
