@@ -324,7 +324,8 @@
       backup: yes
     when: le_pem.stat.exists
     tags:
-      - le_renewal_yml
+      - le_renewal
+      - letsencrypt
 
   # Create a cron job to see if the Let's Encrypt certificate needs to be renewed.
   - name: let's encrypt renewal cron task
@@ -337,6 +338,9 @@
       - le_pem.stat.exists
       - ansible_os_family != "Darwin"
       - ansible_os_family != "Windows"
+    tags:
+      - le_renewal
+      - letsencrypt
 
   # For upgrades, run the updatedb.php script which performs the upgrade process.
   - name: run updatedb.php
