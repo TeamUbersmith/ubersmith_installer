@@ -31,6 +31,7 @@ services:
       LOCK_BACKEND: mysql
       MAINTENANCE: 0
       HTTPS_FORCE: 1
+      REASON_LOG: 0
     volumes:
       - "logs:/var/www/ubersmith_root/logs"
       - "webroot:/var/www/ubersmith_root"
