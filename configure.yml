@@ -21,7 +21,7 @@
      
       - name: check specified path
         stat: 
-          path: "{{ ubersmith_home }} + /docker-compose.yml"
+          path: "{{ ubersmith_home }}/docker-compose.yml"
         register: my_path
 
       - name: confirm specified path is correct
