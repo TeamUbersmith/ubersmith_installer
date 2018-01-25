@@ -44,7 +44,6 @@ services:
     restart: unless-stopped
     volumes:
       - "{{ ubersmith_home }}/logs/rsyslog/log:/dev/log"
-      - "twig:/tmp/twig/cache"
     volumes_from:
       - web
   cron:
@@ -119,7 +118,6 @@ volumes:
   logs: {}
   mail: {}
   search: {}
-  twig: {}
   webroot: {}
   pmm_prometheus: {}
   pmm_consul: {}
