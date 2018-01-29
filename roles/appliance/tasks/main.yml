@@ -23,6 +23,7 @@
     with_items:
        - "{{ appliance_home }}/conf/mysql"
        - "{{ appliance_home }}/conf/cron"
+       - "{{ appliance_home }}/conf/php"
        - "{{ appliance_home }}/conf/ssl"
        - "{{ appliance_home }}/logs"
        - "{{ appliance_home }}/logs/appliance"
