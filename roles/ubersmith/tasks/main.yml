@@ -137,6 +137,17 @@
       backup: yes
     tags:
       - compose_override_template
+  
+  # For existing installs, update to Docker Compose v3
+  - name: update docker compose override file
+    replace:
+      path: "{{ ubersmith_home }}/docker-compose.override.yml"
+      replace: "version: '3'"
+      regexp: "version: '2'"
+      backup: yes
+    tags:
+      - upgrade
+      - update_compose_override_template
 
   # Copy a helper script which allows Ubersmith containers to be restarted.
   - name: copy ubersmith_restart

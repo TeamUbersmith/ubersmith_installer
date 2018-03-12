@@ -1,4 +1,4 @@
-version: '2'
+version: '3'
 services:
   solr:
     image: quay.io/ubersmith/solr:{{ containers.solr_version }}
@@ -37,22 +37,20 @@ services:
     volumes:
       - "logs:/var/www/ubersmith_root/logs"
       - "webroot:/var/www/ubersmith_root"
-    volumes_from:
-      - solr
+      - "search:/opt/solr"
   php:
     image: quay.io/ubersmith/php:{{ containers.php_version }}
     hostname: {{ virtual_host }}
     restart: unless-stopped
     volumes:
       - "{{ ubersmith_home }}/logs/rsyslog/log:/dev/log"
-    volumes_from:
-      - web
+      - "webroot:/var/www/ubersmith_root"
   cron:
     image: quay.io/ubersmith/cron:{{ containers.cron_version }}
     hostname: {{ virtual_host }}
     restart: unless-stopped
-    volumes_from:
-      - web
+    volumes:
+      - "webroot:/var/www/ubersmith_root"
   mail:
     image: quay.io/ubersmith/mail:{{ containers.mail_version }}
     hostname: {{ virtual_host }}
@@ -61,8 +59,7 @@ services:
       - "25:25"
     volumes:
       - "mail:/var/log"
-    volumes_from:
-      - web
+      - "webroot:/var/www/ubersmith_root"
     networks:
       default:
         aliases:
@@ -73,8 +70,8 @@ services:
     restart: unless-stopped
     ports:
       - "4321:4321"
-    volumes_from:
-      - web
+    volumes:
+      - "webroot:/var/www/ubersmith_root"
   redis:
     image: redis:3.0
     restart: unless-stopped
@@ -85,8 +82,7 @@ services:
       DATABASE_HOST: ubersmith_db_1
     volumes:
       - "{{ ubersmith_home }}/backup:/backup"
-    volumes_from:
-      - db
+      - "database:/var/lib/mysql"
     depends_on:
       - db
   rsyslog:
