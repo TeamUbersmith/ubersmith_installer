@@ -33,7 +33,8 @@ services:
       HTTPS_FORCE: 1
       REASON_LOG: 0
       STORAGE_BACKEND: redis
-      STORAGE_HOST: redis
+      REDIS_HOST: 'tcp://redis:6379?database=2'
+      SESSION_HOST: 'tcp://redis:6379?database=0'
       APPLIANCE_TIMEOUT: 30
     volumes:
       - "logs:/var/www/ubersmith_root/logs"
