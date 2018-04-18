@@ -1,7 +1,8 @@
 version: '3'
 services:
   cron:
-    # volumes:
+    volumes:
+      - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
       # - "{{ ubersmith_home }}/conf/cron:/etc/cron.d"
   db:
     environment:
@@ -12,8 +13,9 @@ services:
       - "{{ timezone_file.stdout }}:/etc/localtime"
     {% endif %}
       - "{{ ubersmith_home }}/conf/mysql:/etc/mysql/conf.d"
-  # php:
-  #   volumes:
+  php:
+    volumes:
+      - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
   #     - "{{ ubersmith_home }}/conf/php/www.conf:/etc/php/5.6/fpm/pool.d/www.conf"
   web:
     ports:
