@@ -157,6 +157,8 @@
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0700
+    tags:
+      - upgrade
 
   # Copy a helper script which allows Ubersmith containers to be started.
   - name: copy ubersmith_start
@@ -166,7 +168,9 @@
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0700
-
+    tags:
+      - upgrade
+      
   # Retrieve Ubersmith images from the repository.
   - name: pull ubersmith images
     command: docker-compose -p ubersmith pull
