@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
-# Stops, removes, and recreates selected base Ubersmith containers.
+# Recreates selected base Ubersmith containers.
 
-docker-compose -p ubersmith rm -f -s
-docker-compose -p ubersmith up --scale redis=1 -d redis
-docker-compose -p ubersmith up -d cron db mail php solr web
+REDIS_CLUSTER_SIZE=1
+
+docker-compose -p ubersmith up --scale redis=$REDIS_CLUSTER_SIZE -d redis
+docker-compose -p ubersmith up -d cron db mail php solr web 
