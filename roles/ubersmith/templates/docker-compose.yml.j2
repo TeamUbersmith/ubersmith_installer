@@ -75,7 +75,7 @@ services:
     volumes:
       - "webroot:/var/www/ubersmith_root"
   redis:
-    image: redis:3.0
+    image: quay.io/ubersmith/redis:{{ containers.redis_version }}
     restart: unless-stopped
   backup:
     image: quay.io/ubersmith/xtrabackup:{{ containers.backup_version }}
