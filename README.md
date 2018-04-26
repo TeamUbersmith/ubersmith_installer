@@ -3,34 +3,13 @@
 The Ubersmith installer requires [Docker](https://docs.docker.com/engine/installation/) 
 and some OS level dependencies to be installed. 
 
-## CentOS 7
+# Documentation
 
-`sudo yum install gcc libffi-devel python-devel openssl-devel epel-release`
-
-Once EPEL is configured, run:
-
-`sudo yum install python-pip`
-
-## Debian 8 / Ubuntu LTS
-
-`sudo apt-get install build-essential libssl-dev libffi-dev python-dev python-setuptools`
-
-## Install
-
-Run `./install_ubersmith.sh` to install Ubersmith Core.
-
-Follow the prompts to complete the installation.
-
-On a separate host, run `./install_appliance.sh` to install the Ubersmith Appliance.
-
-Ubersmith Core and the Ubersmith Appliance should not be deployed to the same host.
-See [our documentation](https://docs.ubersmith.com/display/UbersmithDocumentation/Ubersmith%27s+System+Requirements) for more details and system requirements.
+Full documentation for the installer can be found [here](https://docs.ubersmith.com/x/sQCs)
 
 # Caveats
 
 This upgrade utility is not compatible with Ubersmith 3.x.
-
-Presently, this utility is only capable of upgrading installations that were deployed using the installation utility. We plan to expand this support for installations of Ubersmith provided by our Support / Operations team.
 
 Do not install the OS provided `pip` packages for Ubuntu and Debian as the version of `pip` provided is older and has difficulty installing the dependencies for the Ubersmith installer. `python-setuptools` will install the `easy_install` utility, which will allow the installer to install a more contemporary version of `pip`.
 
