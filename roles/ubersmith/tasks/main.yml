@@ -51,6 +51,7 @@
        - "{{ ubersmith_home }}/conf/cron"
        - "{{ ubersmith_home }}/conf/rwhois"
        - "{{ ubersmith_home }}/app/custom"
+       - "{{ ubersmith_home }}/app/custom/plugins"
        - "{{ ubersmith_home }}/app/custom/include"
        - "{{ ubersmith_home }}/app/custom/include/service_modules"
        - "{{ ubersmith_home }}/app/custom/include/device_modules"
