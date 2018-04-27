@@ -58,7 +58,7 @@ services:
     hostname: {{ virtual_host }}
     restart: unless-stopped
     ports:
-      - "25:8025"
+      - "25:25"
     volumes:
       - "mail:/var/log"
       - "webroot:/var/www/ubersmith_root"
