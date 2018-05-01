@@ -3,6 +3,9 @@ services:
   cron:
     volumes:
       - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
+    {% if ansible_os_family != 'Darwin' %}
+      - "{{ timezone_file.stdout }}:/etc/localtime"
+    {% endif %}
       # - "{{ ubersmith_home }}/conf/cron:/etc/cron.d"
   db:
     environment:
@@ -16,6 +19,9 @@ services:
   php:
     volumes:
       - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
+    {% if ansible_os_family != 'Darwin' %}
+      - "{{ timezone_file.stdout }}:/etc/localtime"
+    {% endif %}
   #     - "{{ ubersmith_home }}/conf/php/www.conf:/etc/php/5.6/fpm/pool.d/www.conf"
   web:
     ports:
@@ -42,6 +48,7 @@ services:
   mail:
 {% if ansible_os_family != 'Darwin' %}
     volumes:
+      - "{{ timezone_file.stdout }}:/etc/localtime"
       - "{{ timezone_file.stdout }}:/var/spool/postfix/etc/localtime"
       # - "{{ ubersmith_home }}/conf/mail/aliases:/etc/aliases"
 {% endif %}
