@@ -261,7 +261,7 @@
     copy:
       dest: "{{ ubersmith_home }}/app/custom/{{ le_challenge['challenge_data'][virtual_host]['http-01']['resource'] }}"
       content: "{{ le_challenge['challenge_data'][virtual_host]['http-01']['resource_value'] }}"
-    when: le_challenge|changed
+    when: le_challenge is changed
     tags:
       - letsencrypt
 
@@ -360,6 +360,13 @@
     tags:
       - le_renewal
       - letsencrypt
+
+  # Solr can take a little bit to start, so wait before proceeding with the upgrade.
+  - name: wait for containers to come online
+    wait_for:
+      timeout: 15
+    tags:
+      - upgrade_only
 
   # For upgrades, run the updatedb.php script which performs the upgrade process.
   - name: run updatedb.php
