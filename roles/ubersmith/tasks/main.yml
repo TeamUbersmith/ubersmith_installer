@@ -63,6 +63,31 @@
       - httpd_config
       - upgrade
 
+  # Add configuration directives to rsyslog for handling incoming logs from Ubersmith
+  # Docker containers.
+  - name: create rsyslog configuration
+    copy:
+      dest: /etc/rsyslog.d/30-ubersmith.conf
+      src: 30-ubersmith.conf
+    ignore_errors: yes
+    tags:
+      - upgrade
+    when: 
+      - ansible_os_family != "Darwin"
+      - ansible_os_family != "Windows"
+
+  # Add logrotate directives to keep Ubersmith logs compressed and rotated.
+  - name: create log rotation configuration
+    copy:
+      dest: /etc/logrotate.d/ubersmith-logs
+      src: ubersmith-logs
+    ignore_errors: yes
+    tags:
+      - upgrade
+    when: 
+      - ansible_os_family != "Darwin"
+      - ansible_os_family != "Windows"
+
   # The Apache Virtual Host entry is created on the local filesystem to facilitate
   # editing without having to enter the container. A restart of the 'web' container is
   # required if this file is modified.

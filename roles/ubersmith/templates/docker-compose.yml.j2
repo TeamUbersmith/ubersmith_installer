@@ -6,6 +6,12 @@ services:
     restart: unless-stopped
     volumes:
       - "search:/opt/solr"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/solr
+{% endif %}
   db:
     image: quay.io/ubersmith/db:{{ containers.db_version }}
     hostname: database.{{ virtual_host }}
@@ -19,6 +25,12 @@ services:
       - "database:/var/lib/mysql"
       - "pmm_client:/usr/local/percona"
       - "/etc/mysql/conf.d"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/db
+{% endif %}
   web:
     image: quay.io/ubersmith/ubersmith:{{ containers.web_version }}
     hostname: {{ virtual_host }}
@@ -40,6 +52,12 @@ services:
       - "logs:/var/www/ubersmith_root/logs"
       - "webroot:/var/www/ubersmith_root"
       - "search:/opt/solr"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/web
+{% endif %}
   php:
     image: quay.io/ubersmith/php:{{ containers.php_version }}
     hostname: {{ virtual_host }}
@@ -47,12 +65,24 @@ services:
     volumes:
       - "{{ ubersmith_home }}/logs/rsyslog/log:/dev/log"
       - "webroot:/var/www/ubersmith_root"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/php
+{% endif %}
   cron:
     image: quay.io/ubersmith/cron:{{ containers.cron_version }}
     hostname: {{ virtual_host }}
     restart: unless-stopped
     volumes:
       - "webroot:/var/www/ubersmith_root"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/cron
+{% endif %}
   mail:
     image: quay.io/ubersmith/mail:{{ containers.mail_version }}
     hostname: {{ virtual_host }}
@@ -66,6 +96,12 @@ services:
       default:
         aliases:
           - ubersmith.mail
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/mail
+{% endif %}
   rwhois:
     image: quay.io/ubersmith/xinetd:{{ containers.rwhois_version }}
     hostname: {{ virtual_host }}
@@ -74,9 +110,21 @@ services:
       - "4321:4321"
     volumes:
       - "webroot:/var/www/ubersmith_root"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/rwhois
+{% endif %}
   redis:
     image: quay.io/ubersmith/redis:{{ containers.redis_version }}
     restart: unless-stopped
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/redis
+{% endif %}
   backup:
     image: quay.io/ubersmith/xtrabackup:{{ containers.backup_version }}
     hostname: backups.{{ virtual_host }}
@@ -92,6 +140,12 @@ services:
     hostname: rsyslog.{{ virtual_host }}
     volumes:
       - "{{ ubersmith_home }}/logs/rsyslog/:/var/run/rsyslog/dev/"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/ubersmith
+{% endif %}
   pmm:
     image: percona/pmm-server:{{ containers.pmm_version }}
     hostname: pmm.{{ virtual_host }}
@@ -111,6 +165,12 @@ services:
     ports:
       - "3306"
       - "3307"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/haproxy
+{% endif %}
 volumes:
   database: {}
   logs: {}
