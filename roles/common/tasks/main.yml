@@ -34,7 +34,7 @@
 
   # Enable the Docker service in the event the installer / sysadmin did not.
   - name: ensure the docker service is enabled
-      service:
+    service:
       name: docker
       enabled: yes
     when: 
