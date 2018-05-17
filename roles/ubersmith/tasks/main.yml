@@ -354,7 +354,8 @@
     args:
       chdir:  "{{ ubersmith_home }}"
     environment:
-      PATH: "{{ ansible_user_dir }}/.local/bin/:$PATH"    when: le_pem.stat.exists
+      PATH: "{{ ansible_user_dir }}/.local/bin/:$PATH"
+    when: le_pem.stat.exists
     tags:
       - letsencrypt
 
