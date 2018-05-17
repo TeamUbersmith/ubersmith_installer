@@ -1,4 +1,4 @@
-version: '2'
+version: '3'
 services:
   app_db:
     image: quay.io/ubersmith/appliance_db:{{ containers.appliance_db_version }}
@@ -33,8 +33,9 @@ services:
     image: quay.io/ubersmith/appliance_cron:{{ containers.appliance_cron_version }}
     hostname: cron.appliance.{{ app_virtual_host }}
     restart: unless-stopped
-    volumes_from:
-      - app_web
+    volumes:
+      - "app_webroot:/var/www/appliance_root"
+      - "rrds:/var/www/appliance_root/rrds"
   app_backup:
     image: quay.io/ubersmith/xtrabackup:{{ containers.backup_version }}
     hostname: backups.appliance.{{ app_virtual_host }}
@@ -42,8 +43,7 @@ services:
       DATABASE_HOST: ubersmith_app_db_1
     volumes:
       - "app_backup:/backup"
-    volumes_from:
-      - app_db
+      - "app_database:/var/lib/mysql"
     depends_on:
       - app_db
       

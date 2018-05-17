@@ -69,6 +69,17 @@
     tags:
       - compose_file
 
+  # For existing installs, update to Docker Compose v3
+  - name: update docker compose override file
+    replace:
+      path: "{{ appliance_home }}/docker-compose.override.yml"
+      replace: "version: '3'"
+      regexp: "version: '2'"
+      backup: yes
+    tags:
+      - upgrade
+      - update_compose_override_template
+
   # Copy a helper script which creates a backup of Ubersmith's RRDs.
   - name: copy backup script
     copy:
