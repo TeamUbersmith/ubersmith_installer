@@ -36,6 +36,8 @@ services:
     volumes:
       - "app_webroot:/var/www/appliance_root"
       - "rrds:/var/www/appliance_root/rrds"
+    depends_on:
+      - app_web
   app_backup:
     image: quay.io/ubersmith/xtrabackup:{{ containers.backup_version }}
     hostname: backups.appliance.{{ app_virtual_host }}
