@@ -5,7 +5,7 @@ services:
     hostname: database.appliance.{{ app_virtual_host }}
     restart: unless-stopped
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3307:3306"
     environment:
       MYSQL_USER: uberapp
       MYSQL_DATABASE: uberapp
