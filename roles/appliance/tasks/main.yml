@@ -89,6 +89,16 @@
       group: "{{ ansible_user_gid }}"
       mode: 0700
 
+  # Create a self signed certificate for temporary use to secure HTTP and SMTP traffic.
+  # These files should be replaced with a certificate and key provided by an authorized CA.
+  # The 'web' and 'mail' containers need to be restarted if these files are modified.
+  - name: create self signed certificates
+    command: "openssl req -new -x509 -days 365 -sha256 -newkey rsa:2048 -nodes -keyout {{ app_virtual_host }}.key -out {{ app_virtual_host }}.pem -subj '/O=Ubersmith/OU=Hosting/CN={{ app_virtual_host }}'"
+    args:
+      chdir: "{{ appliance_home }}/conf/ssl"
+      creates: "{{ appliance_home }}/conf/ssl/{{ app_virtual_host }}.pem"
+    when: ansible_os_family != "Windows"
+
   # Retrieve Ubersmith images from the repository.  
   - name: run docker compose pull
     command: docker-compose -p ubersmith pull
