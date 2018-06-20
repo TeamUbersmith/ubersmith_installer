@@ -118,7 +118,7 @@
 
   # Only when upgrading, run the upgrade script.
   - name: run upgrade.php
-    command: "docker exec -ti ubersmith_app_web_1 php /var/www/appliance_root/www/upgrade.php"
+    command: "docker exec ubersmith_app_web_1 php /var/www/appliance_root/www/upgrade.php"
     args:
       chdir: "{{ appliance_home }}"
     tags:
