@@ -101,11 +101,9 @@
 
   # Retrieve Ubersmith images from the repository.  
   - name: run docker compose pull
-    command: docker-compose -p ubersmith pull
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith pull"
     args:
       chdir: "{{ appliance_home }}"
-    environment:
-      PATH: "{{ ansible_user_dir }}/.local/bin/:$PATH"
     tags:
       - compose_pull
       - upgrade
@@ -114,19 +112,15 @@
     command: docker-compose -p ubersmith up -d
     args:
       chdir: "{{ appliance_home }}"
-    environment:
-      PATH: "{{ ansible_user_dir }}/.local/bin/:$PATH"
     tags:
       - compose_up
       - upgrade
 
   # Only when upgrading, run the upgrade script.
   - name: run upgrade.php
-    command: docker-compose -p ubersmith exec app_web php /var/www/appliance_root/www/upgrade.php
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith exec app_web php /var/www/appliance_root/www/upgrade.php"
     args:
       chdir: "{{ appliance_home }}"
-    environment:
-      PATH: "{{ ansible_user_dir }}/.local/bin/:$PATH"
     tags:
       - upgrade_only
 
