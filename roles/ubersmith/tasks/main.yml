@@ -197,11 +197,9 @@
       
   # Retrieve Ubersmith images from the repository.
   - name: pull ubersmith images
-    command: docker-compose -p ubersmith pull
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith pull"
     args:
       chdir:  "{{ ubersmith_home }}"
-    environment:
-      PATH: "{{ ansible_user_dir }}/.local/bin/:$PATH"
     tags:
       - compose_pull
       - upgrade
@@ -209,11 +207,9 @@
 
   # Only when upgrading, stop and remove existing Ubersmith containers.
   - name: stop existing containers
-    command: docker-compose -p ubersmith rm -sf
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith rm -sf"
     args:
       chdir:  "{{ ubersmith_home }}"
-    environment:
-      PATH: "{{ ansible_user_dir }}/.local/bin/:$PATH"
     tags:
       - upgrade_only
 
@@ -285,11 +281,9 @@
 
   # Restart the web container to pick up the challenge data.
   - name: restart the web container
-    command: docker-compose -p ubersmith restart web
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith restart web"
     args:
       chdir:  "{{ ubersmith_home }}"
-    environment:
-      PATH: "{{ ansible_user_dir }}/.local/bin/:$PATH"
     tags:
       - letsencrypt
 
@@ -350,11 +344,9 @@
 
   # Restart the web container to use the newly issued LE certificate.
   - name: restart the web container
-    command: docker-compose -p ubersmith restart web
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith restart web"
     args:
       chdir:  "{{ ubersmith_home }}"
-    environment:
-      PATH: "{{ ansible_user_dir }}/.local/bin/:$PATH"
     when: le_pem.stat.exists
     tags:
       - letsencrypt
@@ -396,20 +388,16 @@
 
   # For upgrades, run the updatedb.php script which performs the upgrade process.
   - name: run updatedb.php
-    command: "docker-compose -p ubersmith exec php php {{ ubersmith_root }}/app/www/setup/updatedb.php ubersmith --debug"
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith exec php php {{ ubersmith_root }}/app/www/setup/updatedb.php ubersmith --debug"
     args:
       chdir:  "{{ ubersmith_home }}"
-    environment:
-      PATH: "{{ ansible_user_dir }}/.local/bin/:$PATH"
     tags:
       - upgrade_only
 
   # For upgrades, remove the setup/ directory, allowing Ubersmith to start.
   - name: remove setup
-    command: "docker-compose -p ubersmith exec web rm -rf {{ ubersmith_root }}/app/www/setup"
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith exec web rm -rf {{ ubersmith_root }}/app/www/setup"
     args:
       chdir:  "{{ ubersmith_home }}"
-    environment:
-      PATH: "{{ ansible_user_dir }}/.local/bin/:$PATH"
     tags:
       - upgrade_only 
