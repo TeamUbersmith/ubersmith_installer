@@ -22,7 +22,8 @@ services:
 {% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stdout }}:/etc/localtime"
 {% endif %}
-  #     - "{{ ubersmith_home }}/conf/php/www.conf:/etc/php/5.6/fpm/pool.d/www.conf"
+     - "{{ ubersmith_home }}/conf/php/ubersmith.ini:/etc/php/{{ php_version }}/fpm/conf.d/20-ubersmith.ini"
+  #     - "{{ ubersmith_home }}/conf/php/www.conf:/etc/php/{{ php_version }}/fpm/pool.d/www.conf"
   web:
     ports:
       - "80:80"

@@ -106,6 +106,16 @@
     tags:
       - mysql_config
 
+  # The PHP override configuration file is created on the local filesystem to facilitate
+  # editing without having to enter the container. A restart of the 'php' container is
+  # required if this file is modified.
+  - name: create ubersmith.ini file
+    template:
+      src: ubersmith.ini.j2
+      dest: "/usr/local/ubersmith/conf/php/ubersmith.ini"
+    tags:
+      - php_ini
+
   # The xinetd configuration file for rwhois  is created on the local filesystem to
   # facilitate editing without having to enter the container. A restart of the 'rwhois'
   # container is required if this file is modified.
