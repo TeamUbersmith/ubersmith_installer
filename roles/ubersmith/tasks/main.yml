@@ -112,7 +112,7 @@
   - name: create ubersmith.ini file
     template:
       src: ubersmith.ini.j2
-      dest: "/usr/local/ubersmith/conf/php/ubersmith.ini"
+      dest: "{{ ubersmith_home }}/conf/php/ubersmith.ini"
     tags:
       - php_ini
 
