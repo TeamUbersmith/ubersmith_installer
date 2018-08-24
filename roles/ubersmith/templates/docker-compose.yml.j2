@@ -65,6 +65,8 @@ services:
     volumes:
       - "{{ ubersmith_home }}/logs/rsyslog/log:/dev/log"
       - "webroot:/var/www/ubersmith_root"
+    depends_on:
+      - web
 {% if ansible_os_family != 'Darwin' %}
     logging:
       driver: syslog
@@ -77,6 +79,8 @@ services:
     restart: unless-stopped
     volumes:
       - "webroot:/var/www/ubersmith_root"
+    depends_on:
+      - web
 {% if ansible_os_family != 'Darwin' %}
     logging:
       driver: syslog
@@ -95,6 +99,8 @@ services:
       default:
         aliases:
           - ubersmith.mail
+    depends_on:
+      - web
 {% if ansible_os_family != 'Darwin' %}
     logging:
       driver: syslog
@@ -109,6 +115,8 @@ services:
       - "4321:4321"
     volumes:
       - "webroot:/var/www/ubersmith_root"
+    depends_on:
+      - web
 {% if ansible_os_family != 'Darwin' %}
     logging:
       driver: syslog
