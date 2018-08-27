@@ -238,6 +238,15 @@
     when: volume_output.stdout.find('ubersmith_webroot') != -1
     tags:
       - upgrade_only
+  
+  # This is an unfortunate side effect of moving to Docker Compose v3, and the fact that
+  # Ubersmith does not manage timezones within software (yet)
+  - name: give the administrator a chance to update docker-compose.override.yml
+    pause:
+      prompt: "Make sure docker-compose.override.yml has been updated to include a ports directive for web, and timezone volume entries for all containers"
+      minutes: 5
+    tags:
+      - upgrade_only
 
   # For both new deploys and upgrades, start Ubersmith.
   - name: run ubersmith_start.sh
