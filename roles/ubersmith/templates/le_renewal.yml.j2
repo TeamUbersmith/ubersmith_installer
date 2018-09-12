@@ -15,11 +15,11 @@
         copy:
           {% raw %}dest: "{% endraw %}{{ ubersmith_home }}{% raw %}/app/custom/{{ le_challenge['challenge_data']['{% endraw %}{{ virtual_host }}{% raw %}']['http-01']['resource'] }}{% endraw %}"
           {% raw %}content: "{{ le_challenge['challenge_data']['{% endraw %}{{ virtual_host }}{% raw %}']['http-01']['resource_value'] }}{% endraw %}"
-        when: le_challenge|changed
+        when: le_challenge is changed
       
       - name: docker cp let's encrypt challenge data into webroot
         {% raw %}command: "docker cp {% endraw %}{{ ubersmith_home }}{% raw %}/app/custom/{{ le_challenge['challenge_data']['{% endraw %}{{ virtual_host }}{% raw %}']['http-01']['resource'] }} ubersmith_web_1:/var/www/ubersmith_root/app/www/{{ le_challenge['challenge_data']['{% endraw %}{{ virtual_host }}{% raw %}']['http-01']['resource'] }}{% endraw %}"
-        when: le_challenge|changed
+        when: le_challenge is changed
 
       - name: let's encrypt wrapup 
         letsencrypt:
@@ -29,8 +29,8 @@
           acme_directory: https://acme-v01.api.letsencrypt.org/directory
           data: {% raw %}"{{ le_challenge }}{% endraw %}"
         ignore_errors: yes
-        when: le_challenge|changed
+        when: le_challenge is changed
         
       - name: restart web container
         command: docker restart ubersmith_web_1
-        when: le_challenge|changed
+        when: le_challenge is changed
