@@ -28,8 +28,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    environment:
-      MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
     volumes:
       - "{{ ubersmith_home }}/logs/ubersmith:/var/www/ubersmith_root/logs"
       - "{{ ubersmith_home }}/conf/ssl:/var/www/ubersmith_root/conf/ssl"
@@ -39,13 +37,13 @@ services:
 {% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stdout }}:/etc/localtime"
 {% endif %}
-    # environment:
-    #   MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
-    #   DATABASE_HOST: "ubersmith_db_1"
-    #   USAGE_DATABASE: usage
-    #   USAGE_DATABASE_HOST: remote_db
-    #   USAGE_DATABASE_USERNAME: usage_guy
-    #   USAGE_DATABASE_PASSWORD: usage_password
+    environment:
+      MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
+    #  DATABASE_HOST: "ubersmith_db_1"
+    #  USAGE_DATABASE: usage
+    #  USAGE_DATABASE_HOST: remote_db
+    #  USAGE_DATABASE_USERNAME: usage_guy
+    #  USAGE_DATABASE_PASSWORD: usage_password
   mail:
     volumes:
 {% if ansible_os_family != 'Darwin' %}
