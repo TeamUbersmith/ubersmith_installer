@@ -55,7 +55,7 @@ services:
     environment:
       - "POSTCONF_SMTPD_TLS_CERT_FILE=/etc/ssl/certs/{{ virtual_host }}.pem"
       - "POSTCONF_SMTPD_TLS_KEY_FILE=/etc/ssl/private/{{ virtual_host }}.key" 
-      - POSTCONF_SMTPD_USE_TLS=yes
+      - POSTCONF_SMTP_TLS_SECURITY_LEVEL=may
   # rwhois:
   #   volumes:
   #     - "{{ ubersmith_home }}/conf/rwhois:/etc/xinetd.d"
