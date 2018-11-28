@@ -1,0 +1,50 @@
+---
+  - hosts: all
+
+    vars:
+      ubersmith_home: "{{ lookup('ini', 'ubersmith_home section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
+      virtual_host: "{{ lookup('ini', 'virtual_host section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
+      admin_email: "{{ lookup('ini', 'admin_email section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini'') }}"    
+        
+    tasks:
+
+      - name: generate let's encrypt request
+        letsencrypt:
+          account_key: "{{ ubersmith_home }}/conf/ssl/le_account.key"
+          csr: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.csr"
+          dest: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.pem"
+          acme_directory: https://acme-v01.api.letsencrypt.org/directory
+        register: le_challenge
+        tags:
+          - letsencrypt
+    
+      - name: copy let's encrypt challenge data into webroot
+        copy:
+          dest: "{{ ubersmith_home }}/app/custom/{{ le_challenge['challenge_data'][virtual_host]['http-01']['resource'] }}"
+          content: "{{ le_challenge['challenge_data'][virtual_host]['http-01']['resource_value'] }}"
+        when: le_challenge|changed
+        tags:
+          - letsencrypt
+      
+      - name: docker cp let's encrypt challenge data into webroot
+        command: "docker cp {{ ubersmith_home }}/app/custom/{{ le_challenge['challenge_data'][virtual_host]['http-01']['resource'] }} ubersmith_web_1:/var/www/ubersmith_root/app/www/{{ le_challenge['challenge_data'][virtual_host]['http-01']['resource'] }}"
+        when: le_challenge|changed
+        tags:
+          - letsencrypt
+
+      - name: let's encrypt wrapup 
+        letsencrypt:
+          account_key: "{{ ubersmith_home }}/conf/ssl/le_account.key"
+          csr: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.csr"
+          dest: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.pem"
+          acme_directory: https://acme-v01.api.letsencrypt.org/directory
+          data: "{{ le_challenge }}"
+        ignore_errors: yes
+        tags:
+          - letsencrypt
+
+      - name: restart web container
+        command: docker-compose -p ubersmith restart web
+        args:
+          chdir: "{{ ubersmith_home }}"
+        when: le_challenge|changed

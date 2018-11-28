@@ -278,7 +278,7 @@
 
   # Generate the challenge data and request for Let's Encrypt.
   - name: generate let's encrypt request
-    letsencrypt:
+    acme_certificate:
       account_key: "{{ ubersmith_home }}/conf/ssl/le_account.key"
       csr: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.csr"
       dest: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.pem"
@@ -315,7 +315,7 @@
  
   # Have Let's Encrypt verify our challenge data and hopefully issue a certificate.
   - name: let's encrypt wrapup 
-    letsencrypt:
+    acme_certificate:
       account_key: "{{ ubersmith_home }}/conf/ssl/le_account.key"
       csr: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.csr"
       dest: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.pem"
