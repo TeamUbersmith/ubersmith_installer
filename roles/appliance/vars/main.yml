@@ -5,7 +5,7 @@
   mysql_appliance_password: "{{ lookup('password', ansible_user_dir + '/.appliance_' + app_virtual_host + '_appliance_db_pass') }}"
   mysql_appliance_user_password: "{{ lookup('password', ansible_user_dir + '/.appliance_' + app_virtual_host + '_appliance_user_pass') }}"
 
-  appliance_version: 4.2.3
+  appliance_version: 4.3.0
   
   containers:
     backup_version: 2.4
