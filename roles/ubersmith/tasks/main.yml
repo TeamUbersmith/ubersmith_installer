@@ -31,6 +31,13 @@
     tags:
       - disable_mtas
 
+  # Updates to docker-compose remove the project_container_index syntax
+  - name: alert admin to necessary license updates
+    pause:
+      prompt: "When upgrading from versions prior to Ubersmith 4.3.0, a change is being made to the naming convention for the database host. Please contact support@ubersmith.com to ensure your license record is updated."
+    tags:
+      - upgrade_only
+
   # Create the directory structure required for Ubersmith to store configuration data
   # and other related files
   - name: create ubersmith configuration directories
