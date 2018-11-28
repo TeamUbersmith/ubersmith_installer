@@ -407,16 +407,20 @@
 
   # For upgrades, run the updatedb.php script which performs the upgrade process.
   - name: run updatedb.php
-    command: "docker exec ubersmith_php_1 php {{ ubersmith_root }}/app/www/setup/updatedb.php ubersmith --debug"
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose exec -T php php {{ ubersmith_root }}/app/www/setup/updatedb.php ubersmith --debug"
     args:
       chdir:  "{{ ubersmith_home }}"
+    environment:
+      COMPOSE_INTERACTIVE_NO_CLI: 1
     tags:
       - upgrade_only
 
   # For upgrades, remove the setup/ directory, allowing Ubersmith to start.
   - name: remove setup
-    command: "docker exec ubersmith_web_1 rm -rf {{ ubersmith_root }}/app/www/setup"
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose exec -T web rm -rf {{ ubersmith_root }}/app/www/setup"
     args:
       chdir:  "{{ ubersmith_home }}"
+    environment:
+      COMPOSE_INTERACTIVE_NO_CLI: 1
     tags:
       - upgrade_only 

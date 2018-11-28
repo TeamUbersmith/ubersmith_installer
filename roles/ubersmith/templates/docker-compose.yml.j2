@@ -38,15 +38,15 @@ services:
     environment:
       MYSQL_USER: ubersmith
       MYSQL_DATABASE: ubersmith
-      DATABASE_HOST: "ubersmith_db_1"
+      DATABASE_HOST: "db"
       UBER_HOSTNAME: {{ virtual_host }}
       LOCK_BACKEND: mysql
       MAINTENANCE: 0
       HTTPS_FORCE: 1
       REASON_LOG: 0
       STORAGE_BACKEND: redis
-      REDIS_HOST: tcp://ubersmith_redis_1:6379?database=2
-      SESSION_HOST: tcp://ubersmith_redis_1:6379?database=0
+      REDIS_HOST: tcp://redis:6379?database=2
+      SESSION_HOST: tcp://redis:6379?database=0
       APPLIANCE_TIMEOUT: 30
     volumes:
       - "logs:/var/www/ubersmith_root/logs"
@@ -136,7 +136,7 @@ services:
     image: quay.io/ubersmith/xtrabackup:{{ containers.backup_version }}
     hostname: backups.{{ virtual_host }}
     environment:
-      DATABASE_HOST: ubersmith_db_1
+      DATABASE_HOST: db
     volumes:
       - "{{ ubersmith_home }}/backup:/backup"
       - "database:/var/lib/mysql"

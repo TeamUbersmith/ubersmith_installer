@@ -118,9 +118,11 @@
 
   # Only when upgrading, run the upgrade script.
   - name: run upgrade.php
-    command: "docker exec ubersmith_app_web_1 php /var/www/appliance_root/www/upgrade.php"
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose exec -T app_web php /var/www/appliance_root/www/upgrade.php"
     args:
-      chdir: "{{ appliance_home }}"
+      chdir:  "{{ ubersmith_home }}"
+    environment:
+      COMPOSE_INTERACTIVE_NO_CLI: 1
     tags:
       - upgrade_only
 

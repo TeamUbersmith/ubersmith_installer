@@ -21,7 +21,7 @@ services:
     environment:
       UBER_HOSTNAME: appliance.{{ app_virtual_host }}
       DATABASE_USER: uberapp
-      DATABASE_HOST: ubersmith_app_db_1
+      DATABASE_HOST: app_db
       DATABASE_NAME: uberapp
     volumes:
       - "app_webroot:/var/www/appliance_root"
@@ -42,7 +42,7 @@ services:
     image: quay.io/ubersmith/xtrabackup:{{ containers.backup_version }}
     hostname: backups.appliance.{{ app_virtual_host }}
     environment:
-      DATABASE_HOST: ubersmith_app_db_1
+      DATABASE_HOST: app_db
     volumes:
       - "app_backup:/backup"
       - "app_database:/var/lib/mysql"
