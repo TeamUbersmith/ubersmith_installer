@@ -198,7 +198,7 @@
     replace:
       path: /usr/local/ubersmith/docker-compose.override.yml
       replace: "/etc/php/{{ php_version }}"
-      regexp: "\/etc\/php\/{{ item }}"
+      regexp: "/etc/php/{{ item }}"
       backup: yes
     with_items: 
       - "{{ old_php_versions }}"
