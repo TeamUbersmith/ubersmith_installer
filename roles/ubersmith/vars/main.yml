@@ -3,6 +3,8 @@
   fcgi_host: php
   gc_maxlifetime: 86400
   php_version: 7.1
+  old_php_versions:
+    - 5.6
 
   ubersmith_root: /var/www/ubersmith_root
   mysql_root_password: "{{ lookup('password', ansible_user_dir + '/.ubersmith_' + virtual_host + '_root_db_pass') }}"
