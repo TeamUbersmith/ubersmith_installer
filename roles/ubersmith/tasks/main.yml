@@ -443,4 +443,4 @@
     environment:
       COMPOSE_INTERACTIVE_NO_CLI: 1
     tags:
-      - upgrade_only 
+      - upgrade_only
