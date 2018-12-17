@@ -190,7 +190,7 @@
       regexp: "version: '2'"
       backup: yes
     tags:
-      - upgrade
+      - upgrade_only
       - update_compose_override_template
 
   # For existing installs, update to current supported PHP release
@@ -203,7 +203,7 @@
     with_items: 
       - "{{ old_php_versions }}"
     tags:
-      - upgrade
+      - upgrade_only
       - update_compose_override_template
 
   # Copy a helper script which allows Ubersmith containers to be restarted.
