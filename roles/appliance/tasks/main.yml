@@ -120,7 +120,7 @@
   - name: run upgrade.php
     command: "{{ ansible_user_dir }}/.local/bin/docker-compose exec -T app_web php /var/www/appliance_root/www/upgrade.php"
     args:
-      chdir:  "{{ ubersmith_home }}"
+      chdir:  "{{ appliance_home }}"
     environment:
       COMPOSE_INTERACTIVE_NO_CLI: 1
     tags:
