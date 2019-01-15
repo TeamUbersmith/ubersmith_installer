@@ -108,6 +108,31 @@
       - compose_pull
       - upgrade
 
+  # Only when upgrading, stop and remove existing Ubersmith containers.
+  - name: stop existing containers
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith rm -sf"
+    args:
+      chdir:  "{{ appliance_home }}"
+    tags:
+      - upgrade_only
+
+  # Only when upgrading, get the list of docker volumes, so the webroot
+  # can be replaced by the new version of Ubersmith.
+  - name: get existing docker volumes
+    shell: "docker volume ls -q"
+    register: volume_output
+    tags:
+      - upgrade_only
+
+  # Remove the appliance webroot so the codebase can be replaced.
+  - name: remove ubersmith appliance webroot volume if present
+    command: docker volume rm ubersmith_app_webroot
+    args:
+      chdir:  "{{ appliance_home }}"
+    when: volume_output.stdout.find('ubersmith_app_webroot') != -1
+    tags:
+      - upgrade_only
+
   - name: run docker compose up -d
     command: docker-compose -p ubersmith up -d
     args:
