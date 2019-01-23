@@ -47,6 +47,7 @@ services:
       STORAGE_BACKEND: redis
       REDIS_HOST: tcp://redis:6379?database=2
       SESSION_HOST: tcp://redis:6379?database=0
+      PLUGIN_LOG_HOST: tcp://redis:6379?database=3
       APPLIANCE_TIMEOUT: 30
     volumes:
       - "logs:/var/www/ubersmith_root/logs"
