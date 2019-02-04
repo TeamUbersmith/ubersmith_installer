@@ -49,6 +49,7 @@ services:
       SESSION_HOST: tcp://redis:6379?database=0
       PLUGIN_LOG_HOST: tcp://redis:6379?database=3
       APPLIANCE_TIMEOUT: 30
+      ALIPAY_ENABLE: 1
     volumes:
       - "logs:/var/www/ubersmith_root/logs"
       - "webroot:/var/www/ubersmith_root"

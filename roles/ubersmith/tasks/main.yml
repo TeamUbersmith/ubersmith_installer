@@ -104,15 +104,27 @@
       src: instance_vhost.j2
       dest: "{{ ubersmith_home }}/conf/httpd/sites-enabled/{{ virtual_host }}.conf"
 
-  # The Mysql configuration file is created on the local filesystem to facilitate
+  # The Percona Server configuration file is created on the local filesystem to facilitate
   # editing without having to enter the container. A restart of the 'db' container is
   # required if this file is modified.
-  - name: create mysql configuration overrides
+  - name: create percona server configuration overrides
     template:
       src: ubersmith.cnf.j2
       dest: "{{ ubersmith_home }}/conf/mysql/ubersmith.cnf"
     tags:
       - mysql_config
+  
+  # The database server configuration requires a change to sql_mode when running 
+  # Percona Server 5.7
+  - name: ensure sql_mode line exists
+    lineinfile:
+      path: /usr/local/ubersmith/conf/mysql/ubersmith.cnf
+      line: 'sql_mode = "NO_ENGINE_SUBSTITUTION"'
+    when:
+      - containers.db_version == 5.7
+    tags:
+      - upgrade_only
+      - upgrade_prep
 
   # The PHP override configuration file is created on the local filesystem to facilitate
   # editing without having to enter the container. A restart of the 'php' container is
