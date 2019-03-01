@@ -12,7 +12,7 @@ innodb_log_file_size           = 128M
 local-infile                   = 0
 
 {% if containers.db_version == 5.7 %}
-sql_mode = "NO_ENGINE_SUBSTITUTION"
+sql_mode = "NO_ENGINE_SUBSTITUTION,NO_AUTO_CREATE_USER"
 {% endif %}
 
 # Uncomment and restart MySQL to use PMM
