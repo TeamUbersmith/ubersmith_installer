@@ -17,6 +17,7 @@
     solr_version: 4.10.4
     db_version: 5.6
     web_version: "{{ ubersmith_version }}.0.0"
+    web_container_repo: "ubersmith"
     php_version: 7.1
     cron_version: 5.0
     mail_version: 2.0

@@ -32,7 +32,7 @@ services:
         tag: ubersmith/db
 {% endif %}
   web:
-    image: quay.io/ubersmith/ubersmith:{{ containers.web_version }}
+    image: quay.io/ubersmith/{{ containers.web_container_repo }}:{{ containers.web_version }}
     hostname: {{ virtual_host }}
     restart: unless-stopped
     environment:
