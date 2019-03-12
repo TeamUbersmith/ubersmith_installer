@@ -276,7 +276,7 @@
   # Ubersmith does not manage timezones within software (yet)
   - name: give the administrator a chance to update docker-compose.override.yml
     pause:
-      prompt: "Make sure docker-compose.override.yml has been updated to include a ports directive for web, and timezone volume entries for all containers"
+      prompt: "Make sure docker-compose.override.yml has been updated to include a ports directive for web, and timezone volume entries for all containers (CTRL+C to continue)"
     tags:
       - upgrade_only
 
