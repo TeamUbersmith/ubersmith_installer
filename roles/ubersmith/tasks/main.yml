@@ -11,7 +11,6 @@
       - { var: 'ubersmith_home', val: "{{ ubersmith_home }}" }
       - { var: 'virtual_host', val: "{{ virtual_host }}" }
       - { var: 'admin_email', val: "{{ admin_email }}" }
-      - { var: 'redis_count', val: 1 }
 
   # Stop and disable MTAs; Ubersmith provides its own mail service
   # If this fails, it's okay, but the Ubersmith mail container won't start
