@@ -11,6 +11,12 @@ services:
       MYSQL_DATABASE: uberapp
     volumes:
       - "app_database:/var/lib/mysql"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/app_db
+{% endif %}
   app_web:
     image: quay.io/ubersmith/appliance:{{ containers.appliance_web_version }}
     hostname: appliance.{{ app_virtual_host }}
@@ -27,6 +33,12 @@ services:
       - "app_webroot:/var/www/appliance_root"
       - "rrds:/var/www/appliance_root/rrds"
       - "app_logs:/var/www/appliance_root/logs"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/app_web
+{% endif %}
     depends_on:
       - app_db
   app_cron:
@@ -36,6 +48,12 @@ services:
     volumes:
       - "app_webroot:/var/www/appliance_root"
       - "rrds:/var/www/appliance_root/rrds"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/app_cron
+{% endif %}
     depends_on:
       - app_web
   app_backup:
@@ -43,6 +61,12 @@ services:
     hostname: backups.appliance.{{ app_virtual_host }}
     environment:
       DATABASE_HOST: app_db
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/app_backup
+{% endif %}
     volumes:
       - "app_backup:/backup"
       - "app_database:/var/lib/mysql"
