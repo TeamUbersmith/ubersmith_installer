@@ -421,7 +421,7 @@
       name: "check for le renewal"
       job: "{{ ansible_user_dir }}/.local/bin/ansible-playbook -i 'localhost,' -c local {{ ubersmith_home }}/le_renewal.yml &> /dev/null"
       user: "{{ ansible_user }}"
-      day: "*/2"
+      special_time: daily
     when:
       - le_pem.stat.exists
       - ansible_os_family != "Darwin"
