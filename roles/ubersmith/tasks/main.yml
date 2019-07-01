@@ -124,7 +124,6 @@
       - containers.db_version == 5.7
     tags:
       - upgrade_only
-      - upgrade_prep
 
   # The PHP override configuration file is created on the local filesystem to facilitate
   # editing without having to enter the container. A restart of the 'php' container is

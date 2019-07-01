@@ -32,6 +32,17 @@
       - httpd_config
       - upgrade
 
+  - name: create rsyslog configuration
+    copy:
+      dest: /etc/rsyslog.d/30-ubersmith.conf
+      src: 30-ubersmith.conf
+    ignore_errors: yes
+    tags:
+      - upgrade
+    when: 
+      - ansible_os_family != "Darwin"
+      - ansible_os_family != "Windows"
+
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
     shell: readlink -f /etc/localtime
