@@ -18,7 +18,7 @@ services:
         tag: ubersmith/app_db
 {% endif %}
   app_web:
-    image: quay.io/ubersmith/appliance:{{ containers.appliance_web_version }}
+    image: quay.io/ubersmith/{{ containers.appweb_container_repo }}:{{ containers.appliance_web_version }}
     hostname: appliance.{{ app_virtual_host }}
     restart: unless-stopped
     ports:
