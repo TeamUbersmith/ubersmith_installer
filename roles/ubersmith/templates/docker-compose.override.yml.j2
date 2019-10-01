@@ -56,9 +56,12 @@ services:
       - "POSTCONF_SMTPD_TLS_CERT_FILE=/etc/ssl/certs/{{ virtual_host }}.pem"
       - "POSTCONF_SMTPD_TLS_KEY_FILE=/etc/ssl/private/{{ virtual_host }}.key" 
       - POSTCONF_SMTP_TLS_SECURITY_LEVEL=may
-  # rwhois:
-  #   volumes:
-  #     - "{{ ubersmith_home }}/conf/rwhois:/etc/xinetd.d"
+  rwhois:
+    volumes:
+{% if ansible_os_family != 'Darwin' %}
+      - "{{ timezone_file.stdout }}:/etc/localtime"
+{% endif %}
+      - "{{ ubersmith_home }}/conf/rwhois:/etc/xinetd.d"
   backup:
     environment:
       MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
