@@ -10,7 +10,7 @@
   mysql_root_password: "{{ lookup('password', ansible_user_dir + '/.ubersmith_' + virtual_host + '_root_db_pass chars=ascii_letters,digits') }}"
   mysql_ubersmith_password: "{{ lookup('password', ansible_user_dir + '/.ubersmith_' + virtual_host + '_ubersmith_db_pass') }}"
 
-  ubersmith_version: 4.4.2
+  ubersmith_version: 4.5.0
 
   containers:
     backup_version: 2.4
