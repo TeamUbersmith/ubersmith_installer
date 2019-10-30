@@ -136,7 +136,7 @@ services:
 {% endif %}
   redis-commander:
     image: rediscommander/redis-commander:latest
-    restart: none
+    restart: "no"
     hostname: rediscommander.{{ virtual_host }}
     environment:
       REDIS_HOSTS: default:ubersmith_redis_1:6379:3
