@@ -134,6 +134,11 @@ services:
       options:
         tag: ubersmith/redis
 {% endif %}
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    hostname: rediscommander.{{ virtual_host }}
+    environment:
+      REDIS_HOSTS: default:ubersmith_redis_1:6379:3
   backup:
     image: quay.io/ubersmith/xtrabackup:{{ containers.backup_version }}
     hostname: backups.{{ virtual_host }}
