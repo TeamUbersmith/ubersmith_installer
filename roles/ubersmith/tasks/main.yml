@@ -313,8 +313,9 @@
       account_key: "{{ ubersmith_home }}/conf/ssl/le_account.key"
       csr: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.csr"
       dest: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.pem"
-      acme_directory: https://acme-v01.api.letsencrypt.org/directory
-      agreement: https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf
+      acme_directory: https://acme-v02.api.letsencrypt.org/directory
+      acme_version: 2
+      terms_agreed: yes
     register: le_challenge
     ignore_errors: yes
     tags:
@@ -352,7 +353,9 @@
       dest: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.pem"
       acme_directory: https://acme-v01.api.letsencrypt.org/directory
       data: "{{ le_challenge }}"
-      agreement: https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf
+      acme_directory: https://acme-v02.api.letsencrypt.org/directory
+      acme_version: 2
+      terms_agreed: yes
     ignore_errors: yes
     tags:
       - letsencrypt
