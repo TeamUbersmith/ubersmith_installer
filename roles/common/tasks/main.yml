@@ -48,5 +48,7 @@
       state: present
       version: 1.23.2
       extra_args: "--user"
+    when:
+      - interactive
     tags:
       - upgrade
