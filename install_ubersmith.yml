@@ -16,7 +16,10 @@
         prompt: "Enter the email address of the Ubersmith administrator"
         default: "admin@example.org"
         private: no
-    
+
+    vars:
+      interactive: true
+
     roles:
       - common
       - ubersmith
