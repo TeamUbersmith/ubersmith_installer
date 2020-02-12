@@ -12,7 +12,10 @@
         prompt: "Enter the domain name associated with your Ubersmith installation"
         default: "example.com"
         private: no
-    
+
+    vars:
+      interactive: true
+
     roles:
       - common
       - appliance
