@@ -46,7 +46,7 @@
     pip:
       name: docker-compose
       state: present
-      version: 1.23.2
+      version: "{{ docker_compose_version }}"
       extra_args: "--user"
     when:
       - interactive
