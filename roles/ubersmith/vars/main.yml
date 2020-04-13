@@ -2,7 +2,7 @@
 
   fcgi_host: php
   gc_maxlifetime: 86400
-  php_version: 7.1
+  php_version: 7.3
   old_php_versions:
     - 5.6
 
@@ -10,7 +10,7 @@
   mysql_root_password: "{{ lookup('password', ansible_user_dir + '/.ubersmith_' + virtual_host + '_root_db_pass chars=ascii_letters,digits') }}"
   mysql_ubersmith_password: "{{ lookup('password', ansible_user_dir + '/.ubersmith_' + virtual_host + '_ubersmith_db_pass') }}"
 
-  ubersmith_version: 4.5.2
+  ubersmith_version: 4.5.3
 
   containers:
     backup_version: 2.4
@@ -18,10 +18,10 @@
     db_version: 5.6
     web_version: "{{ ubersmith_version }}.0.0"
     web_container_repo: "ubersmith"
-    php_version: 7.1
-    cron_version: 6.0
-    mail_version: 2.0
-    rwhois_version: 3.0
+    php_version: 7.3
+    cron_version: 7.0
+    mail_version: 3.0
+    rwhois_version: 4.0
     pmm_version: 1.16.0
     haproxy_version: 1.7-alpine
     redis_version: 3.2

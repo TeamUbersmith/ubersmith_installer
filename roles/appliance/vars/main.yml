@@ -5,11 +5,11 @@
   mysql_appliance_password: "{{ lookup('password', ansible_user_dir + '/.appliance_' + app_virtual_host + '_appliance_db_pass') }}"
   mysql_appliance_user_password: "{{ lookup('password', ansible_user_dir + '/.appliance_' + app_virtual_host + '_appliance_user_pass') }}"
 
-  appliance_version: 4.5.1
+  appliance_version: 4.5.3
   
   containers:
     backup_version: 2.4
     appliance_db_version: 5.6
     appliance_web_version: "{{ appliance_version }}.0.0"
-    appliance_cron_version: 5.0
+    appliance_cron_version: 6.0
     appweb_container_repo: "appliance"
