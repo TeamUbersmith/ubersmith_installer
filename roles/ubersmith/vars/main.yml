@@ -5,6 +5,7 @@
   php_version: 7.3
   old_php_versions:
     - 5.6
+    - 7.1
 
   ubersmith_root: /var/www/ubersmith_root
   mysql_root_password: "{{ lookup('password', ansible_user_dir + '/.ubersmith_' + virtual_host + '_root_db_pass chars=ascii_letters,digits') }}"
