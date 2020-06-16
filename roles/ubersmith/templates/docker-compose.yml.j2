@@ -45,9 +45,10 @@ services:
       HTTPS_FORCE: 1
       REASON_LOG: 0
       STORAGE_BACKEND: redis
-      REDIS_HOST: tcp://ubersmith_redis_1:6379?database=2
-      SESSION_HOST: tcp://ubersmith_redis_1:6379?database=0
-      PLUGIN_LOG_HOST: tcp://ubersmith_redis_1:6379?database=3
+      REDIS_HOST: tcp://ubersmith_redis-data_1:6379?database=2
+      SESSION_HOST: tcp://ubersmith_redis-data_1:6379?database=0
+      PLUGIN_LOG_HOST: tcp://ubersmith_redis-data_1:6379?database=3
+      QUEUE_HOST: tcp://ubersmith_redis-data_1:6379?database=4
       APPLIANCE_TIMEOUT: 30
       ALIPAY_ENABLE: 1
     volumes:
@@ -134,12 +135,23 @@ services:
       options:
         tag: ubersmith/redis
 {% endif %}
+  redis-data:
+    image: quay.io/ubersmith/redis:{{ containers.redis_version }}
+    restart: unless-stopped
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/redis-data
+{% endif %}
+    volumes:
+      - redis:/data
   redis-commander:
     image: rediscommander/redis-commander:latest
     restart: "no"
     hostname: rediscommander.{{ virtual_host }}
     environment:
-      REDIS_HOSTS: default:ubersmith_redis_1:6379:3
+      REDIS_HOSTS: default:ubersmith_redis-data_1:6379:3
   backup:
     image: quay.io/ubersmith/xtrabackup:{{ containers.backup_version }}
     hostname: backups.{{ virtual_host }}
@@ -189,6 +201,7 @@ services:
 volumes:
   database: {}
   logs: {}
+  redis: {}
   search: {}
   webroot: {}
   pmm_prometheus: {}
