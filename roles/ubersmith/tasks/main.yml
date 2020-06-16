@@ -261,7 +261,7 @@
     command: docker exec ubersmith_redis_1 redis-cli SAVE
     args:
       chdir:  /usr/local/ubersmith
-    when: volume_output.stdout.find('ubersmith_redis') = -1
+    when: volume_output.stdout.find('ubersmith_redis') == -1
     tags:
       - upgrade_only
 
@@ -270,7 +270,7 @@
     command: docker cp ubersmith_redis_1:/data/dump.rdb .
     args:
       chdir:  /usr/local/ubersmith
-    when: volume_output.stdout.find('ubersmith_redis') = -1
+    when: volume_output.stdout.find('ubersmith_redis') == -1
     tags:
       - upgrade_only
 
@@ -464,7 +464,7 @@
     command: docker cp dump.rdb ubersmith_redis-data_1:/data/dump.rdb
     args:
       chdir:  /usr/local/ubersmith
-    when: volume_output.stdout.find('ubersmith_redis') = -1
+    when: volume_output.stdout.find('ubersmith_redis') == -1
     tags:
       - upgrade_only
 
@@ -473,7 +473,7 @@
     command: docker-compose exec redis-data chown redis:redis /data/dump.rdb
     args:
       chdir:  /usr/local/ubersmith
-    when: volume_output.stdout.find('ubersmith_redis') = -1
+    when: volume_output.stdout.find('ubersmith_redis') == -1
     tags:
       - upgrade_only
 
