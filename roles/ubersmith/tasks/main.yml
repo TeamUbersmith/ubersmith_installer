@@ -260,8 +260,9 @@
   - name: trigger save of redis data if redis volume does not already exist
     command: docker exec ubersmith_redis_1 redis-cli SAVE
     args:
-      chdir:  /usr/local/ubersmith
+      chdir:  "{{ ubersmith_home }}"
     when: volume_output.stdout.find('ubersmith_redis') == -1
+    ignore_errors: yes
     tags:
       - upgrade_only
 
@@ -269,8 +270,9 @@
   - name: make a copy of dump.rdb if redis volume does not already exist
     command: docker cp ubersmith_redis_1:/data/dump.rdb .
     args:
-      chdir:  /usr/local/ubersmith
+      chdir:  "{{ ubersmith_home }}"
     when: volume_output.stdout.find('ubersmith_redis') == -1
+    ignore_errors: yes
     tags:
       - upgrade_only
 
@@ -465,15 +467,19 @@
     args:
       chdir:  /usr/local/ubersmith
     when: volume_output.stdout.find('ubersmith_redis') == -1
+    ignore_errors: yes
     tags:
       - upgrade_only
 
   # Change ownership on the redis dump.rdb file to redis:redis
   - name: give redis user ownership over dump.rdb
-    command: docker-compose exec redis-data chown redis:redis /data/dump.rdb
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose exec redis-data chown redis:redis /data/dump.rdb"
     args:
-      chdir:  /usr/local/ubersmith
+      chdir:  "{{ ubersmith_home }}"
+    environment:
+      COMPOSE_INTERACTIVE_NO_CLI: 1
     when: volume_output.stdout.find('ubersmith_redis') == -1
+    ignore_errors: yes
     tags:
       - upgrade_only
 
