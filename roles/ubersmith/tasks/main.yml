@@ -473,7 +473,7 @@
 
   # Change ownership on the redis dump.rdb file to redis:redis
   - name: give redis user ownership over dump.rdb
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose exec redis-data chown redis:redis /data/dump.rdb"
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose exec -T redis-data chown redis:redis /data/dump.rdb"
     args:
       chdir:  "{{ ubersmith_home }}"
     environment:
