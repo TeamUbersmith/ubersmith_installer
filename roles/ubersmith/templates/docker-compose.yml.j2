@@ -55,6 +55,8 @@ services:
       - "logs:/var/www/ubersmith_root/logs"
       - "webroot:/var/www/ubersmith_root"
       - "search:/opt/solr"
+    depends_on:
+      - redis-data
 {% if ansible_os_family != 'Darwin' %}
     logging:
       driver: syslog
