@@ -1,7 +1,7 @@
 ---
   # Store the configuration values specified during the deploy for use during
   # future upgrades.
-  - name: set up ini_file for future use
+  - name: set up ini file for future use
     ini_file:
       dest: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
       section: ubersmith_installer
@@ -491,8 +491,13 @@
       chdir:  "{{ ubersmith_home }}"
     environment:
       COMPOSE_INTERACTIVE_NO_CLI: 1
+    register: updatedb_output
     tags:
       - upgrade_only
+
+  # Show the upgrade output, in the event of any issues.
+  - name: display updatedb.php debug output
+    debug: var=updatedb_output.stdout_lines
 
   # For upgrades, remove the setup/ directory, allowing Ubersmith to start.
   - name: remove setup
