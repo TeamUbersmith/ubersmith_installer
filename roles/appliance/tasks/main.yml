@@ -152,6 +152,13 @@
       - compose_up
       - upgrade
 
+  # The database can take a little bit to start, so wait before proceeding with the upgrade.
+  - name: wait for containers to come online
+    wait_for:
+      timeout: 15
+    tags:
+      - upgrade_only
+
   # Only when upgrading, run the upgrade script.
   - name: run upgrade.php
     command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith exec -T app_web php /var/www/appliance_root/www/upgrade.php"
