@@ -498,6 +498,8 @@
   # Show the upgrade output, in the event of any issues.
   - name: display updatedb.php debug output
     debug: var=updatedb_output.stdout_lines
+    tags:
+      - upgrade_only
 
   # For upgrades, remove the setup/ directory, allowing Ubersmith to start.
   - name: remove setup
