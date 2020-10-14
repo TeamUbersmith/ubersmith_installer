@@ -11,7 +11,7 @@ export PATH="$HOME/.local/bin:$PATH"
 echo "Checking for pip..."
 if command -v pip >/dev/null 2>&1; then
     echo "Upgrading Ansible..."
-    pip install ansible -q --upgrade --user --force
+    pip install "ansible>=2.9,<2.10" -q --upgrade --user --force
 else
     if command -v easy_install 2>/dev/null; then
         easy_install -q --user pip
@@ -21,7 +21,7 @@ else
         exit 1
     fi
     echo "Upgrading Ansible..."
-    pip install ansible -q --upgrade --user --force
+    pip install "ansible>=2.9,<2.10" -q --upgrade --user --force
 fi
 echo "Upgrading Ubersmith..."
 ansible-playbook -i ./hosts -c local -t upgrade,upgrade_only upgrade_ubersmith.yml
