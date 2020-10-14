@@ -1,4 +1,55 @@
 ---
+
+  - name: Output OS and Version
+    debug:
+      msg: "This host is running {{ ansible_distribution }} {{ ansible_distribution_version }}."
+    tags:
+      - os
+
+  - name: Output Running Kernel
+    debug:
+      msg: "This host is running Linux kernel version {{ ansible_kernel }}."
+    tags:
+      - os 
+
+  - name: Verify OS Distribution is Debian, CentOS, or Ubuntu
+    assert:  
+      that:
+        - "ansible_distribution in supported_os"
+      msg: "Ensure Host is running Debian, CentOS, or Ubuntu."
+    tags:
+      - os
+
+  - name: Verify Ubuntu OS Distribution Version and Kernel
+    assert:  
+      that:
+        - "{{ ansible_distribution_version is version_compare(supported_ubuntu_ver, '>=') }}"
+        - "{{ ansible_kernel is version_compare('4.4.0', '>=' ) }}"
+      msg: "Ensure Host is running supported Ubuntu LTS with 4.4.0+ kernel"
+    when: ansible_distribution == 'Ubuntu'
+    tags:
+      - os
+
+  - name: Verify CentOS OS Distribution Version and Kernel
+    assert:  
+      that:
+        - "ansible_distribution_version|int >= supported_centos_ver"
+        - "{{ ansible_kernel is version_compare('3.10.0-693', '>=' ) }}"
+      msg: "Ensure Host is running supported CentOS and kernel newer than 3.10.0-693"
+    when: ansible_distribution == 'CentOS'
+    tags:
+      - os
+
+  - name: Verify Debian OS Distribution Version and Kernel
+    assert:  
+      that:
+        - "ansible_distribution_version|int >= supported_debian_ver"
+        - "{{ ansible_kernel is version_compare('4.0', '>=' ) }}"
+      msg: "Ensure Host is running supported Debian"
+    when: ansible_distribution == 'Debian'
+    tags:
+      - os
+
   # The installation instructions require Docker is installed before the installer is run.
   # Since there are many platforms users could be trying to install on, it's easier to
   # let the sysadmin handle the installation of Docker.
