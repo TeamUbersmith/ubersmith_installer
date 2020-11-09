@@ -4,20 +4,20 @@ set -e
 export PYTHONUSERBASE="$HOME/.local"
 export PATH="$HOME/.local/bin:$PATH"
 
-echo "Checking for pip..."
-if command -v pip >/dev/null 2>&1; then
+echo "Checking for pip3..."
+if command -v pip3 >/dev/null 2>&1; then
     echo "Installing Ansible..."
-    pip install ansible -q --upgrade --user
+    pip3 install ansible -q --upgrade --user
 else
     if command -v easy_install 2>/dev/null; then
-        easy_install -q --user pip
+        easy_install -q --user pip3
     else
-        echo "Both easy_install and pip are missing; please install pip."
-        echo "https://pip.pypa.io/en/stable/installing/"
+        echo "Both easy_install and pip3 are missing; please install pip3."
+        echo "https://pip3.pypa.io/en/stable/installing/"
         exit 1
     fi
     echo "Installing Ansible..."
-    pip install ansible -q --upgrade --user
+    pip3 install ansible -q --upgrade --user
 fi
 
 echo "Configuring the Ubersmith installer for an existing installation..."

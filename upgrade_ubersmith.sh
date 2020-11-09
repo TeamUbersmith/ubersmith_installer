@@ -8,20 +8,20 @@ set -e
 export PYTHONUSERBASE="$HOME/.local"
 export PATH="$HOME/.local/bin:$PATH"
 
-echo "Checking for pip..."
-if command -v pip >/dev/null 2>&1; then
+echo "Checking for pip3..."
+if command -v pip3 >/dev/null 2>&1; then
     echo "Upgrading Ansible..."
-    pip install "ansible>=2.9,<2.10" -q --upgrade --user --force
+    pip3 install "ansible>=2.9,<2.10" -q --upgrade --user --force
 else
     if command -v easy_install 2>/dev/null; then
-        easy_install -q --user pip
+        easy_install -q --user pip3
     else
-        echo "Both easy_install and pip are missing; please install pip."
-        echo "https://pip.pypa.io/en/stable/installing/"
+        echo "Both easy_install and pip3 are missing; please install pip3."
+        echo "https://pip3.pypa.io/en/stable/installing/"
         exit 1
     fi
     echo "Upgrading Ansible..."
-    pip install "ansible>=2.9,<2.10" -q --upgrade --user --force
+    pip3 install "ansible>=2.9,<2.10" -q --upgrade --user --force
 fi
 echo "Upgrading Ubersmith..."
 ansible-playbook -i ./hosts -c local -t upgrade,upgrade_only upgrade_ubersmith.yml
