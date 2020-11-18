@@ -39,6 +39,9 @@ services:
 {% endif %}
     environment:
       MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
+{% if ansible_os_family != 'Darwin' %}
+      TIMEZONE: {{ timezone_file.stdout | replace ("/usr/share/zoneinfo/", "") }}
+{% endif %}
     #  DATABASE_HOST: "db"
     #  USAGE_DATABASE: usage
     #  USAGE_DATABASE_HOST: remote_db
