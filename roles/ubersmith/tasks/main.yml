@@ -336,6 +336,7 @@
       account_key: "{{ ubersmith_home }}/conf/ssl/le_account.key"
       csr: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.csr"
       dest: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.pem"
+      chain_dest: "{{ ubersmith_home}}/conf/ssl/cabundle.pem"
       acme_directory: https://acme-v02.api.letsencrypt.org/directory
       acme_version: 2
       terms_agreed: yes
@@ -374,6 +375,7 @@
       account_key: "{{ ubersmith_home }}/conf/ssl/le_account.key"
       csr: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.csr"
       dest: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.pem"
+      chain_dest: "{{ ubersmith_home }}/conf/ssl/cabundle.pem"
       data: "{{ le_challenge }}"
       acme_directory: https://acme-v02.api.letsencrypt.org/directory
       acme_version: 2
@@ -407,16 +409,6 @@
       - letsencrypt
       - le_virtual_host_update
   
-  # Retrieve the Let's Encrypt certificate bundle to complete the certificate chain.
-  - name: download let's encrypt CA bundle
-    get_url: 
-      url: https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt
-      dest: "{{ ubersmith_home }}/conf/ssl/cabundle.pem"
-      force: no
-    when: le_pem.stat.exists
-    tags:
-      - letsencrypt
-
   # Restart the web container to use the newly issued LE certificate.
   - name: restart the web container
     command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith restart web"
@@ -438,6 +430,7 @@
     tags:
       - le_renewal
       - letsencrypt
+      - upgrade
 
   # Create a cron job to see if the Let's Encrypt certificate needs to be renewed.
   - name: let's encrypt renewal cron task
