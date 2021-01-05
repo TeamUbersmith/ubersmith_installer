@@ -423,7 +423,7 @@
     template:
       src: le_renewal.yml.j2
       dest: "{{ ubersmith_home }}/le_renewal.yml"
-      owner: "{{ ansible_user }}"
+      owner: "{{ ansible_user_id }}"
       mode: 0600
       backup: yes
     when: le_pem.stat.exists
@@ -437,7 +437,7 @@
     cron:
       name: "check for le renewal"
       job: "{{ ansible_user_dir }}/.local/bin/ansible-playbook -i 'localhost,' -c local {{ ubersmith_home }}/le_renewal.yml &> /dev/null"
-      user: "{{ ansible_user }}"
+      user: "{{ ansible_user_id }}"
       special_time: daily
     when:
       - le_pem.stat.exists
