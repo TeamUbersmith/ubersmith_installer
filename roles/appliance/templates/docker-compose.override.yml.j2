@@ -19,6 +19,11 @@ services:
 {% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stdout }}:/etc/localtime"
 {% endif %}
+  app_cron:
+    volumes:
+{% if ansible_os_family != 'Darwin' %}
+      - "{{ timezone_file.stdout }}:/etc/localtime"
+{% endif %}
   app_backup:
     environment:
       MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
