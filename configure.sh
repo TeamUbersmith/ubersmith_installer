@@ -7,7 +7,7 @@ export PATH="$HOME/.local/bin:$PATH"
 echo "Checking for pip3..."
 if command -v pip3 >/dev/null 2>&1; then
     echo "Installing Ansible..."
-    pip3 install ansible -q --upgrade --user
+    pip3 install "ansible>=2.9,<2.10" -q --upgrade --user --force
 else
     if command -v easy_install 2>/dev/null; then
         easy_install -q --user pip3
