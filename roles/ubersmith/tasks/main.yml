@@ -393,6 +393,7 @@
       - letsencrypt
       - le_renewal
       - le_virtual_host_update
+      - upgrade
   
   # Update Apache's virtual host configuration to use the newly issued certificate.
   - name: update virtual host configuration
