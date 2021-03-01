@@ -121,7 +121,7 @@
   - name: ensure sql_mode line exists
     lineinfile:
       path: /usr/local/ubersmith/conf/mysql/ubersmith.cnf
-      line: 'sql_mode = "NO_ENGINE_SUBSTITUTION"'
+      line: 'sql_mode = "NO_ENGINE_SUBSTITUTION,NO_AUTO_CREATE_USER"'
     when:
       - containers.db_version == 5.7
     tags:
