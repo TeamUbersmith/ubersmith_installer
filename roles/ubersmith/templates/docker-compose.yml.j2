@@ -25,6 +25,9 @@ services:
       - "database:/var/lib/mysql"
       - "pmm_client:/usr/local/percona"
       - "/etc/mysql/conf.d"
+{% if containers.db_version == 5.7 %}
+      - "/usr/local/ubersmith/conf/mysql:/etc/ubersmith.conf.d"
+{% endif %}
 {% if ansible_os_family != 'Darwin' %}
     logging:
       driver: syslog
