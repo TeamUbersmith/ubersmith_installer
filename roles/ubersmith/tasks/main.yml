@@ -477,6 +477,20 @@
     tags:
       - upgrade_only
 
+  # When moving to Percona Server 5.7, run mysql_upgrade. 0 and 2 return codes are acceptable.
+  - name: run mysql_upgrade
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose exec -T 'mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD'"
+    args:
+      chdir:  "{{ ubersmith_home }}"
+    register: command_result
+    failed_when: 
+     - command_result.rc != 0
+     - command_result.rc != 2
+    when:
+      - containers.db_version == 5.7
+    tags:
+      - upgrade_only
+      - mysql_upgrade
 
   # For upgrades, run the updatedb.php script which performs the upgrade process.
   - name: run updatedb.php
