@@ -479,7 +479,7 @@
 
   # When moving to Percona Server 5.7, run mysql_upgrade. 0 and 2 return codes are acceptable.
   - name: run mysql_upgrade
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose exec -T db 'mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD'"
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose exec -T db sh -c 'mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD'"
     args:
       chdir:  "{{ ubersmith_home }}"
     register: command_result
