@@ -492,6 +492,14 @@
       - upgrade_only
       - mysql_upgrade
 
+  # Give MySQL a chance to recover post-upgrade.
+  - name: give mysql a chance to recover after running mysql_upgrade
+    pause:
+      seconds: 5
+    tags:
+      - upgrade_only
+      - mysql_upgrade
+
   # For upgrades, run the updatedb.php script which performs the upgrade process.
   - name: run updatedb.php
     command: "{{ ansible_user_dir }}/.local/bin/docker-compose exec -T php php {{ ubersmith_root }}/app/www/setup/updatedb.php ubersmith --debug"
