@@ -184,10 +184,7 @@ services:
     ports:
       - "8443:443"
     volumes:
-       - pmm_prometheus:/opt/prometheus/data
-       - pmm_consul:/opt/consul-data
-       - pmm_mysql:/var/lib/mysql
-       - pmm_grafana:/var/lib/grafana
+       - pmm-data:/srv
        - "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.pem:/etc/nginx/ssl/server.crt"
        - "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.key:/etc/nginx/ssl/server.key"
   haproxy:
@@ -209,8 +206,4 @@ volumes:
   redis: {}
   search: {}
   webroot: {}
-  pmm_prometheus: {}
-  pmm_consul: {}
-  pmm_mysql: {}
-  pmm_grafana: {}
-  pmm_client: {}
+  pmm-data: {}
