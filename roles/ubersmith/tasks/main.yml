@@ -1,4 +1,14 @@
 ---
+
+  # Backups are important, but especially with database version changes in 4.6.0
+  - name: remind admin to make a backup before proceeding with an upgrade
+    pause:
+      prompt: "Please ensure you have made a backup of your Ubersmith database before proceeding with the upgrade process. (CTRL+C to continue)"
+    when:
+      - interactive
+    tags:
+      - upgrade_only
+
   # Store the configuration values specified during the deploy for use during
   # future upgrades.
   - name: set up ini file for future use
@@ -488,6 +498,14 @@
      - command_result.rc != 2
     when:
       - containers.db_version == 5.7
+    tags:
+      - upgrade_only
+      - mysql_upgrade
+
+  # Give MySQL a chance to recover post-upgrade.
+  - name: give mysql a chance to recover after running mysql_upgrade
+    pause:
+      seconds: 5
     tags:
       - upgrade_only
       - mysql_upgrade
