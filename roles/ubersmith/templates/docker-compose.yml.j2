@@ -42,7 +42,8 @@ services:
       MYSQL_DATABASE: ubersmith
       DATABASE_HOST: "db"
       UBER_HOSTNAME: {{ virtual_host }}
-      LOCK_BACKEND: mysql
+      LOCK_BACKEND: redis
+      LOCK_SERVERS: "ubersmith_redis_1:6379:1,ubersmith_redis_2:6379:1,ubersmith_redis_3:6379:1"
       MAINTENANCE: 0
       HTTPS_FORCE: 1
       REASON_LOG: 0
