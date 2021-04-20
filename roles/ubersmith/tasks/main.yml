@@ -502,10 +502,11 @@
       - upgrade_only
       - mysql_upgrade
 
-  # Give MySQL a chance to recover post-upgrade.
-  - name: give mysql a chance to recover after running mysql_upgrade
-    pause:
-      seconds: 10
+  # After running mysql_upgrade, MySQL needs to be restarted
+  - name: restart database container after mysql_upgrade
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose restart db"
+    args:
+      chdir:  /usr/local/ubersmith
     tags:
       - upgrade_only
       - mysql_upgrade
