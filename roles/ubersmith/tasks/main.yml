@@ -505,7 +505,7 @@
   # Give MySQL a chance to recover post-upgrade.
   - name: give mysql a chance to recover after running mysql_upgrade
     pause:
-      seconds: 5
+      seconds: 10
     tags:
       - upgrade_only
       - mysql_upgrade
