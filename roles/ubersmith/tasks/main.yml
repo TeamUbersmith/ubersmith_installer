@@ -511,6 +511,14 @@
       - upgrade_only
       - mysql_upgrade
 
+  # Depending on system performance, the database container can take a long time to restart
+  - name: wait for database container to restart
+    pause:
+      seconds: 30
+    tags:
+      - upgrade_only
+      - mysql_upgrade
+ 
   # For upgrades, run the updatedb.php script which performs the upgrade process.
   - name: run updatedb.php
     command: "{{ ansible_user_dir }}/.local/bin/docker-compose exec -T php php {{ ubersmith_root }}/app/www/setup/updatedb.php ubersmith --debug"
