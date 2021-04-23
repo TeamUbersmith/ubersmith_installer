@@ -92,6 +92,9 @@
     copy:
       dest: /etc/rsyslog.d/30-ubersmith.conf
       src: 30-ubersmith.conf
+      owner: root
+      group: root
+      mode: 0644
     ignore_errors: yes
     tags:
       - upgrade
