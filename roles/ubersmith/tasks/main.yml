@@ -15,6 +15,9 @@
     ini_file:
       dest: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
       section: ubersmith_installer
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: 0640 
       option: "{{ item.var }}"
       value: "{{ item.val }}"
     with_items:
