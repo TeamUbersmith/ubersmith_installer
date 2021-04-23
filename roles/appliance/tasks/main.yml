@@ -7,6 +7,9 @@
       section: ubersmith_installer
       option: "{{ item.var }}"
       value: "{{ item.val }}"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: 0640
     with_items:
       - { var: 'appliance_home', val: "{{ appliance_home }}" }
       - { var: 'app_virtual_host', val: "{{ app_virtual_host }}" }
@@ -36,6 +39,9 @@
     copy:
       dest: /etc/rsyslog.d/30-ubersmith.conf
       src: 30-ubersmith.conf
+      owner: root
+      group: root
+      mode: 0644
     ignore_errors: yes
     tags:
       - upgrade
