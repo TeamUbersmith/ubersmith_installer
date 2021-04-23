@@ -51,9 +51,11 @@
 
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
-    shell: readlink -f /etc/localtime
+    ansible.builtin.stat:
+      path: /etc/localtime
     register: timezone_file
     tags:
+      - timezone
       - compose_override_template
       - upgrade
     when: ansible_os_family != "Darwin"

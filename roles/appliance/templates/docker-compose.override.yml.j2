@@ -5,7 +5,7 @@ services:
       MYSQL_PASSWORD: "{{ mysql_appliance_password }}"
     volumes:
 {% if ansible_os_family != 'Darwin' %}
-      - "{{ timezone_file.stdout }}:/etc/localtime"
+      - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
 {% endif %}
       - "{{ appliance_home }}/logs/appliance:/var/www/appliance_root/logs"
       - "{{ appliance_home }}/conf/ssl/{{ app_virtual_host }}.pem:/var/www/appliance_root/conf/ssl/appliance.pem"
@@ -17,12 +17,12 @@ services:
     volumes:
       - "{{ appliance_home }}/conf/mysql:/etc/mysql/conf.d"
 {% if ansible_os_family != 'Darwin' %}
-      - "{{ timezone_file.stdout }}:/etc/localtime"
+      - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
 {% endif %}
   app_cron:
     volumes:
 {% if ansible_os_family != 'Darwin' %}
-      - "{{ timezone_file.stdout }}:/etc/localtime"
+      - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
 {% endif %}
   app_backup:
     environment:
