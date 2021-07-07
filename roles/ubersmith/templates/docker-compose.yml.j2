@@ -168,7 +168,7 @@ services:
     depends_on:
       - db
   rsyslog:
-    image: quay.io/ubersmith/rsyslog:1.0
+    image: quay.io/ubersmith/rsyslog:{{ containers.rsyslog_version }}
     hostname: rsyslog.{{ virtual_host }}
     volumes:
       - "{{ ubersmith_home }}/logs/rsyslog/:/var/run/rsyslog/dev/"
