@@ -477,7 +477,7 @@
 
   # Change ownership on the redis dump.rdb file to redis:redis
   - name: give redis user ownership over dump.rdb
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose exec -T redis-data chown redis:redis /data/dump.rdb"
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith exec -T redis-data chown redis:redis /data/dump.rdb"
     args:
       chdir:  "{{ ubersmith_home }}"
     environment:
@@ -489,7 +489,7 @@
 
   # When moving to Percona Server 5.7, run mysql_upgrade. 0 and 2 return codes are acceptable.
   - name: run mysql_upgrade
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose exec -T db sh -c 'mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD'"
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith exec -T db sh -c 'mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD'"
     args:
       chdir:  "{{ ubersmith_home }}"
     register: command_result
@@ -504,7 +504,7 @@
 
   # After running mysql_upgrade, MySQL needs to be restarted
   - name: restart database container after mysql_upgrade
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose restart db"
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith restart db"
     args:
       chdir:  "{{ ubersmith_home }}"
     tags:
@@ -521,7 +521,7 @@
  
   # For upgrades, run the updatedb.php script which performs the upgrade process.
   - name: run updatedb.php
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose exec -T php php {{ ubersmith_root }}/app/www/setup/updatedb.php ubersmith --debug"
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith exec -T php php {{ ubersmith_root }}/app/www/setup/updatedb.php ubersmith --debug"
     args:
       chdir:  "{{ ubersmith_home }}"
     environment:
@@ -538,7 +538,7 @@
 
   # For upgrades, remove the setup/ directory, allowing Ubersmith to start.
   - name: remove setup
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose exec -T web rm -rf {{ ubersmith_root }}/app/www/setup"
+    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith exec -T web rm -rf {{ ubersmith_root }}/app/www/setup"
     args:
       chdir:  "{{ ubersmith_home }}"
     environment:
