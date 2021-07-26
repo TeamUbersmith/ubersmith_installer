@@ -130,7 +130,7 @@
   # Percona Server 5.7
   - name: ensure sql_mode line exists
     lineinfile:
-      path: /usr/local/ubersmith/conf/mysql/ubersmith.cnf
+      path: "{{ ubersmith_home }}/conf/mysql/ubersmith.cnf"
       line: 'sql_mode = "NO_ENGINE_SUBSTITUTION,NO_AUTO_CREATE_USER"'
     when:
       - containers.db_version == 5.7
@@ -219,7 +219,7 @@
   # For existing installs, update to current supported PHP release
   - name: update docker compose override file for php version
     replace:
-      path: /usr/local/ubersmith/docker-compose.override.yml
+      path: "{{ ubersmith_home }}/docker-compose.override.yml"
       replace: "/etc/php/{{ php_version }}"
       regexp: "/etc/php/{{ item }}"
       backup: yes
@@ -469,7 +469,7 @@
   - name: copy dump.rdb if redis volume does not exist
     command: docker cp dump.rdb ubersmith_redis-data_1:/data/dump.rdb
     args:
-      chdir:  /usr/local/ubersmith
+      chdir:  "{{ ubersmith_home }}"
     when: volume_output.stdout.find('ubersmith_redis') == -1
     ignore_errors: yes
     tags:
@@ -506,7 +506,7 @@
   - name: restart database container after mysql_upgrade
     command: "{{ ansible_user_dir }}/.local/bin/docker-compose restart db"
     args:
-      chdir:  /usr/local/ubersmith
+      chdir:  "{{ ubersmith_home }}"
     tags:
       - upgrade_only
       - mysql_upgrade
