@@ -257,6 +257,23 @@
     tags:
       - compose_pull
       - upgrade
+  
+  # Check to see if the installation is using a remote database    
+  - name: check for remote database
+    community.docker.docker_container_info:
+      name: ubersmith_web_1
+    register: web_container_info
+    tags:
+      - upgrade_only
+      - database_location
+
+  - name: output results of database location search
+    debug:
+      var: web_container_info
+    tags:
+      - debug
+      - database_location
+      - upgrade      
 
   # Only when upgrading, get the list of docker volumes, so the webroot
   # can be replaced by the new version of Ubersmith.
@@ -512,10 +529,17 @@
       - mysql_upgrade
 
   # Depending on system performance, the database container can take a long time to restart
-  - name: wait for database container to restart
-    pause:
-      seconds: 30
+  - name: check database container status
+    community.docker.docker_container_info:
+      name: ubersmith_db_1
+    register: db_docker_container_info
+    until: db_docker_container_info.container.State.Health.Status == "healthy"
+    retries: 5
+    delay: 5
+    when:
+      - database_location.stdout.find('ubersmith_db_1') != -1
     tags:
+      - docker_container_info
       - upgrade_only
       - mysql_upgrade
  
