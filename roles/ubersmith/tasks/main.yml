@@ -587,4 +587,4 @@
     with_items:
       - { var: 'ubersmith_installed_version', val: "{{ ubersmith_version }}" }
     tags:
-      - upgrade_only
+      - upgrade
