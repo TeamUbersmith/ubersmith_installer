@@ -475,7 +475,7 @@
       name: "{{ item }}"
     register: db_docker_container_info
     until: db_docker_container_info.container.State.Health.Status == "healthy"
-    retries: 6
+    retries: 9
     delay: 10
     with_items:
       - ubersmith_web_1
