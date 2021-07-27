@@ -18,5 +18,7 @@ else
     echo "https://docs.ubersmith.com/display/UbersmithDocumentation/Ubersmith+Installation+and+Upgrade+Utility"
     exit 1
 fi
+echo "Installing Dependencies..."
+ansible-galaxy install -r requirements.yml
 echo "Upgrading Ubersmith..."
 ansible-playbook -i ./hosts -c local -t upgrade,upgrade_only upgrade_ubersmith.yml
