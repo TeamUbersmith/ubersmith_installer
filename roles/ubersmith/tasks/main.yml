@@ -469,8 +469,19 @@
 
   # Solr can take a little bit to start, so wait before proceeding with the upgrade.
   - name: wait for containers to come online
-    wait_for:
-      timeout: 15
+    # wait_for:
+    #   timeout: 15
+  - name: check database container status
+    community.docker.docker_container_info:
+      name: "{{ item }}"
+    register: db_docker_container_info
+    until: db_docker_container_info.container.State.Health.Status == "healthy"
+    retries: 6
+    delay: 10
+    with_items:
+      - ubersmith_web_1
+      - ubersmith_php_1
+      - ubersmith_solr_1
     tags:
       - upgrade_only
 
