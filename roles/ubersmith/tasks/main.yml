@@ -529,8 +529,8 @@
       name: ubersmith_db_1
     register: db_docker_container_info
     until: db_docker_container_info.container.State.Health.Status == "healthy"
-    retries: 5
-    delay: 5
+    retries: 6
+    delay: 10
     when:
       - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"
     tags:
