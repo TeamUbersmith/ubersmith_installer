@@ -267,14 +267,6 @@
       - upgrade_only
       - database_location
 
-  - name: output results of database location search
-    debug:
-      var: web_container_info
-    tags:
-      - debug
-      - database_location
-      - upgrade      
-
   # Only when upgrading, get the list of docker volumes, so the webroot
   # can be replaced by the new version of Ubersmith.
   - name: get existing docker volumes
@@ -515,6 +507,7 @@
      - command_result.rc != 2
     when:
       - containers.db_version == 5.7
+      - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"
     tags:
       - upgrade_only
       - mysql_upgrade
@@ -524,6 +517,8 @@
     command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith restart db"
     args:
       chdir:  "{{ ubersmith_home }}"
+    when:
+      - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"    
     tags:
       - upgrade_only
       - mysql_upgrade
@@ -537,7 +532,7 @@
     retries: 5
     delay: 5
     when:
-      - database_location.stdout.find('ubersmith_db_1') != -1
+      - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"
     tags:
       - docker_container_info
       - upgrade_only
