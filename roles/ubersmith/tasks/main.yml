@@ -471,7 +471,6 @@
   - name: wait for containers to come online
     # wait_for:
     #   timeout: 15
-  - name: check database container status
     community.docker.docker_container_info:
       name: "{{ item }}"
     register: db_docker_container_info
