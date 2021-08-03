@@ -3,3 +3,5 @@
 
 collections:
 - community.docker
+- community.general
+
