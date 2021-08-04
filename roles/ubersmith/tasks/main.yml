@@ -47,6 +47,7 @@
       prompt: "When upgrading from versions prior to Ubersmith 4.3.0, a change is being made to the naming convention for the database host. Please contact support@ubersmith.com to ensure your license record is updated (CTRL+C to continue)"
     when:
       - interactive
+      - ubersmith_installed_version is version_compare('4.3.0', '>' )
     tags:
       - upgrade_only
 
@@ -257,6 +258,15 @@
     tags:
       - compose_pull
       - upgrade
+  
+  # Check to see if the installation is using a remote database    
+  - name: check for remote database
+    community.docker.docker_container_info:
+      name: ubersmith_web_1
+    register: web_container_info
+    tags:
+      - upgrade_only
+      - database_location
 
   # Only when upgrading, get the list of docker volumes, so the webroot
   # can be replaced by the new version of Ubersmith.
@@ -460,8 +470,18 @@
 
   # Solr can take a little bit to start, so wait before proceeding with the upgrade.
   - name: wait for containers to come online
-    wait_for:
-      timeout: 15
+    # wait_for:
+    #   timeout: 15
+    community.docker.docker_container_info:
+      name: "{{ item }}"
+    register: db_docker_container_info
+    until: db_docker_container_info.container.State.Health.Status == "healthy"
+    retries: 9
+    delay: 10
+    with_items:
+      - ubersmith_web_1
+      - ubersmith_php_1
+      - ubersmith_solr_1
     tags:
       - upgrade_only
 
@@ -498,6 +518,7 @@
      - command_result.rc != 2
     when:
       - containers.db_version == 5.7
+      - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"
     tags:
       - upgrade_only
       - mysql_upgrade
@@ -507,15 +528,24 @@
     command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith restart db"
     args:
       chdir:  "{{ ubersmith_home }}"
+    when:
+      - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"    
     tags:
       - upgrade_only
       - mysql_upgrade
 
   # Depending on system performance, the database container can take a long time to restart
-  - name: wait for database container to restart
-    pause:
-      seconds: 30
+  - name: check database container status
+    community.docker.docker_container_info:
+      name: ubersmith_db_1
+    register: db_docker_container_info
+    until: db_docker_container_info.container.State.Health.Status == "healthy"
+    retries: 6
+    delay: 10
+    when:
+      - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"
     tags:
+      - docker_container_info
       - upgrade_only
       - mysql_upgrade
  
@@ -545,3 +575,16 @@
       COMPOSE_INTERACTIVE_NO_CLI: 1
     tags:
       - upgrade_only
+
+  # Store the configuration values specified during the deploy for use during
+  # future upgrades.
+  - name: set post upgrade values in ini file for future use
+    ini_file:
+      dest: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
+      section: ubersmith_installer
+      option: "{{ item.var }}"
+      value: "{{ item.val }}"
+    with_items:
+      - { var: 'ubersmith_installed_version', val: "{{ ubersmith_version }}" }
+    tags:
+      - upgrade

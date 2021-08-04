@@ -2,4 +2,6 @@
 # $ ansible-galaxy install -r requirements.yml
 
 collections:
+- community.crypto
 - community.docker
+- community.general

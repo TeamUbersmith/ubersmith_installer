@@ -12,7 +12,8 @@
   mysql_ubersmith_password: "{{ lookup('password', ansible_user_dir + '/.ubersmith_' + virtual_host + '_ubersmith_db_pass') }}"
 
   ubersmith_version: 4.6.0
-
+  ubersmith_installed_version: 4.0.0
+  
   containers:
     backup_version: 2.4
     solr_version: 4.10.4
