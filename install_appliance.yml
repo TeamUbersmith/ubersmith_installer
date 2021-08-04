@@ -12,6 +12,10 @@
         prompt: "Enter the domain name associated with your Ubersmith installation"
         default: "example.com"
         private: no
+      - name: "appliance_version"
+        prompt: "Enter the version of the Ubersmith Appliance to install"
+        default: "4.6.0"
+        private: no
 
     vars:
       interactive: true

@@ -16,7 +16,11 @@
         prompt: "Enter the email address of the Ubersmith administrator"
         default: "admin@example.org"
         private: no
-
+      - name: "ubersmith_version"
+        prompt: "Enter the version of Ubersmith to install"
+        default: "4.6.0"
+        private: no
+        
     vars:
       interactive: true
 

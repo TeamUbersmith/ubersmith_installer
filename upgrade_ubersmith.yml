@@ -3,6 +3,13 @@
   - hosts: local
     any_errors_fatal: true
 
+    vars_prompt:
+
+      - name: "ubersmith_version"
+        prompt: "Enter the upgrade version of Ubersmith"
+        default: "4.6.0"
+        private: no
+
     pre_tasks:
 
       - name: Check for .ubersmith_installer.ini
