@@ -27,7 +27,7 @@
   # if an MTA is still running and/or 25/tcp is in use.
   - name: stop and disable mail transfer agents
     service:
-      name: "{{item}}"
+      name: "{{ item }}"
       enabled: no
       state: stopped
     with_items:

@@ -88,6 +88,10 @@
     service:
       name: docker
       enabled: yes
+    register: docker_enabled
+    failed_when:
+      - docker_enabled.enabled is defined
+      - not docker_enabled.enabled
     when: 
       - ansible_os_family != "Darwin"
       - ansible_os_family != "Windows"
