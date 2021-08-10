@@ -319,6 +319,7 @@
       prompt: "Make sure docker-compose.override.yml has been updated to include a ports directive for web, and timezone volume entries for all containers (CTRL+C to continue)"
     when:
       - interactive
+      - ubersmith_installed_version is version_compare('4.6.0', '>' )
     tags:
       - upgrade_only
 
