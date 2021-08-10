@@ -268,6 +268,14 @@
       - upgrade_only
       - database_location
 
+  - name: display web container info
+    debug:
+      var: web_container_info
+    when:
+      - debug
+    tags:
+      - upgrade_only
+
   # Only when upgrading, get the list of docker volumes, so the webroot
   # can be replaced by the new version of Ubersmith.
   - name: get existing docker volumes
