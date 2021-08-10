@@ -272,7 +272,7 @@
     debug:
       var: web_container_info
     when:
-      - debug
+      - debug is defined
     tags:
       - upgrade_only
 
