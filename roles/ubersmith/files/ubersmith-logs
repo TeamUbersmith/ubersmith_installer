@@ -1,5 +1,5 @@
 /var/log/ubersmith/*/docker.log {
-  rotate 7
+  rotate 30
   daily
   compress
   missingok
@@ -7,7 +7,7 @@
   copytruncate
 }
 /var/log/ubersmith/*.log {
-  rotate 7
+  rotate 30
   daily
   compress
   missingok
