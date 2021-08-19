@@ -286,9 +286,11 @@
       
   # Retrieve Ubersmith images from the repository.
   - name: pull ubersmith images
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith pull"
-    args:
-      chdir:  "{{ ubersmith_home }}"
+    community.docker.docker_compose:
+      project_src: "{{ ubersmith_home }}"
+      pull: yes
+      recreate: never
+      project_name: ubersmith
     tags:
       - compose_pull
       - upgrade
@@ -372,16 +374,7 @@
       chdir: "{{ ubersmith_home }}"
     tags:
       - upgrade
-    
-  # Restart the web container to use the newly issued LE certificate.
-  - name: restart the web container
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith restart web"
-    args:
-      chdir:  "{{ ubersmith_home }}"
-    when: le_pem.stat.exists
-    tags:
-      - letsencrypt
-
+  
   # Solr can take a little bit to start, so wait before proceeding with the upgrade.
   - name: wait for containers to come online
     # wait_for:
