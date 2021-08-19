@@ -176,7 +176,7 @@
       chdir: "{{ ubersmith_home }}/conf/ssl"
       creates: "{{ ubersmith_home }}/conf/ssl/{{ item }}.pem"
       with_items: "{{ virtual_hosts }} "
-    with_item:
+    with_items:
       - virtual_hosts
     when: ansible_os_family != "Windows"
 
