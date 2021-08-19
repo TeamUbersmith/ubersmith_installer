@@ -115,7 +115,11 @@
   - name: create ubersmith apache virtual host configuration file
     template:
       src: instance_vhost.j2
-      dest: "{{ ubersmith_home }}/conf/httpd/sites-enabled/{{ virtual_host }}.conf"
+      dest: "{{ ubersmith_home }}/conf/httpd/sites-enabled/{{ item }}.conf"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: "0640"
+    with_items: "{{ virtual_hosts }}"
 
   # The Percona Server configuration file is created on the local filesystem to facilitate
   # editing without having to enter the container. A restart of the 'db' container is
@@ -124,6 +128,9 @@
     template:
       src: ubersmith.cnf.j2
       dest: "{{ ubersmith_home }}/conf/mysql/ubersmith.cnf"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: "0640"
     tags:
       - mysql_config
   
@@ -155,6 +162,8 @@
     template:
       src: rwhois.j2
       dest: "{{ ubersmith_home }}/conf/rwhois/rwhois"
+    vars:
+      virtual_host: "{{ main_virtual_host }}"
     tags:
       - rwhois
 
@@ -162,10 +171,11 @@
   # These files should be replaced with a certificate and key provided by an authorized CA.
   # The 'web' and 'mail' containers need to be restarted if these files are modified.
   - name: create self signed certificates
-    command: "openssl req -new -x509 -days 365 -sha256 -newkey rsa:2048 -nodes -keyout {{ virtual_host }}.key -out {{ virtual_host }}.pem -subj '/O=Ubersmith/OU=Hosting/CN={{ virtual_host }}'"
+    command: "openssl req -new -x509 -days 365 -sha256 -newkey rsa:2048 -nodes -keyout {{ item }}.key -out {{ item }}.pem -subj '/O=Ubersmith/OU=Hosting/CN={{ item }}'"
     args:
       chdir: "{{ ubersmith_home }}/conf/ssl"
-      creates: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.pem"
+      creates: "{{ ubersmith_home }}/conf/ssl/{{ item }}.pem"
+      with_items: "{{ virtual_hosts }} "
     when: ansible_os_family != "Windows"
 
   # Get the system's timezone data for use in Docker Compose files
@@ -189,6 +199,8 @@
       group: "{{ ansible_user_gid }}"
       mode: 0600
       backup: yes
+    vars:
+      virtual_host: "{{ main_virtual_host }}"
     tags:
       - compose_template
       - upgrade
@@ -203,6 +215,8 @@
       group: "{{ ansible_user_gid }}"
       mode: 0600
       backup: yes
+    vars:
+      virtual_host: "{{ main_virtual_host }}"
     tags:
       - compose_override_template
   
@@ -338,107 +352,7 @@
       chdir: "{{ ubersmith_home }}"
     tags:
       - upgrade
-  
-  # Let's Encrypt requires an account key to be used when issuing requests.
-  - name: create let's encrypt account key
-    command: "openssl genrsa -out le_account.key 4096"
-    args:
-      chdir: "{{ ubersmith_home }}/conf/ssl"
-      creates: "{{ ubersmith_home }}/conf/ssl/le_account.key"
-    when: ansible_os_family != "Windows"
-    tags:
-      - letsencrypt
-
-  # Create the private key and certificate signing request for Let's Encrypt.
-  - name: create private key and csr
-    command: "openssl req -nodes -newkey rsa:4096 -keyout {{ virtual_host }}.le.key -out {{ virtual_host }}.le.csr -subj '/O=Ubersmith/OU=Hosting/CN={{ virtual_host }}'"
-    args:
-      chdir: "{{ ubersmith_home }}/conf/ssl"
-      creates: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.key"
-    when: ansible_os_family != "Windows"
-    tags:
-      - letsencrypt
-
-  # Generate the challenge data and request for Let's Encrypt.
-  - name: generate let's encrypt request
-    acme_certificate:
-      account_key: "{{ ubersmith_home }}/conf/ssl/le_account.key"
-      csr: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.csr"
-      dest: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.pem"
-      chain_dest: "{{ ubersmith_home }}/conf/ssl/cabundle.pem"
-      acme_directory: https://acme-v02.api.letsencrypt.org/directory
-      acme_version: 2
-      terms_agreed: yes
-    register: le_challenge
-    ignore_errors: yes
-    tags:
-      - letsencrypt
- 
-  # Copy the challenge data for Let's Encrypt into the Ubersmith webroot.
-  - name: copy let's encrypt challenge data into webroot
-    copy:
-      dest: "{{ ubersmith_home }}/app/custom/{{ le_challenge['challenge_data'][virtual_host]['http-01']['resource'] }}"
-      content: "{{ le_challenge['challenge_data'][virtual_host]['http-01']['resource_value'] }}"
-    when: le_challenge is changed
-    tags:
-      - letsencrypt
-
-  # Restart the web container to pick up the challenge data.
-  - name: restart the web container
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith restart web"
-    args:
-      chdir:  "{{ ubersmith_home }}"
-    tags:
-      - letsencrypt
-
-  # If Ubersmith is behind a load balancer or proxy, it may take a moment for it to allow connections.
-  - name: give LB / proxy a chance to notice web server has returned
-    pause:
-      seconds: 5
-    tags:
-      - letsencrypt
- 
-  # Have Let's Encrypt verify our challenge data and hopefully issue a certificate.
-  - name: let's encrypt wrapup 
-    acme_certificate:
-      account_key: "{{ ubersmith_home }}/conf/ssl/le_account.key"
-      csr: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.csr"
-      dest: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.pem"
-      chain_dest: "{{ ubersmith_home }}/conf/ssl/cabundle.pem"
-      data: "{{ le_challenge }}"
-      acme_directory: https://acme-v02.api.letsencrypt.org/directory
-      acme_version: 2
-      terms_agreed: yes
-    ignore_errors: yes
-    tags:
-      - letsencrypt
-
-  # See if our Let's Encrypt requests were successful. 
-  - name: verify that let's encrypt certificate was issued
-    stat:
-      path: "{{ ubersmith_home }}/conf/ssl/{{ virtual_host }}.le.pem"
-    register: le_pem
-    tags:
-      - letsencrypt
-      - le_renewal
-      - le_virtual_host_update
-      - upgrade
-  
-  # Update Apache's virtual host configuration to use the newly issued certificate.
-  - name: update virtual host configuration
-    lineinfile:
-      path: "{{ ubersmith_home }}/conf/httpd/sites-enabled/{{ virtual_host }}.conf"
-      regexp: "{{ item.regexp }}"
-      line: "{{ item.replacement }}"
-    with_items:
-      - { regexp: 'SSLCertificateFile {{ ubersmith_root }}/conf/ssl/{{ virtual_host }}.pem', replacement: '  SSLCertificateFile {{ ubersmith_root }}/conf/ssl/{{ virtual_host }}.le.pem' }
-      - { regexp: 'SSLCertificateKeyFile {{ ubersmith_root }}/conf/ssl/{{ virtual_host }}.key', replacement: '  SSLCertificateKeyFile {{ ubersmith_root }}/conf/ssl/{{ virtual_host }}.le.key' }
-      - { regexp: ' # SSLCACertificateFile {{ ubersmith_root }}/conf/ssl/cabundle.pem', replacement: '  SSLCACertificateFile {{ ubersmith_root }}/conf/ssl/cabundle.pem' }
-    when: le_pem.stat.exists
-    tags:
-      - letsencrypt
-      - le_virtual_host_update
-  
+    
   # Restart the web container to use the newly issued LE certificate.
   - name: restart the web container
     command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith restart web"
@@ -446,35 +360,6 @@
       chdir:  "{{ ubersmith_home }}"
     when: le_pem.stat.exists
     tags:
-      - letsencrypt
-
-  # Create playbook to automatically keep the Let's Encrypt certificate up to date.
-  - name: create let's encrypt renewal playbook
-    template:
-      src: le_renewal.yml.j2
-      dest: "{{ ubersmith_home }}/le_renewal.yml"
-      owner: "{{ ansible_user_id }}"
-      mode: 0600
-      backup: yes
-    when: le_pem.stat.exists
-    tags:
-      - le_renewal
-      - letsencrypt
-      - upgrade
-
-  # Create a cron job to see if the Let's Encrypt certificate needs to be renewed.
-  - name: let's encrypt renewal cron task
-    cron:
-      name: "check for le renewal"
-      job: "{{ ansible_user_dir }}/.local/bin/ansible-playbook -i 'localhost,' -c local {{ ubersmith_home }}/le_renewal.yml &> /dev/null"
-      user: "{{ ansible_user_id }}"
-      special_time: daily
-    when:
-      - le_pem.stat.exists
-      - ansible_os_family != "Darwin"
-      - ansible_os_family != "Windows"
-    tags:
-      - le_renewal
       - letsencrypt
 
   # Solr can take a little bit to start, so wait before proceeding with the upgrade.

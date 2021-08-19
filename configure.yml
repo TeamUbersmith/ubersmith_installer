@@ -9,7 +9,7 @@
         default: "/usr/local/ubersmith"
         private: no
       - name: "virtual_host"
-        prompt: "Enter the address in use by Ubersmith / Appliance"
+        prompt: "Enter the address in use by Ubersmith / Appliance; for multiple hostnames use a comma delimited list"
         default: "ubersmith.example.com"
         private: no
       - name: "admin_email"
