@@ -177,8 +177,7 @@
       organization_name: Ubersmith
       organizational_unit_name: Hosting
       common_name: "{{ item }}"
-    with_items:
-      - virtual_hosts
+    with_items: "{{ virtual_hosts }}"
 
   - name: create self signed certificates
     community.crypto.x509_certificate:
@@ -186,8 +185,7 @@
       privatekey_path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.key"
       csr_path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.csr"
       provider: selfsigned
-    with_items:
-      - virtual_hosts
+    with_items: "{{ virtual_hosts }}"
 
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
