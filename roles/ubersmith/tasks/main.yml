@@ -176,6 +176,8 @@
       chdir: "{{ ubersmith_home }}/conf/ssl"
       creates: "{{ ubersmith_home }}/conf/ssl/{{ item }}.pem"
       with_items: "{{ virtual_hosts }} "
+    with_item:
+      - virtual_hosts
     when: ansible_os_family != "Windows"
 
   # Get the system's timezone data for use in Docker Compose files
