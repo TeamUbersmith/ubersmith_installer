@@ -170,6 +170,12 @@
   # Create a self signed certificate for temporary use to secure HTTP and SMTP traffic.
   # These files should be replaced with a certificate and key provided by an authorized CA.
   # The 'web' and 'mail' containers need to be restarted if these files are modified.
+  - name: create private key rsa 4096 bits
+    community.crypto.openssl_privatekey:
+      path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.key"
+    tags:
+      - selfsigned
+
   - name: create certificate signing requests
     community.crypto.openssl_csr:
       path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.csr"
@@ -178,6 +184,8 @@
       organizational_unit_name: Hosting
       common_name: "{{ item }}"
     with_items: "{{ virtual_hosts }}"
+    tags:
+      - selfsigned
 
   - name: create self signed certificates
     community.crypto.x509_certificate:
@@ -186,6 +194,8 @@
       csr_path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.csr"
       provider: selfsigned
     with_items: "{{ virtual_hosts }}"
+    tags:
+      - selfsigned
 
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
