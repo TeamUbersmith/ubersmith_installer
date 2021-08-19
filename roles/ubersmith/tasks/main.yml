@@ -173,6 +173,7 @@
   - name: create private key rsa 4096 bits
     community.crypto.openssl_privatekey:
       path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.key"
+    with_items: "{{ virtual_hosts }}"
     tags:
       - selfsigned
 
