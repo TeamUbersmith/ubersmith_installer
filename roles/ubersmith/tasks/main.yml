@@ -291,7 +291,7 @@
       pull: yes
       recreate: never
       project_name: ubersmith
-      service:
+      services:
         - web
     tags:
       - compose_pull
