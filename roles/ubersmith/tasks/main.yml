@@ -170,15 +170,24 @@
   # Create a self signed certificate for temporary use to secure HTTP and SMTP traffic.
   # These files should be replaced with a certificate and key provided by an authorized CA.
   # The 'web' and 'mail' containers need to be restarted if these files are modified.
-  - name: create self signed certificates
-    command: "openssl req -new -x509 -days 365 -sha256 -newkey rsa:2048 -nodes -keyout {{ item }}.key -out {{ item }}.pem -subj '/O=Ubersmith/OU=Hosting/CN={{ item }}'"
-    args:
-      chdir: "{{ ubersmith_home }}/conf/ssl"
-      creates: "{{ ubersmith_home }}/conf/ssl/{{ item }}.pem"
-      with_items: "{{ virtual_hosts }} "
+  - name: create certificate signing requests
+    community.crypto.openssl_csr:
+      path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.csr"
+      privatekey_path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.key"
+      organization_name: Ubersmith
+      organizational_unit_name: Hosting
+      common_name: "{{ item }}"
     with_items:
       - virtual_hosts
-    when: ansible_os_family != "Windows"
+
+  - name: create self signed certificates
+    community.crypto.x509_certificate:
+      path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.pem"
+      privatekey_path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.key"
+      csr_path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.csr"
+      provider: selfsigned
+    with_items:
+      - virtual_hosts
 
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
