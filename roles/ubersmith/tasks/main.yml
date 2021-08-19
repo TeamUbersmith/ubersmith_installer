@@ -293,6 +293,11 @@
       project_name: ubersmith
       services:
         - web
+        - cron
+        - db
+        - php
+        - solr
+        - mail
     tags:
       - compose_pull
       - upgrade
