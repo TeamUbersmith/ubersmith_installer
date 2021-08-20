@@ -253,6 +253,12 @@
       - selfsigned
 
   # Make one last attempt at securing a Let's Encrypt certificate
+  - name: wait for port 80 to become available
+    ansible.builtin.wait_for:
+      host: 0.0.0.0
+      port: 80
+      state: drained
+
   - name: run certbot via a container
     community.docker.docker_container:
       name: certbot
