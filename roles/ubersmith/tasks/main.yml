@@ -204,7 +204,6 @@
     community.crypto.openssl_privatekey:
       path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.key"
     with_items: "{{ virtual_hosts }}"
-    creates: "{{ ubersmith_home }}/conf/ssl/{{ item }}.key"
     tags:
       - selfsigned
 
@@ -215,7 +214,6 @@
       organization_name: Ubersmith
       organizational_unit_name: Hosting
       common_name: "{{ item }}"
-    creates: "{{ ubersmith_home }}/conf/ssl/{{ item }}.csr"
     with_items: "{{ virtual_hosts }}"
     tags:
       - selfsigned
@@ -226,7 +224,6 @@
       privatekey_path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.key"
       csr_path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.csr"
       provider: selfsigned
-    creates: "{{ ubersmith_home }}/conf/ssl/{{ item }}.pem"
     with_items: "{{ virtual_hosts }}"
     tags:
       - selfsigned
