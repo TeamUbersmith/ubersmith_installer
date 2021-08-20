@@ -258,6 +258,7 @@
       host: 0.0.0.0
       port: 80
       state: drained
+    when: certbot_result.failed
 
   - name: run certbot via a container
     community.docker.docker_container:
