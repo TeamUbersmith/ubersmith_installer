@@ -54,9 +54,8 @@
   # Since there are many platforms users could be trying to install on, it's easier to
   # let the sysadmin handle the installation of Docker.
   - name: verify docker is installed
-    shell: command -v docker
+    community.docker.docker_host_info:
     register: docker_result
-    ignore_errors: true
     tags:
       - upgrade
   
@@ -64,22 +63,16 @@
   - name: output error when docker is not installed
     fail:
       msg: "Docker does not appear to be installed. Please install Docker (https://docs.docker.com/engine/installation/)."
-    when: docker_result.rc != 0
+    when: not docker_result.can_talk_to_docker
     tags:
       - upgrade
 
   # Check the version reported by the running version of Docker.
   - name: verify docker version
-    shell: docker version --format '{{ '{{' }} .Server.Version {{ '}}' }}'
+    fail:
+      msg:  "The Docker version installed is not supported. Please upgrade Docker (https://docs.docker.com/engine/installation/)."
+      when: docker_result.host_info.['Server Version'] is version_compare(docker_ok_version, '<=' )
     register: docker_version
-    tags:
-      - upgrade
-  
-  # Give the administrator an opportunity to do the right thing or shoot themselves in the foot.
-  - name: output error when docker is too old
-    pause:
-      prompt: "The Docker version installed is not supported. Please upgrade Docker (https://docs.docker.com/engine/installation/). If you're sure this is OK, press CTRL+C and then c. To abort the installation, press CTRL+c and then a."
-    when: docker_version.stdout[:5] is version_compare(docker_ok_version, '<=' )
     tags:
       - upgrade
 
