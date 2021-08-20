@@ -141,9 +141,10 @@
       dest: "{{ ubersmith_home }}/conf/mysql/ubersmith.cnf"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
-      mode: "0640"
+      mode: "0644"
     tags:
       - mysql_config
+      - upgrade
   
   # The database server configuration requires a change to sql_mode when running 
   # Percona Server 5.7
@@ -335,16 +336,16 @@
     tags:
       - upgrade_only
 
-  # Only when upgrading, get the list of docker volumes, so the webroot
+  # Only when upgrading, get the existing volumes, so the webroot
   # can be replaced by the new version of Ubersmith.
-  - name: get existing redis volumes
+  - name: get existing redis volume
     community.docker.docker_volume_info:
       name: ubersmith_redis
     register: redis_volume_output
     tags:
       - upgrade_only
 
-  - name: get existing webroot volumes
+  - name: get existing webroot volume
     community.docker.docker_volume_info:
       name: ubersmith_webroot
     register: webroot_volume_output
