@@ -56,8 +56,8 @@ services:
 {% endif %}
       - "{{ ubersmith_home }}/conf/ssl:/var/www/ubersmith_root/conf/ssl"
     environment:
-      - "POSTCONF_SMTPD_TLS_CERT_FILE=/etc/ssl/certs/{{ virtual_host }}.pem"
-      - "POSTCONF_SMTPD_TLS_KEY_FILE=/etc/ssl/private/{{ virtual_host }}.key" 
+      - "POSTCONF_SMTPD_TLS_CERT_FILE=/etc/ssl/certs/{{ container_domain }}.pem"
+      - "POSTCONF_SMTPD_TLS_KEY_FILE=/etc/ssl/private/{{ container_domain }}.key" 
       - POSTCONF_SMTP_TLS_SECURITY_LEVEL=may
   rwhois:
     volumes:

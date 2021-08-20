@@ -179,8 +179,6 @@
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: "0644"
-    vars:
-      virtual_host: "{{ main_virtual_host }}"
     tags:
       - rwhois
 
@@ -238,7 +236,7 @@
       mode: 0600
       backup: yes
     vars:
-      virtual_host: "{{ main_virtual_host }}"
+      container_domain: "{{ main_virtual_host }}"
     tags:
       - compose_template
       - upgrade
@@ -254,7 +252,7 @@
       mode: 0600
       backup: yes
     vars:
-      virtual_host: "{{ main_virtual_host }}"
+      container_domain: "{{ main_virtual_host }}"
     tags:
       - compose_override_template
   
@@ -318,7 +316,7 @@
         - mail
     tags:
       - compose_pull
-      - upgrade
+      - upgrade_only
   
   # Check to see if the installation is using a remote database    
   - name: check for remote database

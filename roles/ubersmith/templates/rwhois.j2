@@ -7,6 +7,6 @@ service rwhois
 	wait = no
 	user = ubersmith
 	server = {{ ubersmith_root }}/app/www/rwhois.php
-	server_args = {{ virtual_host }}
+	server_args = {{ main_virtual_host }}
 	port = 4321
 }
