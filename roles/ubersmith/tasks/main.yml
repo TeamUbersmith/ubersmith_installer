@@ -396,6 +396,7 @@
         - solr
         - mail
         - rwhois
+        - redis
     tags:
       - compose_pull
       - upgrade_only
