@@ -234,6 +234,8 @@
       host: 0.0.0.0
       port: 80
       state: drained
+    tags:
+      - docker_certbot
 
   - name: run certbot via a container
     community.docker.docker_container:
@@ -249,7 +251,6 @@
         - "{{ ubersmith_home }}/conf/certbot/etc:/etc/letsencrypt"
         - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
         - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
-        - "{{ ubersmith_home }}/conf/ssl:/tmp/ssl"
     with_items: "{{ virtual_hosts }}"
     tags:
       - docker_certbot
@@ -258,7 +259,37 @@
     ansible.builtin.wait_for:
       host: 0.0.0.0
       port: 80
+      state: drained      
+    tags:
+      - docker_certbot
+
+  - name: run dry-run renewal to run deploy hooks
+    community.docker.docker_container:
+      name: certbot
+      image: "certbot/certbot:{{ containers.certbot_version }}"
+      command: "renew --dry-run -n -d {{ item }}"
+      user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
+      ports:
+        - "80:80"
+        - "443:443"
+      # auto_remove: yes
+      volumes:
+        - "{{ ubersmith_home }}/conf/certbot/etc:/etc/letsencrypt"
+        - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
+        - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
+        - "{{ ubersmith_home }}/conf/ssl:/tmp/ssl"
+    with_items: "{{ virtual_hosts }}"
+    tags:
+      - docker_certbot
+      - docker_certbot_renewal
+
+  - name: wait for port 80 to become available
+    ansible.builtin.wait_for:
+      host: 0.0.0.0
+      port: 80
       state: drained
+    tags:
+      - docker_certbot
 
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
