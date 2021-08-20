@@ -399,6 +399,7 @@
         - redis
     tags:
       - compose_pull
+      - upgrade
   
   # Solr can take a little bit to start, so wait before proceeding with the upgrade.
   - name: wait for containers to come online
