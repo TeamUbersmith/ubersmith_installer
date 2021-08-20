@@ -17,6 +17,9 @@
       section: ubersmith_installer
       option: "{{ item.var }}"
       value: "{{ item.val }}"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: "0640"
     with_items:
       - { var: 'ubersmith_home', val: "{{ ubersmith_home }}" }
       - { var: 'virtual_host', val: "{{ virtual_host }}" }
@@ -90,7 +93,12 @@
     copy:
       dest: /etc/rsyslog.d/30-ubersmith.conf
       src: 30-ubersmith.conf
+      owner: root
+      group: root
+      mode: "0644"
     ignore_errors: yes
+    notify:
+      - restart rsyslog
     tags:
       - upgrade
     when: 
@@ -102,6 +110,9 @@
     copy:
       dest: /etc/logrotate.d/ubersmith-logs
       src: ubersmith-logs
+      owner: root
+      group: root
+      mode: "0644"
     ignore_errors: yes
     tags:
       - upgrade
@@ -152,6 +163,9 @@
     template:
       src: ubersmith.ini.j2
       dest: "{{ ubersmith_home }}/conf/php/ubersmith.ini"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: "0644"
     tags:
       - php_ini
 
@@ -162,6 +176,9 @@
     template:
       src: rwhois.j2
       dest: "{{ ubersmith_home }}/conf/rwhois/rwhois"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: "0644"
     vars:
       virtual_host: "{{ main_virtual_host }}"
     tags:
@@ -200,7 +217,8 @@
 
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
-    shell: readlink -f /etc/localtime
+    ansible.builtin.stat:
+      path: /etc/localtime
     register: timezone_file
     tags:
       - compose_override_template
@@ -321,18 +339,26 @@
 
   # Only when upgrading, get the list of docker volumes, so the webroot
   # can be replaced by the new version of Ubersmith.
-  - name: get existing docker volumes
-    shell: "docker volume ls -q"
-    register: volume_output
+  - name: get existing redis volumes
+    community.docker.docker_volume_info:
+      name: ubersmith_redis
+    register: redis_volume_output
+    tags:
+      - upgrade_only
+
+  - name: get existing webroot volumes
+    community.docker.docker_volume_info:
+      name: ubersmith_webroot
+    register: webroot_volume_output
     tags:
       - upgrade_only
 
   # Only when upgrading, make sure redis data is committed before we copy it.  
   - name: trigger save of redis data if redis volume does not already exist
-    command: docker exec ubersmith_redis_1 redis-cli SAVE
-    args:
-      chdir:  "{{ ubersmith_home }}"
-    when: volume_output.stdout.find('ubersmith_redis') == -1
+    community.docker.docker_container_exec:
+      container: ubersmith_redis_1
+      command: /bin/bash -c "/usr/local/bin/redis-cli SAVE"
+    when: not redis_volume_output.exists
     ignore_errors: yes
     tags:
       - upgrade_only
@@ -342,24 +368,26 @@
     command: docker cp ubersmith_redis_1:/data/dump.rdb .
     args:
       chdir:  "{{ ubersmith_home }}"
-    when: volume_output.stdout.find('ubersmith_redis') == -1
+    when: not redis_volume_output.exists
     ignore_errors: yes
     tags:
       - upgrade_only
 
   # Only when upgrading, stop and remove existing Ubersmith containers.
   - name: stop existing containers
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith rm -sf"
-    args:
-      chdir:  "{{ ubersmith_home }}"
+    community.docker.docker_compose:
+      project_src: "{{ ubersmith_home }}"
+      state: absent
+      remove_volumes: no
+      project_name: ubersmith
     tags:
       - upgrade_only
 
   - name: remove ubersmith webroot volume if present
-    command: docker volume rm ubersmith_webroot
-    args:
-      chdir:  "{{ ubersmith_home }}"
-    when: volume_output.stdout.find('ubersmith_webroot') != -1
+    community.docker.docker_volume:
+      name: ubersmith_webroot
+      state: absent
+    when: webroot_volume_output.exists
     tags:
       - upgrade_only
   
@@ -404,28 +432,26 @@
     command: docker cp dump.rdb ubersmith_redis-data_1:/data/dump.rdb
     args:
       chdir:  "{{ ubersmith_home }}"
-    when: volume_output.stdout.find('ubersmith_redis') == -1
+    when: not redis_volume_output.exists
     ignore_errors: yes
     tags:
       - upgrade_only
 
   # Change ownership on the redis dump.rdb file to redis:redis
   - name: give redis user ownership over dump.rdb
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith exec -T redis-data chown redis:redis /data/dump.rdb"
-    args:
-      chdir:  "{{ ubersmith_home }}"
-    environment:
-      COMPOSE_INTERACTIVE_NO_CLI: 1
-    when: volume_output.stdout.find('ubersmith_redis') == -1
+    community.docker.docker_container_exec:
+      container: ubersmith_redis-data
+      command: /bin/bash -c "chown redis:redis /data/dump.rdb"
+    when: not redis_volume_output.exists
     ignore_errors: yes
     tags:
       - upgrade_only
 
   # When moving to Percona Server 5.7, run mysql_upgrade. 0 and 2 return codes are acceptable.
   - name: run mysql_upgrade
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith exec -T db sh -c 'mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD'"
-    args:
-      chdir:  "{{ ubersmith_home }}"
+    community.docker.docker_container_exec:
+      container: ubersmith_db_1
+      command: /bin/sh -c 'mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD'
     register: command_result
     failed_when: 
      - command_result.rc != 0
@@ -439,9 +465,12 @@
 
   # After running mysql_upgrade, MySQL needs to be restarted
   - name: restart database container after mysql_upgrade
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith restart db"
-    args:
-      chdir:  "{{ ubersmith_home }}"
+    community.docker.docker_compose:
+      project_src: "{{ ubersmith_home }}"
+      restarted: yes
+      project_name: ubersmith
+      services:
+        - db
     when:
       - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"    
     tags:
@@ -465,28 +494,24 @@
  
   # For upgrades, run the updatedb.php script which performs the upgrade process.
   - name: run updatedb.php
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith exec -T php php {{ ubersmith_root }}/app/www/setup/updatedb.php ubersmith --debug"
-    args:
-      chdir:  "{{ ubersmith_home }}"
-    environment:
-      COMPOSE_INTERACTIVE_NO_CLI: 1
+    community.docker.docker_container_exec:
+      container: ubersmith_php_1
+      command: "/bin/bash -c 'php {{ ubersmith_root }}/app/www/setup/updatedb.php ubersmith --debug'"
     register: updatedb_output
     tags:
       - upgrade_only
 
   # Show the upgrade output, in the event of any issues.
   - name: display updatedb.php debug output
-    debug: var=updatedb_output.stdout_lines
+    debug: var=updatedb_output.stdout
     tags:
       - upgrade_only
 
   # For upgrades, remove the setup/ directory, allowing Ubersmith to start.
   - name: remove setup
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith exec -T web rm -rf {{ ubersmith_root }}/app/www/setup"
-    args:
-      chdir:  "{{ ubersmith_home }}"
-    environment:
-      COMPOSE_INTERACTIVE_NO_CLI: 1
+    community.docker.docker_container_exec:
+      container: ubersmith_web_1
+      command: "/bin/bash -c 'rm -rf {{ ubersmith_root }}/app/www/setup'"
     tags:
       - upgrade_only
 
@@ -498,6 +523,9 @@
       section: ubersmith_installer
       option: "{{ item.var }}"
       value: "{{ item.val }}"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: "0644"
     with_items:
       - { var: 'ubersmith_installed_version', val: "{{ ubersmith_version }}" }
     tags:
