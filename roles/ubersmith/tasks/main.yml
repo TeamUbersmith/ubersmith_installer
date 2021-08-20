@@ -237,7 +237,6 @@
       host: 0.0.0.0
       port: 80
       state: drained
-    when: certbot_result.failed
 
   - name: run certbot via a container
     community.docker.docker_container:
@@ -255,7 +254,6 @@
         - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
         - "{{ ubersmith_home }}/conf/ssl:/tmp/ssl"
     with_items: "{{ virtual_hosts }}"
-    when: certbot_result.failed
     tags:
       - docker_certbot
 
@@ -264,7 +262,6 @@
       host: 0.0.0.0
       port: 80
       state: drained
-    when: certbot_result.failed
 
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
