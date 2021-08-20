@@ -24,6 +24,6 @@
 
     roles:
       - common
-      - snapd
+      - { role: snapd, ignore_errors: yes }
       - { role: certbot, ignore_errors: yes }
       - ubersmith
