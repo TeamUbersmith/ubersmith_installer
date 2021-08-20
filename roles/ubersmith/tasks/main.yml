@@ -239,7 +239,7 @@
     community.docker.docker_container:
       name: certbot
       image: "certbot/certbot:{{ containers.certbot_version }}"
-      command: "certonly --dry-run -n -d {{ item }} --standalone --agree-tos -m {{ notify_email }}"
+      command: "certonly -n -d {{ item }} --standalone --agree-tos -m {{ notify_email }}"
       user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
       ports:
         - "80:80"
