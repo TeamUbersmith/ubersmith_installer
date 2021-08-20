@@ -144,7 +144,6 @@
       mode: "0644"
     tags:
       - mysql_config
-      - upgrade
   
   # The database server configuration requires a change to sql_mode when running 
   # Percona Server 5.7
