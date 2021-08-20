@@ -299,25 +299,7 @@
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0700
-      
-  # Retrieve Ubersmith images from the repository.
-  - name: pull ubersmith images
-    community.docker.docker_compose:
-      project_src: "{{ ubersmith_home }}"
-      pull: yes
-      recreate: never
-      project_name: ubersmith
-      services:
-        - web
-        - cron
-        - db
-        - php
-        - solr
-        - mail
-    tags:
-      - compose_pull
-      - upgrade_only
-  
+        
   # Check to see if the installation is using a remote database    
   - name: check for remote database
     community.docker.docker_container_info:
@@ -400,13 +382,23 @@
     tags:
       - upgrade_only
 
-  # For both new deploys and upgrades, start Ubersmith.
-  - name: run ubersmith_start.sh
-    command: "{{ ubersmith_home }}/ubersmith_start.sh"
-    args:
-      chdir: "{{ ubersmith_home }}"
+  # Retrieve Ubersmith images from the repository.
+  - name: pull ubersmith images
+    community.docker.docker_compose:
+      project_src: "{{ ubersmith_home }}"
+      pull: yes
+      project_name: ubersmith
+      services:
+        - web
+        - cron
+        - db
+        - php
+        - solr
+        - mail
+        - rwhois
     tags:
-      - upgrade
+      - compose_pull
+      - upgrade_only
   
   # Solr can take a little bit to start, so wait before proceeding with the upgrade.
   - name: wait for containers to come online
