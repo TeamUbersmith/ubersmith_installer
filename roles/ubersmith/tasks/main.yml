@@ -267,7 +267,7 @@
     community.docker.docker_container:
       name: certbot
       image: "certbot/certbot:{{ containers.certbot_version }}"
-      command: "renew --dry-run -n -d {{ item }}"
+      command: "renew --dry-run -n"
       user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
       ports:
         - "80:80"
@@ -278,7 +278,6 @@
         - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
         - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
         - "{{ ubersmith_home }}/conf/ssl:/tmp/ssl"
-    with_items: "{{ virtual_hosts }}"
     tags:
       - docker_certbot
       - docker_certbot_renewal
