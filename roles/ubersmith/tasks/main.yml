@@ -191,7 +191,7 @@
   # This deploy hook will copy certificates into conf/ssl after they've been renewed.
   - name: install deploy hook
     template:
-      src: roles/certbot/templates/ubersmith-deploy.sh.j2
+      src: ubersmith-deploy.sh.j2
       dest: "{{ ubersmith_home }}/conf/certbot/etc/renewal-hooks/deploy/ubersmith-deploy.sh"
       owner: root
       group: root
