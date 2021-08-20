@@ -263,11 +263,11 @@
     tags:
       - docker_certbot
 
-  - name: run dry-run renewal to run deploy hooks
+  - name: run force-renewal to run deploy hooks
     community.docker.docker_container:
       name: certbot
       image: "certbot/certbot:{{ containers.certbot_version }}"
-      command: "renew --dry-run -n"
+      command: "renew --force-renewal -n"
       user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
       ports:
         - "80:80"
