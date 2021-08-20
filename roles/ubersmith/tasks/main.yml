@@ -76,6 +76,9 @@
        - "{{ ubersmith_home }}/conf/certbot"
        - "{{ ubersmith_home }}/conf/certbot/lib"
        - "{{ ubersmith_home }}/conf/certbot/etc"
+       - "{{ ubersmith_home }}/conf/certbot/etc/renewal-hooks"
+       - "{{ ubersmith_home }}/conf/certbot/etc/renewal-hooks/deploy"
+       - "{{ ubersmith_home }}/conf/certbot/log"
        - "{{ ubersmith_home }}/app/custom"
        - "{{ ubersmith_home }}/app/custom/locale"
        - "{{ ubersmith_home }}/app/custom/plugins"
@@ -185,38 +188,14 @@
     tags:
       - rwhois
 
-  # If the certbot role is successful, install our post renew hooks
-  - name: install pre-renew hook
-    template:
-      src: roles/certbot/templates/ubersmith-pre-renew.sh.j2
-      dest: /etc/letsencrypt/renewal-hooks/pre/ubersmith-pre-renew.sh
-      owner: root
-      group: root
-      mode: 0744
-    when: not certbot_result.failed
-
+  # This deploy hook will copy certificates into conf/ssl after they've been renewed.
   - name: install deploy hook
     template:
       src: roles/certbot/templates/ubersmith-deploy.sh.j2
-      dest: /etc/letsencrypt/renewal-hooks/deploy/ubersmith-deploy.sh
+      dest: "{{ ubersmith_home }}/conf/certbot/etc/renewal-hooks/deploy/ubersmith-deploy.sh"
       owner: root
       group: root
       mode: 0744
-    when: not certbot_result.failed
-
-  - name: install post-renew hook
-    template:
-      src: roles/certbot/templates/ubersmith-post-renew.sh.j2
-      dest: /etc/letsencrypt/renewal-hooks/post/ubersmith-post-renew.sh
-      owner: root
-      group: root
-      mode: 0744
-    when: not certbot_result.failed
-
-  # Run the certbot deploy hook to put the certificates issued by Let's Encrypt in place.
-  - name: run certbot ubersmith-deploy.sh
-    ansible.builtin.command: /etc/letsencrypt/renewal-hooks/deploy/ubersmith-deploy.sh
-    when: not certbot_result.failed
 
   # Create a self signed certificate for temporary use to secure HTTP and SMTP traffic.
   # These files should be replaced with a certificate and key provided by an authorized CA.
@@ -225,7 +204,7 @@
     community.crypto.openssl_privatekey:
       path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.key"
     with_items: "{{ virtual_hosts }}"
-    when: certbot_result.failed
+    creates: "{{ ubersmith_home }}/conf/ssl/{{ item }}.key"
     tags:
       - selfsigned
 
@@ -236,8 +215,8 @@
       organization_name: Ubersmith
       organizational_unit_name: Hosting
       common_name: "{{ item }}"
+    creates: "{{ ubersmith_home }}/conf/ssl/{{ item }}.csr"
     with_items: "{{ virtual_hosts }}"
-    when: certbot_result.failed
     tags:
       - selfsigned
 
@@ -247,12 +226,12 @@
       privatekey_path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.key"
       csr_path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.csr"
       provider: selfsigned
+    creates: "{{ ubersmith_home }}/conf/ssl/{{ item }}.pem"
     with_items: "{{ virtual_hosts }}"
-    when: certbot_result.failed
     tags:
       - selfsigned
 
-  # Make one last attempt at securing a Let's Encrypt certificate
+  # Request certificates from Let's Encrypt
   - name: wait for port 80 to become available
     ansible.builtin.wait_for:
       host: 0.0.0.0
@@ -264,7 +243,8 @@
     community.docker.docker_container:
       name: certbot
       image: "certbot/certbot:{{ containers.certbot_version }}"
-      command: "certonly -n -d {{ item }} --standalone --agree-tos -m {{ notify_email }}"
+      command: "certonly --dry-run -n -d {{ item }} --standalone --agree-tos -m {{ notify_email }}"
+      user: "{{ ansible_user_id }}:{{ ansible_user_gid }}"
       ports:
         - "80:80"
         - "443:443"
@@ -272,8 +252,12 @@
       volumes:
         - "{{ ubersmith_home }}/conf/certbot/etc:/etc/letsencrypt"
         - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
+        - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
+        - "{{ ubersmith_home }}/conf/ssl:/tmp/ssl"
     with_items: "{{ virtual_hosts }}"
     when: certbot_result.failed
+    tags:
+      - docker_certbot
 
   - name: wait for port 80 to become available
     ansible.builtin.wait_for:
