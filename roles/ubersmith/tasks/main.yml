@@ -264,14 +264,14 @@
     community.docker.docker_container:
       name: certbot
       image: "certbot/certbot:{{ containers.certbot_version }}"
-      command: "certonly -d {{ item }} --standalone --agree-tos -m {{ notify_email }}"
+      command: "certonly -n -d {{ item }} --standalone --agree-tos -m {{ notify_email }}"
       ports:
         - "80:80"
         - "443:443"
       # auto_remove: yes
       volumes:
-        - "{{ ubersmith_root }}/conf/certbot/etc:/etc/letsencrypt"
-        - "{{ ubersmith_root }}/conf/certbot/lib:/var/lib/letsencrypt"
+        - "{{ ubersmith_home }}/conf/certbot/etc:/etc/letsencrypt"
+        - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
     with_items: "{{ virtual_hosts }}"
     when: certbot_result.failed
 
