@@ -193,8 +193,8 @@
     template:
       src: ubersmith-deploy.sh.j2
       dest: "{{ ubersmith_home }}/conf/certbot/etc/renewal-hooks/deploy/ubersmith-deploy.sh"
-      owner: root
-      group: root
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
       mode: 0744
 
   # Create a self signed certificate for temporary use to secure HTTP and SMTP traffic.
