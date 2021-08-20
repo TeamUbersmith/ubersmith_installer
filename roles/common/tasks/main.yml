@@ -59,6 +59,9 @@
     tags:
       - upgrade
   
+  - debug:
+      var: docker_result
+
   # If we can't find Docker, we can't proceed.
   - name: output error when docker is not installed
     fail:
@@ -71,7 +74,7 @@
   - name: verify docker version
     fail:
       msg:  "The Docker version installed is not supported. Please upgrade Docker (https://docs.docker.com/engine/installation/)."
-      when: docker_result.host_info.['Server Version'] is version_compare(docker_ok_version, '<=' )
+      when: docker_result.host_info.ServerVersion is version_compare(docker_ok_version, '<=' )
     register: docker_version
     tags:
       - upgrade
