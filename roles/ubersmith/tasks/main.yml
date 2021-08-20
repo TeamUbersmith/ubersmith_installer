@@ -258,7 +258,7 @@
       name: certbot
       image: "certbot/certbot:{{ containers.certbot_version }}"
       entrypoint: "certbot certonly -d {{ item }} --standalone --agree-tos -m {{ notify_email }} "
-      auto_remove: yes
+      # auto_remove: yes
       volumes:
         - "{{ ubersmith_root }}/conf/certbot/etc:/etc/letsencrypt"
         - "{{ ubersmith_root }}/conf/certbot/lib:/var/lib/letsencrypt"
