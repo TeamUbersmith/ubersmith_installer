@@ -134,7 +134,8 @@ services:
   redis:
     image: quay.io/ubersmith/redis:{{ containers.redis_version }}
     restart: unless-stopped
-    replicas: 3
+    deploy:
+      replicas: 3
 {% if ansible_os_family != 'Darwin' %}
     logging:
       driver: syslog
