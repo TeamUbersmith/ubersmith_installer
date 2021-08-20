@@ -182,6 +182,38 @@
     tags:
       - rwhois
 
+  # If the certbot role is successful, install our post renew hooks
+  - name: install pre-renew hook
+    template:
+      src: roles/certbot/templates/ubersmith-pre-renew.sh.j2
+      dest: /etc/letsencrypt/renewal-hooks/pre/ubersmith-pre-renew.sh
+      owner: root
+      group: root
+      mode: 0744
+    when: certbot_success
+
+  - name: install deploy hook
+    template:
+      src: roles/certbot/templates/ubersmith-deploy.sh.j2
+      dest: /etc/letsencrypt/renewal-hooks/deploy/ubersmith-deploy.sh
+      owner: root
+      group: root
+      mode: 0744
+    when: certbot_success
+
+  - name: install post-renew hook
+    template:
+      src: roles/certbot/templates/ubersmith-post-renew.sh.j2
+      dest: /etc/letsencrypt/renewal-hooks/post/ubersmith-post-renew.sh
+      owner: root
+      group: root
+      mode: 0744
+    when: certbot_success
+
+  # Run the certbot deploy hook to put the certificates issued by Let's Encrypt in place.
+  - name: run certbot ubersmith-deploy.sh
+    ansible.builtin.command: /etc/letsencrypt/renewal-hooks/deploy/ubersmith-deploy.sh
+
   # Create a self signed certificate for temporary use to secure HTTP and SMTP traffic.
   # These files should be replaced with a certificate and key provided by an authorized CA.
   # The 'web' and 'mail' containers need to be restarted if these files are modified.
@@ -189,6 +221,7 @@
     community.crypto.openssl_privatekey:
       path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.key"
     with_items: "{{ virtual_hosts }}"
+    when: not certbot_success
     tags:
       - selfsigned
 
@@ -200,6 +233,7 @@
       organizational_unit_name: Hosting
       common_name: "{{ item }}"
     with_items: "{{ virtual_hosts }}"
+    when: not certbot_success
     tags:
       - selfsigned
 
@@ -210,6 +244,7 @@
       csr_path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.csr"
       provider: selfsigned
     with_items: "{{ virtual_hosts }}"
+    when: not certbot_success
     tags:
       - selfsigned
 

@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+for DOMAIN in `find /etc/letsencrypt/live -mindepth 1 -maxdepth 1 -type d -printf '%f\n'`;
+do 
+        cp /etc/letsencrypt/live/$DOMAIN/cert.pem {{ ubersmith_home }}/conf/ssl/$DOMAIN.pem 
+        cp /etc/letsencrypt/live/$DOMAIN/privkey.pem {{ ubersmith_home }}/conf/ssl/$DOMAIN.key; 
+done

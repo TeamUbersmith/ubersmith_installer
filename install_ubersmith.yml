@@ -19,7 +19,11 @@
 
     vars:
       interactive: true
+      certificate_domains: "{{ virtual_host }}"
+      notify_email: "{{ admin_email }}"
 
     roles:
       - common
+      - snapd
+      - { role: certbot, ignore_errors: yes }
       - ubersmith
