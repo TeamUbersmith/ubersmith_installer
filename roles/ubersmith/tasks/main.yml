@@ -382,8 +382,8 @@
     tags:
       - upgrade_only
 
-  # Retrieve Ubersmith images from the repository.
-  - name: pull ubersmith images
+  # Retrieve Ubersmith images from the repository and start containers
+  - name: start ubersmith containers
     community.docker.docker_compose:
       project_src: "{{ ubersmith_home }}"
       pull: yes
@@ -398,9 +398,19 @@
         - rwhois
         - redis
     tags:
-      - compose_pull
       - upgrade
-  
+
+  - name: scale redis containers
+    community.docker.docker_compose:
+      project_src: "{{ ubersmith_home }}"
+      project_name: ubersmith
+      scale:
+        redis: 3
+      services:
+        - redis
+    tags:
+      - upgrade      
+
   # Solr can take a little bit to start, so wait before proceeding with the upgrade.
   - name: wait for containers to come online
     # wait_for:
