@@ -68,10 +68,12 @@
       - upgrade
 
   # If we can't find Docker, we can't proceed.
+  # can_talk_to_docker is defined in the documentation, but this
+  # does not appear to reflect reality
   - name: output error when docker is not installed
     fail:
       msg: "Docker does not appear to be installed. Please install Docker (https://docs.docker.com/engine/installation/)."
-    when: not docker_result.can_talk_to_docker
+    when: docker_result.failed
     tags:
       - upgrade
 
@@ -80,7 +82,6 @@
     fail:
       msg:  "The Docker version installed is not supported. Please upgrade Docker (https://docs.docker.com/engine/installation/)."
       when: docker_result.host_info.ServerVersion is version_compare(docker_ok_version, '<=' )
-    register: docker_version
     tags:
       - upgrade
 
