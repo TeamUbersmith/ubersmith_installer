@@ -193,7 +193,7 @@
     template:
       src: ubersmith-deploy.sh.j2
       dest: "{{ ubersmith_home }}/conf/certbot/etc/renewal-hooks/deploy/ubersmith-deploy.sh"
-      owner: "{{ ansible_user_uid }}"
+      owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0744
 
@@ -240,7 +240,7 @@
       name: certbot
       image: "certbot/certbot:{{ containers.certbot_version }}"
       command: "certonly --dry-run -n -d {{ item }} --standalone --agree-tos -m {{ notify_email }}"
-      user: "{{ ansible_user_id }}:{{ ansible_user_gid }}"
+      user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
       ports:
         - "80:80"
         - "443:443"
