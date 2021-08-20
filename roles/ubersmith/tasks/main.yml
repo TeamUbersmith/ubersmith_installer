@@ -397,6 +397,7 @@
         - mail
         - rwhois
         - redis
+        - redis-data
     tags:
       - upgrade
 
@@ -504,7 +505,11 @@
 
   # Show the upgrade output, in the event of any issues.
   - name: display updatedb.php debug output
-    debug: var=updatedb_output.stdout
+    debug: 
+      var: "{{ item }}"
+    with_items:
+      - updatedb_output.stderr
+      - updatedb_output.stdout
     tags:
       - upgrade_only
 
