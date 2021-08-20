@@ -73,7 +73,7 @@
   - name: output error when docker is not installed
     fail:
       msg: "Docker does not appear to be installed. Please install Docker (https://docs.docker.com/engine/installation/)."
-    when: docker_result.failed
+      when: docker_result.failed
     tags:
       - upgrade
 
