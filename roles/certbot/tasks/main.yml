@@ -83,11 +83,6 @@
     register: certbot_result
     tags:
       - certbot_only
-  
-  - name: set certbot_success on success
-    ansible.builtin.set_fact:
-      certbot_success: true
-    when: certbot_result.rc == 0
 
   - name: wait for port 80 to become available
     ansible.builtin.wait_for:
