@@ -73,6 +73,9 @@
        - "{{ ubersmith_home }}/conf/php"
        - "{{ ubersmith_home }}/conf/cron"
        - "{{ ubersmith_home }}/conf/rwhois"
+       - "{{ ubersmith_home }}/conf/certbot"
+       - "{{ ubersmith_home }}/conf/certbot/lib"
+       - "{{ ubersmith_home }}/conf/certbot/etc"
        - "{{ ubersmith_home }}/app/custom"
        - "{{ ubersmith_home }}/app/custom/locale"
        - "{{ ubersmith_home }}/app/custom/plugins"
@@ -213,11 +216,12 @@
   # Run the certbot deploy hook to put the certificates issued by Let's Encrypt in place.
   - name: run certbot ubersmith-deploy.sh
     ansible.builtin.command: /etc/letsencrypt/renewal-hooks/deploy/ubersmith-deploy.sh
+    when: certbot_success
 
   # Create a self signed certificate for temporary use to secure HTTP and SMTP traffic.
   # These files should be replaced with a certificate and key provided by an authorized CA.
   # The 'web' and 'mail' containers need to be restarted if these files are modified.
-  - name: create private key rsa 4096 bits
+  - name: create private keys rsa 4096 bits
     community.crypto.openssl_privatekey:
       path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.key"
     with_items: "{{ virtual_hosts }}"
@@ -247,6 +251,18 @@
     when: not certbot_success
     tags:
       - selfsigned
+
+  # Make one last attempt at securing a Let's Encrypt certificate
+  - name: run certbot via a container
+    community.docker.docker_container:
+      name: certbot
+      image: "certbot:{{ containers.certbot_version }}"
+      entrypoint: "certbot certonly -d {{ item }} --standalone --agree-tos -m {{ notify_email }} "
+      volumes:
+        - "{{ ubersmith_root }}/conf/certbot/etc:/etc/letsencrypt"
+        - "{{ ubersmith_root }}/conf/certbot/lib:/var/lib/letsencrypt"
+    with_items: "{{ virtual_hosts }}"
+    when: not certbot_success
 
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
