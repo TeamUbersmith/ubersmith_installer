@@ -59,8 +59,13 @@
     tags:
       - upgrade
   
-  - debug:
+  - name: display docker_host_info info
+    debug:
       var: docker_result
+    when:
+      - debug is defined
+    tags:
+      - upgrade
 
   # If we can't find Docker, we can't proceed.
   - name: output error when docker is not installed
