@@ -235,7 +235,7 @@
       port: 80
       state: drained
     tags:
-      - docker_certbot
+      - certbot
 
   - name: run certbot via a container
     community.docker.docker_container:
@@ -246,14 +246,14 @@
       ports:
         - "80:80"
         - "443:443"
-      # auto_remove: yes
+      auto_remove: yes
       volumes:
         - "{{ ubersmith_home }}/conf/certbot/etc:/etc/letsencrypt"
         - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
         - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
     with_items: "{{ virtual_hosts }}"
     tags:
-      - docker_certbot
+      - certbot
 
   - name: wait for port 80 to become available
     ansible.builtin.wait_for:
@@ -261,26 +261,24 @@
       port: 80
       state: drained      
     tags:
-      - docker_certbot
+      - certbot
 
-  - name: run force-renewal to run deploy hooks
+  - name: run deploy hooks
     community.docker.docker_container:
       name: certbot
       image: "certbot/certbot:{{ containers.certbot_version }}"
-      command: "renew --force-renewal -n"
+      entrypoint: "/etc/letsencrypt/renewal-hooks/deploy/ubersmith-deploy.sh"
+      # command: "renew --force-renewal -n"
       user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
-      ports:
-        - "80:80"
-        - "443:443"
-      # auto_remove: yes
+      auto_remove: yes
       volumes:
         - "{{ ubersmith_home }}/conf/certbot/etc:/etc/letsencrypt"
         - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
         - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
         - "{{ ubersmith_home }}/conf/ssl:/tmp/ssl"
     tags:
-      - docker_certbot
-      - docker_certbot_renewal
+      - certbot
+      - certbot_renewal
 
   - name: wait for port 80 to become available
     ansible.builtin.wait_for:
@@ -288,7 +286,7 @@
       port: 80
       state: drained
     tags:
-      - docker_certbot
+      - certbot
 
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
