@@ -241,6 +241,7 @@
     community.docker.docker_container:
       name: certbot
       image: "certbot/certbot:{{ containers.certbot_version }}"
+      container_default_behavior: compatibility
       command: "certonly -n -d {{ item }} --standalone --agree-tos -m {{ notify_email }}"
       user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
       ports:
@@ -267,6 +268,7 @@
     community.docker.docker_container:
       name: certbot
       image: "certbot/certbot:{{ containers.certbot_version }}"
+      container_default_behavior: compatibility
       entrypoint: "/etc/letsencrypt/renewal-hooks/deploy/ubersmith-deploy.sh"
       # command: "renew --force-renewal -n"
       user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
