@@ -13,14 +13,14 @@
 
     pre_tasks:
 
-      - name: Check for .ubersmith_installer.ini
+      - name: check for .ubersmith_installer.ini
         stat:
           path: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
         register: installer_config
         tags:
           - certbot
 
-      - name: Fail if installer configuration is not present  
+      - name: fail if installer configuration is not present  
         fail:
           msg: "Ubersmith installer configuration file is not present, please run configure.sh"
         when: not installer_config.stat.exists
