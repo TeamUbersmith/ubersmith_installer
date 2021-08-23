@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 for DOMAIN in `/usr/local/bin/certbot certificates 2>/dev/null | grep "Certificate Name:" | cut -f2- -d:`;
 do 
