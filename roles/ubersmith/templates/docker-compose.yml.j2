@@ -201,7 +201,7 @@ services:
         tag: ubersmith/haproxy
 {% endif %}
   certbot:
-    image: certbot:{{ containers.haproxy_version }}
+    image: certbot/certbot:{{ containers.haproxy_version }}
     command: "renew -n"
     volumes:
       - "{{ ubersmith_home }}/conf/certbot/etc:/etc/letsencrypt"
