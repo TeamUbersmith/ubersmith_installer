@@ -98,6 +98,18 @@
       - ansible_os_family != "Darwin"
       - ansible_os_family != "Windows"
 
+  # Install the docker sdk using pip.
+  - name: install docker sdk
+    pip:
+      name: docker
+      state: present
+      extra_args: "--user"
+    when:
+      - interactive
+      - ansible_distribution == 'CentOS'
+    tags:
+      - upgrade
+
   # Install the docker-compose application using pip.
   - name: install docker-compose
     pip:
