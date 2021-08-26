@@ -200,6 +200,23 @@ services:
       options:
         tag: ubersmith/haproxy
 {% endif %}
+  certbot:
+    image: certbot:{{ containers.haproxy_version }}
+    command: "renew -n"
+    volumes:
+      - "{{ ubersmith_home }}/conf/certbot/etc:/etc/letsencrypt"
+      - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
+      - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
+      - "{{ ubersmith_home }}/conf/ssl:/tmp/ssl"
+    ports:
+      - "80:80"
+      - "443:443"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/certbot
+{% endif %}
 volumes:
   database: {}
   logs: {}
