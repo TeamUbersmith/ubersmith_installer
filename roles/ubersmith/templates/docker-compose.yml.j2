@@ -202,15 +202,12 @@ services:
 {% endif %}
   certbot:
     image: certbot/certbot:{{ containers.certbot_version }}
-    command: "renew -n"
+    command: "renew -vvv -n --webroot --webroot-path /var/www/ubersmith_root/app/www"
     volumes:
       - "{{ ubersmith_home }}/conf/certbot/etc:/etc/letsencrypt"
       - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
       - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
       - "{{ ubersmith_home }}/conf/ssl:/tmp/ssl"
-    ports:
-      - "80:80"
-      - "443:443"
 {% if ansible_os_family != 'Darwin' %}
     logging:
       driver: syslog

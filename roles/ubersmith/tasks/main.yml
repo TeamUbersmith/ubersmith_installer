@@ -269,7 +269,7 @@
       name: certbot
       image: "certbot/certbot:{{ containers.certbot_version }}"
       container_default_behavior: compatibility
-      entrypoint: "/etc/letsencrypt/renewal-hooks/deploy/ubersmith-deploy.sh"
+      entrypoint: /etc/letsencrypt/renewal-hooks/deploy/ubersmith-deploy.sh
       # command: "renew --force-renewal -n"
       user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
       auto_remove: yes
@@ -290,6 +290,17 @@
     tags:
       - certbot
 
+  # Create a cron task to keep the certificate renewed
+  - name: create certbot container cron task
+    ansible.builtin.cron:
+      name: "check for le renewal"
+      user: "{{ ansible_user_id }}"
+      job: "cd {{ ubersmith_home }}; $HOME/.local/bin/docker-compose stop web; $HOME/.local/bin/docker-compose up certbot; $HOME/.local/bin/docker-compose start web"
+      special_time: daily
+    tags:
+      - le_renewal
+      - certbot
+      
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
     ansible.builtin.stat:

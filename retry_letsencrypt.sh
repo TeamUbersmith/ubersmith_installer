@@ -8,4 +8,4 @@ export PYTHONUSERBASE="$HOME/.local"
 export PATH="$HOME/.local/bin:$PATH"
 
 echo "Retrying Let's Encrypt certificate request..."
-ansible-playbook -i ./hosts -c local -t certbot retry_letsencrypt.yml
+ansible-playbook -i ./hosts -c local retry_letsencrypt.yml
