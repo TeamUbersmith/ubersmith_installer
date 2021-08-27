@@ -66,6 +66,12 @@
   
   SetEnvIf Content-Type "(.*)" HTTP_CONTENT_TYPE=$1
 
+  <IfModule mod_proxy_fcgi.c>
+      <Proxy fcgi://php:9000>
+          ProxySet timeout=300
+      </Proxy>
+  </IfModule>
+
   <IfModule mod_rewrite.c>
     RedirectMatch 404 ^/app/.*$
     RewriteEngine On
