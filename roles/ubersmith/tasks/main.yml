@@ -1,5 +1,17 @@
 ---
 
+  # In the event of a failed upgrade attempt, ensure the bare minimum of containers is running before proceeding
+  - name: check ubersmith containers before proceeding with upgrade
+    community.docker.docker_compose:
+      project_src: "{{ ubersmith_home }}"
+      project_name: ubersmith
+      services:
+        - web
+        - db
+        - php
+    tags:
+      - upgrade_only
+
   # Backups are important, but especially with database version changes in 4.6.0
   - name: remind admin to make a backup before proceeding with an upgrade
     pause:
@@ -199,7 +211,7 @@
     tags:
       - certbot
       - upgrade
-      
+
   # Create a self signed certificate for temporary use to secure HTTP and SMTP traffic.
   # These files should be replaced with a certificate and key provided by an authorized CA.
   # The 'web' and 'mail' containers need to be restarted if these files are modified.
