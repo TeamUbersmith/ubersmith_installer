@@ -471,7 +471,7 @@
       - upgrade_only
 
   # Retrieve Ubersmith images from the repository and start containers
-  - name: start ubersmith containers
+  - name: update and start ubersmith containers
     community.docker.docker_compose:
       project_src: "{{ ubersmith_home }}"
       pull: yes
