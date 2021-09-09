@@ -3,7 +3,7 @@ services:
   app_web:
     environment:
       MYSQL_PASSWORD: "{{ mysql_appliance_password }}"
-      TIMEZONE: {{ timezone_file.stat.lnk_source | replace ("/usr/share/zoneinfo/", "") | replace("Etc/", "") | replace("UCT", "UTC") }}
+      TIMEZONE: {{ timezone_file.stdout | replace ("/usr/share/zoneinfo/", "") | replace("Etc/", "") | replace("UCT", "UTC") }}
     volumes:
 {% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stdout }}:/etc/localtime"
