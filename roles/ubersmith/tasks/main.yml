@@ -249,7 +249,18 @@
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0700
-      
+
+  # Older versions scale redis to 1, we need it scaled to 3
+  - name: ensure redis line exists
+    lineinfile:
+      path: "{{ ubersmith_home }}/ubersmith_start.sh"
+      regexp: "^#?\\s?docker-compose -p ubersmith up --scale redis=\\d -d redis"
+      line: "docker-compose -p ubersmith up --scale redis=3 -d redis"
+      insertafter: "^docker-compose -p ubersmith up (.*)"
+    tags:
+      - upgrade_only
+      - upgrade_prep
+
   # Retrieve Ubersmith images from the repository.
   - name: pull ubersmith images
     command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith pull"
