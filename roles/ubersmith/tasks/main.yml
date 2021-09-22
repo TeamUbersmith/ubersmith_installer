@@ -402,7 +402,18 @@
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0700
-        
+
+  # Older versions scale redis to 1, we need it scaled to 3
+  - name: ensure redis line exists
+    lineinfile:
+      path: "{{ ubersmith_home }}/ubersmith_start.sh"
+      regexp: "^#?\\s?docker-compose -p ubersmith up --scale redis=\\d -d redis"
+      line: "docker-compose -p ubersmith up --scale redis=3 -d redis"
+      insertafter: "^docker-compose -p ubersmith up (.*)"
+    tags:
+      - upgrade_only
+      - upgrade_prep
+
   # Check to see if the installation is using a remote database    
   - name: check for remote database
     community.docker.docker_container_info:
