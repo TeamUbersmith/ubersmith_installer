@@ -64,7 +64,7 @@ services:
       DATABASE_HOST: app_db
       DATABASE_NAME: uberapp
     volumes:
-      - "app_backup:/backup"
+      - "{{ appliance_home }}/backup:/backup"
       - "app_database:/var/lib/mysql"
     depends_on:
       - app_db
@@ -73,6 +73,5 @@ volumes:
   app_database: {}
   app_logs: {}
   app_webroot: {}
-  app_backup: {}
   rrds: {}
   
