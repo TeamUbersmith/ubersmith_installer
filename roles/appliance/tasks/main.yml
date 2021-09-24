@@ -97,7 +97,7 @@
       - upgrade
       - update_compose_override_template
 
-  # Copy a helper script which creates a backup of Ubersmith's RRDs.
+  # Copy over helper scripts 
   - name: copy backup script
     copy:
       src: backup_rrds.sh
@@ -105,6 +105,39 @@
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0700
+
+  - name: copy appliance_restart
+    copy:
+      src: appliance_restart.sh
+      dest: "{{ appliance_home }}"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: 0700
+      force: no
+    tags:
+      - upgrade
+  
+  - name: copy appliance_start
+    copy:
+      src: appliance_start.sh
+      dest: "{{ appliance_home }}"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: 0700
+      force: no 
+    tags:
+      - upgrade
+
+  - name: copy appliance_upgrade
+    copy:
+      src: appliance_upgrade.sh
+      dest: "{{ appliance_home }}"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: 0700
+      force: no 
+    tags:
+      - upgrade
 
   # Create a self signed certificate for temporary use to secure HTTP and SMTP traffic.
   # These files should be replaced with a certificate and key provided by an authorized CA.
