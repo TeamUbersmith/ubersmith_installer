@@ -63,12 +63,6 @@ services:
     environment:
       DATABASE_HOST: app_db
       DATABASE_NAME: uberapp
-{% if ansible_os_family != 'Darwin' %}
-    logging:
-      driver: syslog
-      options:
-        tag: ubersmith/app_backup
-{% endif %}
     volumes:
       - "app_backup:/backup"
       - "app_database:/var/lib/mysql"
