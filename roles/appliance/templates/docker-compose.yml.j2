@@ -59,8 +59,10 @@ services:
   app_backup:
     image: quay.io/ubersmith/xtrabackup:{{ containers.backup_version }}
     hostname: backups.appliance.{{ app_virtual_host }}
+    # entrypoint: /mysqldump.sh
     environment:
       DATABASE_HOST: app_db
+      DATABASE_NAME: uberapp
 {% if ansible_os_family != 'Darwin' %}
     logging:
       driver: syslog
