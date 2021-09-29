@@ -7,8 +7,8 @@
   SetEnvIf Request_URI "^/(images|css|js|locale|admin/minidash.php)" dontlog
   SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
   LogFormat "%h %l %{UberUser}n %{UberElapsed}n %{UberSessionWait}n %{UberSessionLock}n %{UberQueryTime}n %{UberQueryTime2}n %t \"%r\" %>s %b" ubersmith
-  ErrorLog {{ ubersmith_root }}/logs/error_log
-  CustomLog {{ ubersmith_root }}/logs/access_log ubersmith env=!dontlog
+  ErrorLog /dev/stderr
+  CustomLog /dev/stdout combined env=!dontlog
   Options +FollowSymLinks
   DirectoryIndex index.php
   LimitRequestBody 53000000
@@ -45,8 +45,8 @@
   SetEnvIf Request_URI "^/(images|css|js|locale|admin/minidash.php)" dontlog
   SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
   LogFormat "%h %l %{UberUser}n %{UberElapsed}n %{UberSessionWait}n %{UberSessionLock}n %{UberQueryTime}n %{UberQueryTime2}n %t \"%r\" %>s %b" ubersmith
-  ErrorLog {{ ubersmith_root }}/logs/error_log
-  CustomLog {{ ubersmith_root }}/logs/access_log ubersmith env=!dontlog
+  ErrorLog /dev/stderr
+  CustomLog /dev/stdout combined env=!dontlog
  
   SSLCertificateFile {{ ubersmith_root }}/conf/ssl/{{ virtual_host }}.pem
   SSLCertificateKeyFile {{ ubersmith_root }}/conf/ssl/{{ virtual_host }}.key
