@@ -8,6 +8,25 @@
       - interactive
     tags:
       - upgrade_only
+  
+  # See if {{ ubersmith_home }}/.patched exists, abort if it does.
+  - name: determine if the installation has been patched
+    ansible.builtin.stat:
+      path: "{{ ubersmith_home }}/.patched"
+    register: patched
+    when:
+      - interactive
+    tags:
+      - upgrade_only
+
+  - name: fail if ubersmith has been patched
+    ansible.builtin.fail:
+      msg: "Ubersmith appears to be patched. Review the patch configuration and remove the file .patched from {{ ubersmith_home }} to proceed."
+    when: patched.stat.exists   
+    when:
+      - interactive
+    tags:
+      - upgrade_only
 
   # Store the configuration values specified during the deploy for use during
   # future upgrades.
