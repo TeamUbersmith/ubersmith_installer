@@ -89,6 +89,7 @@
        - "{{ ubersmith_home }}/conf/php"
        - "{{ ubersmith_home }}/conf/cron"
        - "{{ ubersmith_home }}/conf/rwhois"
+       - "{{ ubersmith_home }}/conf/sso"
        - "{{ ubersmith_home }}/app/custom"
        - "{{ ubersmith_home }}/app/custom/locale"
        - "{{ ubersmith_home }}/app/custom/plugins"
