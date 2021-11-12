@@ -22,8 +22,8 @@
   - name: fail if ubersmith has been patched
     ansible.builtin.fail:
       msg: "Ubersmith appears to be patched. Review the patch configuration and remove the file .patched from {{ ubersmith_home }} to proceed."
-    when: patched.stat.exists   
-    when:
+    when: 
+      - patched.stat.exists
       - interactive
     tags:
       - upgrade_only
