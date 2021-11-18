@@ -1,0 +1,16 @@
+/var/log/ubersmith/*/docker.log {
+  rotate 30
+  daily
+  compress
+  missingok
+  delaycompress
+  copytruncate
+}
+/var/log/ubersmith/*.log {
+  rotate 30
+  daily
+  compress
+  missingok
+  delaycompress
+  copytruncate
+}

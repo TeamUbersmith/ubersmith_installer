@@ -49,6 +49,18 @@
       - ansible_os_family != "Darwin"
       - ansible_os_family != "Windows"
 
+  # Add logrotate directives to keep Ubersmith logs compressed and rotated.
+  - name: create log rotation configuration
+    copy:
+      dest: /etc/logrotate.d/ubersmith-logs
+      src: ubersmith-logs
+    ignore_errors: yes
+    tags:
+      - upgrade
+    when: 
+      - ansible_os_family != "Darwin"
+      - ansible_os_family != "Windows"
+
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
     shell: readlink -f /etc/localtime
