@@ -134,12 +134,6 @@ services:
   redis:
     image: quay.io/ubersmith/redis:{{ containers.redis_version }}
     restart: unless-stopped
-{% if ansible_os_family != 'Darwin' %}
-    logging:
-      driver: syslog
-      options:
-        tag: ubersmith/redis
-{% endif %}
   redis-data:
     image: quay.io/ubersmith/redis:{{ containers.redis_version }}
     restart: unless-stopped
