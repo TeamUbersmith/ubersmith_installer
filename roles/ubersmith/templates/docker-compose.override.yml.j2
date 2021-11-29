@@ -4,7 +4,7 @@ services:
     volumes:
       - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
 {% if ansible_os_family != 'Darwin' %}
-      - "{{ timezone_file.stdout }}:/etc/localtime"
+      - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
 {% endif %}
       # - "{{ ubersmith_home }}/conf/cron:/etc/cron.d"
   db:
@@ -13,14 +13,14 @@ services:
       MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
     volumes:
 {% if ansible_os_family != 'Darwin' %}
-      - "{{ timezone_file.stdout }}:/etc/localtime"
+      - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
 {% endif %}
       - "{{ ubersmith_home }}/conf/mysql:/etc/mysql/conf.d"
   php:
     volumes:
       - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
 {% if ansible_os_family != 'Darwin' %}
-      - "{{ timezone_file.stdout }}:/etc/localtime"
+      - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
 {% endif %}
       - "{{ ubersmith_home }}/conf/php/ubersmith.ini:/etc/php/{{ php_version }}/fpm/conf.d/20-ubersmith.ini"
   #     - "{{ ubersmith_home }}/conf/php/www.conf:/etc/php/{{ php_version }}/fpm/pool.d/www.conf"
@@ -35,12 +35,12 @@ services:
       - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
       - "{{ ubersmith_home }}/conf/httpd/sites-enabled:/etc/apache2/sites-enabled"
 {% if ansible_os_family != 'Darwin' %}
-      - "{{ timezone_file.stdout }}:/etc/localtime"
+      - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
 {% endif %}
     environment:
       MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
 {% if ansible_os_family != 'Darwin' %}
-      TIMEZONE: {{ timezone_file.stdout | replace ("/usr/share/zoneinfo/", "") | replace("Etc/", "") }}
+      TIMEZONE: {{ timezone_file.stat.lnk_source | replace ("/usr/share/zoneinfo/", "") | replace("Etc/", "") | replace("UCT", "UTC") }}
 {% endif %}
     #  DATABASE_HOST: "db"
     #  USAGE_DATABASE: usage
@@ -50,19 +50,19 @@ services:
   mail:
     volumes:
 {% if ansible_os_family != 'Darwin' %}
-      - "{{ timezone_file.stdout }}:/etc/localtime"
-      - "{{ timezone_file.stdout }}:/var/spool/postfix/etc/localtime"
+      - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
+      - "{{ timezone_file.stat.lnk_source }}:/var/spool/postfix/etc/localtime"
       # - "{{ ubersmith_home }}/conf/mail/aliases:/etc/aliases"
 {% endif %}
       - "{{ ubersmith_home }}/conf/ssl:/var/www/ubersmith_root/conf/ssl"
     environment:
-      - "POSTCONF_SMTPD_TLS_CERT_FILE=/etc/ssl/certs/{{ virtual_host }}.pem"
-      - "POSTCONF_SMTPD_TLS_KEY_FILE=/etc/ssl/private/{{ virtual_host }}.key" 
+      - "POSTCONF_SMTPD_TLS_CERT_FILE=/etc/ssl/certs/{{ container_domain }}.pem"
+      - "POSTCONF_SMTPD_TLS_KEY_FILE=/etc/ssl/private/{{ container_domain }}.key" 
       - POSTCONF_SMTP_TLS_SECURITY_LEVEL=may
   rwhois:
     volumes:
 {% if ansible_os_family != 'Darwin' %}
-      - "{{ timezone_file.stdout }}:/etc/localtime"
+      - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
 {% endif %}
       - "{{ ubersmith_home }}/conf/rwhois:/etc/xinetd.d"
   backup:

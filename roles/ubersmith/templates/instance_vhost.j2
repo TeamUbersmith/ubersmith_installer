@@ -1,9 +1,9 @@
 <VirtualHost *:80>
   ServerAdmin {{ admin_email }}
   DocumentRoot {{ ubersmith_root }}/app/www
-  ServerName {{ virtual_host }}
-  ServerAlias www.{{ virtual_host }}
-  IncludeOptional {{ ubersmith_root }}/conf/httpd/*.{{ virtual_host }}.conf
+  ServerName {{ item }}
+  ServerAlias www.{{ item }}
+  IncludeOptional {{ ubersmith_root }}/conf/httpd/*.{{ item }}.conf
   SetEnvIf Request_URI "^/(images|css|js|locale|admin/minidash.php)" dontlog
   SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
   LogFormat "%h %l %{UberUser}n %{UberElapsed}n %{UberSessionWait}n %{UberSessionLock}n %{UberQueryTime}n %{UberQueryTime2}n %t \"%r\" %>s %b" ubersmith
@@ -39,17 +39,17 @@
 <VirtualHost *:443>
   ServerAdmin {{ admin_email }}
   DocumentRoot {{ ubersmith_root }}/app/www
-  ServerName {{ virtual_host }}
-  ServerAlias www.{{ virtual_host }}
-  IncludeOptional {{ ubersmith_root }}/conf/httpd/*.{{ virtual_host }}.ssl.conf
+  ServerName {{ item }}
+  ServerAlias www.{{ item }}
+  IncludeOptional {{ ubersmith_root }}/conf/httpd/*.{{ item }}.ssl.conf
   SetEnvIf Request_URI "^/(images|css|js|locale|admin/minidash.php)" dontlog
   SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
   LogFormat "%h %l %{UberUser}n %{UberElapsed}n %{UberSessionWait}n %{UberSessionLock}n %{UberQueryTime}n %{UberQueryTime2}n %t \"%r\" %>s %b" ubersmith
   ErrorLog /dev/stderr
   CustomLog /dev/stdout combined env=!dontlog
  
-  SSLCertificateFile {{ ubersmith_root }}/conf/ssl/{{ virtual_host }}.pem
-  SSLCertificateKeyFile {{ ubersmith_root }}/conf/ssl/{{ virtual_host }}.key
+  SSLCertificateFile {{ ubersmith_root }}/conf/ssl/{{ item }}.pem
+  SSLCertificateKeyFile {{ ubersmith_root }}/conf/ssl/{{ item }}.key
  # SSLCACertificateFile {{ ubersmith_root }}/conf/ssl/cabundle.pem
   SSLProtocol             all -SSLv3 -TLSv1 -TLSv1.1
   SSLCipherSuite          ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256

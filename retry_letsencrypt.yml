@@ -1,0 +1,79 @@
+---
+
+  - hosts: local
+
+    vars:
+      ubersmith_home: "{{ lookup('ini', 'ubersmith_home section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
+      virtual_host: "{{ lookup('ini', 'virtual_host section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
+      admin_email: "{{ lookup('ini', 'admin_email section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
+      ubersmith_installed_version: "{{ lookup('ini', 'ubersmith_installed_version section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
+      virtual_hosts: "{{ virtual_host.split(',') }}"
+      notify_email: "{{ admin_email }}"
+      interactive: true
+      containers:
+        certbot_version: latest
+    
+    tasks:
+
+      - name: check for .ubersmith_installer.ini
+        stat:
+          path: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
+        register: installer_config
+
+      - name: fail if installer configuration is not present  
+        fail:
+          msg: "Ubersmith installer configuration file is not present, please run configure.sh"
+        when: not installer_config.stat.exists
+
+      - name: run certbot via a container
+        community.docker.docker_container:
+          name: certbot
+          image: "certbot/certbot:{{ containers.certbot_version }}"
+          container_default_behavior: compatibility
+          command: "certonly -vvv -n -d {{ item }} --webroot --webroot-path /var/www/ubersmith_root/app/www --agree-tos -m {{ notify_email }}"
+          user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
+          auto_remove: yes
+          log_driver: syslog
+          log_options:
+            tag: ubersmith/certbot
+          volumes:
+            - "{{ ubersmith_home }}/conf/certbot/etc:/etc/letsencrypt"
+            - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
+            - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
+            - "ubersmith_webroot:/var/www/ubersmith_root"
+        with_items: "{{ virtual_hosts }}"
+
+      # It's necessary to manually run the deploy hooks to get the key and certificate in place
+      - name: run deploy hooks
+        community.docker.docker_container:
+          name: certbot
+          image: "certbot/certbot:{{ containers.certbot_version }}"
+          container_default_behavior: compatibility
+          entrypoint: /etc/letsencrypt/renewal-hooks/deploy/ubersmith-deploy.sh
+          user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
+          auto_remove: yes
+          log_driver: syslog
+          log_options:
+            tag: ubersmith/certbot
+          volumes:
+            - "{{ ubersmith_home }}/conf/certbot/etc:/etc/letsencrypt"
+            - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
+            - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
+            - "{{ ubersmith_home }}/conf/ssl:/tmp/ssl"
+
+      # Running apache2ctl graceful will reload apache with the new certificates  
+      - name: perform a graceful restart of apache in the web container
+        community.docker.docker_container_exec:
+          container: ubersmith_web_1
+          command: /bin/bash -c "/usr/sbin/apache2ctl graceful"
+
+      # Create a cron task to keep the certificate renewed
+      - name: create certbot container cron task
+        ansible.builtin.cron:
+          name: "check for le renewal"
+          user: "{{ ansible_user_id }}"
+          job: "cd {{ ubersmith_home }}; $HOME/.local/bin/docker-compose up -d certbot; $HOME/.local/bin/docker-compose exec web /usr/sbin/apache2ctl graceful"
+          special_time: daily
+        tags:
+          - le_renewal
+          - certbot

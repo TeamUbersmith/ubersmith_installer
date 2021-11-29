@@ -2,11 +2,10 @@
 set -e
 
 # SSL and Python development libraries are required.
-# sudo yum install gcc libffi-devel python-devel openssl-devel
-# sudo apt-get install build-essential libssl-dev libffi-dev python-dev
+# See documentation at https://docs.ubersmith.com/display/UbersmithDocumentation/Ubersmith+Installation+and+Upgrade+Utility
 
 export PYTHONUSERBASE="$HOME/.local"
 export PATH="$HOME/.local/bin:$PATH"
 
-echo "Retrying Let's Encrypt request..."
-ansible-playbook -i ./hosts -c local -t letsencrypt install_ubersmith.yml
+echo "Retrying Let's Encrypt certificate request..."
+ansible-playbook -i ./hosts -c local retry_letsencrypt.yml
