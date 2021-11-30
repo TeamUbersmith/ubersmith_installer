@@ -227,7 +227,7 @@
       dest: "{{ ubersmith_home }}/conf/certbot/etc/renewal-hooks/deploy/ubersmith-deploy.sh"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
-      mode: 0744
+      mode: 0755
     tags:
       - certbot
       - upgrade
@@ -305,14 +305,16 @@
       image: "certbot/certbot:{{ containers.certbot_version }}"
       container_default_behavior: compatibility
       entrypoint: /etc/letsencrypt/renewal-hooks/deploy/ubersmith-deploy.sh
-      # command: "renew --force-renewal -n"
       user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
       auto_remove: yes
+      env:
+        RENEWED_DOMAINS: "{{ item }}"
       volumes:
         - "{{ ubersmith_home }}/conf/certbot/etc:/etc/letsencrypt"
         - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
         - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
-        - "{{ ubersmith_home }}/conf/ssl:/tmp/ssl"
+        - "{{ ubersmith_home }}/conf/ssl:/opt/certbot/deploy"
+    with_items: "{{ virtual_hosts }}"
     tags:
       - certbot
       - certbot_renewal
