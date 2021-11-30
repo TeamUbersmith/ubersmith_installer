@@ -281,7 +281,6 @@
       user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
       ports:
         - "80:80"
-        - "443:443"
       auto_remove: yes
       volumes:
         - "{{ ubersmith_home }}/conf/certbot/etc:/etc/letsencrypt"
