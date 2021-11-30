@@ -299,7 +299,7 @@
     tags:
       - certbot
 
-  - name: run deploy hooks
+  - name: manually run deploy hooks
     community.docker.docker_container:
       name: certbot
       image: "certbot/certbot:{{ containers.certbot_version }}"
