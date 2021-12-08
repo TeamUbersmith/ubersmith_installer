@@ -203,6 +203,7 @@ services:
       - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
       - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
       - "{{ ubersmith_home }}/conf/ssl:/opt/certbot/deploy"
+      - "webroot:/var/www/ubersmith_root"
 {% if ansible_os_family != 'Darwin' %}
     logging:
       driver: syslog
