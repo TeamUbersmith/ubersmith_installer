@@ -59,7 +59,7 @@
             - "{{ ubersmith_home }}/conf/certbot/etc:/etc/letsencrypt"
             - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
             - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
-            - "{{ ubersmith_home }}/conf/ssl:/tmp/ssl"
+            - "{{ ubersmith_home }}/conf/ssl:/opt/certbot/deploy"
 
       # Running apache2ctl graceful will reload apache with the new certificates  
       - name: perform a graceful restart of apache in the web container
@@ -72,7 +72,7 @@
         ansible.builtin.cron:
           name: "check for le renewal"
           user: "{{ ansible_user_id }}"
-          job: "cd {{ ubersmith_home }}; $HOME/.local/bin/docker-compose up -d certbot; $HOME/.local/bin/docker-compose exec web /usr/sbin/apache2ctl graceful"
+          job: "cd {{ ubersmith_home }}; {{ ansible_user_dir }}/.local/bin/docker-compose up certbot; {{ ansible_user_dir }}/.local/bin/docker-compose exec web /usr/sbin/apache2ctl graceful"
           special_time: daily
         tags:
           - le_renewal

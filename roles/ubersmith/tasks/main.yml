@@ -331,12 +331,11 @@
     ansible.builtin.cron:
       name: "check for le renewal"
       user: "{{ ansible_user_id }}"
-      job: "cd {{ ubersmith_home }}; {{ ansible_user_dir }}/.local/bin/docker-compose up -d certbot; {{ ansible_user_dir }}/.local/bin/docker-compose exec web /usr/sbin/apache2ctl graceful"
+      job: "cd {{ ubersmith_home }}; {{ ansible_user_dir }}/.local/bin/docker-compose up certbot; {{ ansible_user_dir }}/.local/bin/docker-compose exec web /usr/sbin/apache2ctl graceful"
       special_time: daily
     tags:
       - le_renewal
       - certbot
-      - upgrade
       
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
