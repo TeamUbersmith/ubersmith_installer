@@ -197,7 +197,10 @@ services:
 {% endif %}
   certbot:
     image: certbot/certbot:{{ containers.certbot_version }}
+    # image: certbot/dns-nsone:{{ containers.certbot_version }}
     command: "renew -vvv -n --webroot --webroot-path /var/www/ubersmith_root/app/www"
+    # command: "certonly -n --standalone -d {{ virtual_hosts }} --agree-tos -m {{ notify_email }}"
+    # command: "certonly -d {{ virtual_hosts }} --agree-tos -m {{ notify_email }} --dns-nsone --dns-nsone-credentials /tmp/.nsone.ini"
     volumes:
       - "{{ ubersmith_home }}/conf/certbot/etc:/etc/letsencrypt"
       - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
