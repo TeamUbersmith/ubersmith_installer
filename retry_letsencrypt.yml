@@ -50,6 +50,8 @@
           image: "certbot/certbot:{{ containers.certbot_version }}"
           container_default_behavior: compatibility
           entrypoint: /etc/letsencrypt/renewal-hooks/deploy/ubersmith-deploy.sh
+          env:
+            RENEWED_DOMAINS: "{{ item }}"
           user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
           auto_remove: yes
           log_driver: syslog
@@ -60,6 +62,9 @@
             - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
             - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
             - "{{ ubersmith_home }}/conf/ssl:/opt/certbot/deploy"
+        with_items: "{{ virtual_hosts }}"
+        tags:
+          - hooks
 
       # Running apache2ctl graceful will reload apache with the new certificates  
       - name: perform a graceful restart of apache in the web container
