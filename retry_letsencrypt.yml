@@ -25,6 +25,24 @@
           msg: "Ubersmith installer configuration file is not present, please run configure.sh"
         when: not installer_config.stat.exists
 
+      # Create the directory structure required for certbot
+      - name: create ubersmith certbot configuration directories
+        file:
+          path: "{{ item }}"
+          state: directory
+          owner: "{{ ansible_user_id }}"
+          group: "{{ ansible_user_gid }}"
+          mode: 0775
+        with_items:
+           - "{{ ubersmith_home }}/conf/certbot"
+           - "{{ ubersmith_home }}/conf/certbot/lib"
+           - "{{ ubersmith_home }}/conf/certbot/etc"
+           - "{{ ubersmith_home }}/conf/certbot/etc/renewal-hooks"
+           - "{{ ubersmith_home }}/conf/certbot/etc/renewal-hooks/deploy"
+           - "{{ ubersmith_home }}/conf/certbot/log"
+           - "{{ ubersmith_home }}/app/custom/.well-known"
+           - "{{ ubersmith_home }}/app/custom/.well-known/acme-challenge"
+
       - name: run certbot via a container
         community.docker.docker_container:
           name: certbot
