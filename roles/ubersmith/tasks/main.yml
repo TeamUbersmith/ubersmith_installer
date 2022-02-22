@@ -221,10 +221,22 @@
       - rwhois
 
   # This deploy hook will copy certificates into conf/ssl after they've been renewed.
-  - name: install deploy hook
+  - name: install web certbot deploy hook
     template:
       src: ubersmith-deploy.sh.j2
       dest: "{{ ubersmith_home }}/conf/certbot/etc/renewal-hooks/deploy/ubersmith-deploy.sh"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: 0755
+    tags:
+      - certbot
+      - upgrade
+
+  # This deploy hook will copy certificates into conf/ssl after they've been renewed.
+  - name: install mail certbot deploy hook
+    template:
+      src: postfix-deploy.sh.j2
+      dest: "{{ ubersmith_home }}/conf/certbot/etc/renewal-hooks/deploy/postfix-deploy.sh"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0755
