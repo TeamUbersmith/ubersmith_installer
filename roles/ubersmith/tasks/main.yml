@@ -350,6 +350,7 @@
     tags:
       - le_renewal
       - certbot
+      - upgrade
 
   # Create a cron task to call the renewal script once daily
   - name: create certbot container cron task
@@ -361,6 +362,7 @@
     tags:
       - le_renewal
       - certbot
+      - upgrade
 
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
