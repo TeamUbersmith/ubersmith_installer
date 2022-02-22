@@ -338,17 +338,30 @@
     tags:
       - certbot
 
-  # Create a cron task to keep the certificate renewed
+  # Create a shell script to keep the Let's Encrypt certificat renewed
+  - name: create certbot renewal shell script
+    template:
+      src: ubersmith_certbot_renew.sh.j2
+      dest: "{{ ubersmith_home }}/ubersmith_certbot_renew.sh"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: 0700
+      backup: yes
+    tags:
+      - le_renewal
+      - certbot
+
+  # Create a cron task to call the renewal script once daily
   - name: create certbot container cron task
     ansible.builtin.cron:
       name: "check for le renewal"
       user: "{{ ansible_user_id }}"
-      job: "cd {{ ubersmith_home }}; {{ ansible_user_dir }}/.local/bin/docker-compose up certbot; {{ ansible_user_dir }}/.local/bin/docker-compose exec web /usr/sbin/apache2ctl graceful"
+      job: "{{ ubersmith_home }}/ubersmith_certbot_renew.sh"
       special_time: daily
     tags:
       - le_renewal
       - certbot
-      
+
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
     ansible.builtin.stat:

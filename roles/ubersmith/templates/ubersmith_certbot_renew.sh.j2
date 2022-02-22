@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+#
+# Requests a certificate renewal and gracefully restarts Apache
+
+cd {{ ubersmith_home }}
+{{ ansible_user_dir }}/.local/bin/docker-compose up certbot 
+{{ ansible_user_dir }}/.local/bin/docker-compose exec web /usr/sbin/apache2ctl graceful
