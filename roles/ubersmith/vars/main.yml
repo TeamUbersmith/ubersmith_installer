@@ -16,10 +16,11 @@
   ubersmith_version: 4.6.1
   ubersmith_installed_version: 4.0.0
   
+  mysql_version: 5.7
+
   containers:
     backup_version: 2.4
     solr_version: 4.10.4
-    # db_version: 5.7
     web_version: "{{ ubersmith_version }}.0.1"
     web_container_repo: "ubersmith"
     # php_version: 7.3

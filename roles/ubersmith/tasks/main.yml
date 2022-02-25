@@ -190,7 +190,7 @@
       path: "{{ ubersmith_home }}/conf/mysql/ubersmith.cnf"
       line: 'sql_mode = "NO_ENGINE_SUBSTITUTION,NO_AUTO_CREATE_USER"'
     when:
-      - containers.db_version == 5.7
+      - mysql_version == 5.7
     tags:
       - upgrade_only
 
@@ -623,7 +623,7 @@
      - command_result.rc != 0
      - command_result.rc != 2
     when:
-      - containers.db_version == 5.7
+      - mysql_version == 5.7
       - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"
     tags:
       - upgrade_only

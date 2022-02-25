@@ -24,7 +24,7 @@ services:
     volumes:
       - "database:/var/lib/mysql"
       - "/etc/mysql/conf.d"
-{% if containers.db_version == 5.7 %}
+{% if mysql_version == 5.7 %}
       - "{{ ubersmith_home }}/conf/mysql:/etc/ubersmith.conf.d"
 {% endif %}
 {% if ansible_os_family != 'Darwin' %}
