@@ -23,7 +23,7 @@
     web_version: "{{ ubersmith_version }}.0.1"
     web_container_repo: "ubersmith"
     # php_version: 7.3
-    cron_version: 7.0
+    # cron_version: 7.0
     mail_version: 4.0
     rwhois_version: 4.0
     pmm_version: 2

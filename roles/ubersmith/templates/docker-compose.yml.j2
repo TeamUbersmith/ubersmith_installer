@@ -82,7 +82,7 @@ services:
         tag: ubersmith/php
 {% endif %}
   cron:
-    image: quay.io/ubersmith/cron:{{ containers.cron_version }}
+    image: quay.io/ubersmith/cron:{{ ubersmith_version }}
     hostname: {{ container_domain }}
     restart: unless-stopped
     volumes:
