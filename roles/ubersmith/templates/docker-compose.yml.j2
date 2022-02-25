@@ -116,7 +116,7 @@ services:
         tag: ubersmith/mail
 {% endif %}
   rwhois:
-    image: quay.io/ubersmith/xinetd:{{ containers.rwhois_version }}
+    image: quay.io/ubersmith/xinetd:{{ ubersmith_version }}
     hostname: {{ container_domain }}
     restart: unless-stopped
     ports:
