@@ -67,7 +67,7 @@ services:
         tag: ubersmith/web
 {% endif %}
   php:
-    image: quay.io/ubersmith/php:{{ containers.php_version }}
+    image: quay.io/ubersmith/php73:{{ ubersmith_version }}
     hostname: {{ container_domain }}
     restart: unless-stopped
     volumes:
