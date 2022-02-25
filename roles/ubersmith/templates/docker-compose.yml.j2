@@ -96,7 +96,7 @@ services:
         tag: ubersmith/cron
 {% endif %}
   mail:
-    image: quay.io/ubersmith/mail:{{ containers.mail_version }}
+    image: quay.io/ubersmith/mail:{{ ubersmith_version }}
     hostname: {{ container_domain }}
     restart: unless-stopped
     ports:
