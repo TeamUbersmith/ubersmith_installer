@@ -13,7 +13,7 @@ services:
         tag: ubersmith/solr
 {% endif %}
   db:
-    image: quay.io/ubersmith/db:{{ containers.db_version }}
+    image: quay.io/ubersmith/ps57:{{ ubersmith_version }}
     hostname: database.{{ container_domain }}
     restart: unless-stopped
     ports:
