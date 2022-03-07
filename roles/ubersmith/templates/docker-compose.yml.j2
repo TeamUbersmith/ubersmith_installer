@@ -13,7 +13,7 @@ services:
         tag: ubersmith/solr
 {% endif %}
   db:
-    image: quay.io/ubersmith/ps57:{{ ubersmith_version }}
+    image: quay.io/ubersmith/ps57:{{ ubersmith_version }}.0
     hostname: database.{{ container_domain }}
     restart: unless-stopped
     ports:
@@ -67,7 +67,7 @@ services:
         tag: ubersmith/web
 {% endif %}
   php:
-    image: quay.io/ubersmith/php73:{{ ubersmith_version }}
+    image: quay.io/ubersmith/php73:{{ ubersmith_version }}.0
     hostname: {{ container_domain }}
     restart: unless-stopped
     volumes:
@@ -82,7 +82,7 @@ services:
         tag: ubersmith/php
 {% endif %}
   cron:
-    image: quay.io/ubersmith/cron:{{ ubersmith_version }}
+    image: quay.io/ubersmith/cron:{{ ubersmith_version }}.0
     hostname: {{ container_domain }}
     restart: unless-stopped
     volumes:
@@ -96,7 +96,7 @@ services:
         tag: ubersmith/cron
 {% endif %}
   mail:
-    image: quay.io/ubersmith/mail:{{ ubersmith_version }}
+    image: quay.io/ubersmith/mail:{{ ubersmith_version }}.0
     hostname: {{ container_domain }}
     restart: unless-stopped
     ports:
@@ -116,7 +116,7 @@ services:
         tag: ubersmith/mail
 {% endif %}
   rwhois:
-    image: quay.io/ubersmith/xinetd:{{ ubersmith_version }}
+    image: quay.io/ubersmith/xinetd:{{ ubersmith_version }}.0
     hostname: {{ container_domain }}
     restart: unless-stopped
     ports:
@@ -163,7 +163,7 @@ services:
     depends_on:
       - db
   rsyslog:
-    image: quay.io/ubersmith/rsyslog:{{ ubersmith_version }}
+    image: quay.io/ubersmith/rsyslog:{{ ubersmith_version }}.0
     hostname: rsyslog.{{ container_domain }}
     volumes:
       - "{{ ubersmith_home }}/logs/rsyslog/:/var/run/rsyslog/dev/"
