@@ -21,7 +21,7 @@
   containers:
     backup_version: 2.4
     solr_version: 4.10.4
-    web_version: "{{ ubersmith_version }}.0.1"
+    web_version: "{{ ubersmith_version }}.0"
     web_container_repo: "ubersmith"
     # php_version: 7.3
     # cron_version: 7.0
