@@ -190,7 +190,7 @@
       path: "{{ ubersmith_home }}/conf/mysql/ubersmith.cnf"
       line: 'sql_mode = "NO_ENGINE_SUBSTITUTION,NO_AUTO_CREATE_USER"'
     when:
-      - containers.db_version == 5.7
+      - mysql_version == 5.7
     tags:
       - upgrade_only
 
@@ -543,6 +543,26 @@
       - ubersmith_installed_version is version_compare('4.6.0', '>' )
     tags:
       - upgrade_only
+  
+  # Ensure permissions on database files are correct
+  - name: make sure UID/GID 1001 owns the database files
+    community.docker.docker_container:
+      name: busybox
+      image: "busybox"
+      container_default_behavior: compatibility
+      command: "chown -R 1001:1001 /mysql"
+      user: root
+      auto_remove: yes
+      log_driver: syslog
+      log_options:
+        tag: ubersmith/busybox
+      volumes:
+        - "ubersmith_database:/mysql"
+    when:
+      - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"
+    tags:
+      - upgrade_only
+      - mysql_permissions
 
   # Retrieve Ubersmith images from the repository and start containers
   - name: update and start ubersmith containers
@@ -623,7 +643,7 @@
      - command_result.rc != 0
      - command_result.rc != 2
     when:
-      - containers.db_version == 5.7
+      - mysql_version == 5.7
       - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"
     tags:
       - upgrade_only
