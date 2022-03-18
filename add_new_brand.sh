@@ -23,3 +23,5 @@ echo "Installing Dependencies..."
 ansible-galaxy install -r requirements.yml
 echo "Configuring a new brand..."
 ansible-playbook -i ./hosts -c local -t new_brand add_new_brand.yml
+echo "Retrying Let's Encrypt certificate request..."
+ansible-playbook -i ./hosts -c local retry_letsencrypt.yml

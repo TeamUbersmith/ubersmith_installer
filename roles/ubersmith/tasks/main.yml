@@ -291,7 +291,6 @@
       state: drained
     tags:
       - certbot
-      - new_brand
 
   - name: run certbot via a container
     community.docker.docker_container:
@@ -310,7 +309,6 @@
     with_items: "{{ virtual_hosts }}"
     tags:
       - certbot
-      - new_brand
 
   - name: wait for port 80 to become available
     ansible.builtin.wait_for:
@@ -319,7 +317,6 @@
       state: drained      
     tags:
       - certbot
-      - new_brand
 
   - name: manually run deploy hooks
     community.docker.docker_container:
@@ -340,7 +337,6 @@
     tags:
       - certbot
       - certbot_renewal
-      - new_brand
 
   - name: wait for port 80 to become available
     ansible.builtin.wait_for:
@@ -349,7 +345,6 @@
       state: drained
     tags:
       - certbot
-      - new_brand
 
   # Create a shell script to keep the Let's Encrypt certificate renewed
   - name: create certbot renewal shell script
@@ -537,7 +532,6 @@
       project_name: ubersmith
     tags:
       - upgrade_only
-      - new_brand
 
   - name: remove ubersmith webroot volume if present
     community.docker.docker_volume:
@@ -596,7 +590,6 @@
         - redis-data
     tags:
       - upgrade
-      - new_brand
 
   - name: scale redis containers
     community.docker.docker_compose:
