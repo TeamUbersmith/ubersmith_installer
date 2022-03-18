@@ -1,0 +1,20 @@
+---
+
+  - hosts: local
+    any_errors_fatal: true
+
+    vars_prompt:
+      - name: "new_virtual_host"
+        prompt: "Enter the hostname(s) for the new brand; for multiple brands use a comma delimited list"
+        default: "ubersmith.example.com"
+        private: no
+
+    vars:
+      interactive: true
+      existing_virtual_host: "{{ lookup('ini', 'virtual_host section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
+      virtual_host: "{{ existing_virtual_host }},{{ new_virtual_host }}"
+      certificate_domains: "{{ virtual_host }}"
+      notify_email: "{{ admin_email }}"
+
+    roles:
+      - ubersmith
