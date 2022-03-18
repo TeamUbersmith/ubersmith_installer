@@ -55,6 +55,8 @@
       - { var: 'ubersmith_home', val: "{{ ubersmith_home }}" }
       - { var: 'virtual_host', val: "{{ virtual_host }}" }
       - { var: 'admin_email', val: "{{ admin_email }}" }
+    tags:
+      - new_brand
 
   # Stop and disable MTAs; Ubersmith provides its own mail service
   # If this fails, it's okay, but the Ubersmith mail container won't start
@@ -162,13 +164,16 @@
   # editing without having to enter the container. A restart of the 'web' container is
   # required if this file is modified.
   - name: create ubersmith apache virtual host configuration file
-    template:
+    ansible.builtin.template:
       src: instance_vhost.j2
       dest: "{{ ubersmith_home }}/conf/httpd/sites-enabled/{{ item }}.conf"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: "0640"
+      backup: yes
     with_items: "{{ virtual_hosts }}"
+    tags:
+      - new_brand
 
   # The Percona Server configuration file is created on the local filesystem to facilitate
   # editing without having to enter the container. A restart of the 'db' container is
@@ -253,6 +258,7 @@
     with_items: "{{ virtual_hosts }}"
     tags:
       - selfsigned
+      - new_brand
 
   - name: create certificate signing requests
     community.crypto.openssl_csr:
@@ -264,6 +270,7 @@
     with_items: "{{ virtual_hosts }}"
     tags:
       - selfsigned
+      - new_brand
 
   - name: create self signed certificates
     community.crypto.x509_certificate:
@@ -274,6 +281,7 @@
     with_items: "{{ virtual_hosts }}"
     tags:
       - selfsigned
+      - new_brand
 
   # Request certificates from Let's Encrypt
   - name: wait for port 80 to become available
@@ -338,7 +346,7 @@
     tags:
       - certbot
 
-  # Create a shell script to keep the Let's Encrypt certificat renewed
+  # Create a shell script to keep the Let's Encrypt certificate renewed
   - name: create certbot renewal shell script
     template:
       src: ubersmith_certbot_renew.sh.j2
