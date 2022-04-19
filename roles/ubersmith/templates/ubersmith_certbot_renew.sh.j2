@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Requests a certificate renewal and gracefully restarts Apache
+# Requests a certificate renewal and gracefully restarts Apache and Postfix
 
 cd {{ ubersmith_home }}
 {{ ansible_user_dir }}/.local/bin/docker-compose up certbot 
