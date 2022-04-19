@@ -4,4 +4,6 @@
 
 cd {{ ubersmith_home }}
 {{ ansible_user_dir }}/.local/bin/docker-compose up certbot 
+sleep 120
 {{ ansible_user_dir }}/.local/bin/docker-compose exec web /usr/sbin/apache2ctl graceful
+{{ ansible_user_dir }}/.local/bin/docker-compose exec mail /usr/sbin/postfix reload
