@@ -1,0 +1,31 @@
+---
+
+  - hosts: local
+
+    vars:
+      ubersmith_version: "{{ lookup('ini', 'ubersmith_installed_version section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
+
+
+    tasks:
+
+      # Query the Github API to get a list of available patches
+      - name: retrieve available patch releases
+        ansible.builtin.uri:
+          url: https://api.github.com/repos/TeamUbersmith/ubersmith-patches/releases
+          headers:
+            Accept: application/vnd.github.v3+json
+        register: available_patches
+
+      - name: debug ubersmith_version
+        ansible.builtin.debug:
+          msg: "{{ ubersmith_version }}"
+
+      - name: debug available_patches
+        ansible.builtin.debug:
+          # available_patches.json[0].assets
+          # jmespath: 
+          # [].assets[*].browser_download_url
+          # [?name=='4.6.2 Test Patch'].name
+          msg: "{{ available_patches.json | to_json | from_json | community.general.json_query(patch_name_query) }}"
+        vars:
+          patch_name_query: "[?contains(name,'{{ ubersmith_version }}')].name"
