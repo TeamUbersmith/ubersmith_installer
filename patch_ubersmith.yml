@@ -28,4 +28,4 @@
           # [?name=='4.6.2 Test Patch'].name
           msg: "{{ available_patches.json | to_json | from_json | community.general.json_query(patch_name_query) }}"
         vars:
-          patch_name_query: "[?contains(name,'{{ ubersmith_version }}')].name"
+          patch_name_query: "[?contains(name,'4.6.1')].[id, name, html_url, assets[].browser_download_url | [0]]"
