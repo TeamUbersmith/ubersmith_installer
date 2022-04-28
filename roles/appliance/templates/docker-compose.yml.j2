@@ -1,7 +1,7 @@
 version: '3'
 services:
   app_db:
-    image: quay.io/ubersmith/appliance_db:{{ containers.appliance_db_version }}
+    image: {{ registry }}/appliance_db:{{ containers.appliance_db_version }}
     hostname: database.appliance.{{ app_virtual_host }}
     restart: unless-stopped
     ports:
@@ -18,7 +18,7 @@ services:
         tag: ubersmith/app_db
 {% endif %}
   app_web:
-    image: quay.io/ubersmith/{{ containers.appweb_container_repo }}:{{ containers.appliance_web_version }}
+    image: {{ registry }}/{{ containers.appweb_container_repo }}:{{ containers.appliance_web_version }}
     hostname: appliance.{{ app_virtual_host }}
     restart: unless-stopped
     ports:
@@ -42,7 +42,7 @@ services:
     depends_on:
       - app_db
   app_cron:
-    image: quay.io/ubersmith/appliance_cron:{{ containers.appliance_cron_version }}
+    image: {{ registry }}/appliance_cron:{{ containers.appliance_cron_version }}
     hostname: cron.appliance.{{ app_virtual_host }}
     restart: unless-stopped
     volumes:
@@ -57,7 +57,7 @@ services:
     depends_on:
       - app_web
   app_backup:
-    image: quay.io/ubersmith/xtrabackup:{{ containers.backup_version }}
+    image: {{ registry }}/xtrabackup:{{ containers.backup_version }}
     hostname: backups.appliance.{{ app_virtual_host }}
     # entrypoint: /mysqldump.sh
     environment:

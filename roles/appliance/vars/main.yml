@@ -13,3 +13,5 @@
     appliance_web_version: "{{ appliance_version }}.0"
     appliance_cron_version: 6.0
     appweb_container_repo: "appliance"
+
+registry: registry.digitalocean.com/ubersmith
