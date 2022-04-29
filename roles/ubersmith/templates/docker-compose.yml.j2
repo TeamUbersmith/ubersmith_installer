@@ -132,10 +132,10 @@ services:
         tag: ubersmith/rwhois
 {% endif %}
   redis:
-    image: {{ registry }}/redis:{{ containers.redis_version }}
+    image: {{ registry }}/redis:{{ ubersmith_version }}-{{ containers.release_version }}
     restart: unless-stopped
   redis-data:
-    image: {{ registry }}/redis:{{ containers.redis_version }}
+    image: {{ registry }}/redis:{{ ubersmith_version }}-{{ containers.release_version }}
     restart: unless-stopped
 {% if ansible_os_family != 'Darwin' %}
     logging:
