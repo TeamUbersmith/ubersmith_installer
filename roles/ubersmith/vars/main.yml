@@ -20,8 +20,6 @@
 
   containers:
     release_version: r9
-    backup_version: 2.4
-    solr_version: 4.10.4
     web_container_repo: "ubersmith"
     pmm_version: 2
     haproxy_version: 1.7-alpine
