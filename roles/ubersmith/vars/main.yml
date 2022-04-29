@@ -19,18 +19,13 @@
   mysql_version: 5.7
 
   containers:
+    release_version: r9
     backup_version: 2.4
     solr_version: 4.10.4
-    web_version: "{{ ubersmith_version }}.0"
     web_container_repo: "ubersmith"
-    # php_version: 7.3
-    # cron_version: 7.0
-    # mail_version: 4.0
-    # rwhois_version: 4.0
     pmm_version: 2
     haproxy_version: 1.7-alpine
     redis_version: 6
-    # rsyslog_version: 1.1
     certbot_version: latest
 
 registry: registry.digitalocean.com/ubersmith

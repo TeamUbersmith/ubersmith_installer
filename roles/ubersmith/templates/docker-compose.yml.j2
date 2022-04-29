@@ -13,7 +13,7 @@ services:
         tag: ubersmith/solr
 {% endif %}
   db:
-    image: {{ registry }}/ps57:{{ ubersmith_version }}.0
+    image: {{ registry }}/ps57:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: database.{{ container_domain }}
     restart: unless-stopped
     ports:
@@ -34,7 +34,7 @@ services:
         tag: ubersmith/db
 {% endif %}
   web:
-    image: {{ registry }}/{{ containers.web_container_repo }}:{{ containers.web_version }}
+    image: {{ registry }}/{{ containers.web_container_repo }}:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: {{ container_domain }}
     restart: unless-stopped
     environment:
@@ -67,7 +67,7 @@ services:
         tag: ubersmith/web
 {% endif %}
   php:
-    image: {{ registry }}/php73:{{ ubersmith_version }}.0
+    image: {{ registry }}/php73:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: {{ container_domain }}
     restart: unless-stopped
     volumes:
@@ -82,7 +82,7 @@ services:
         tag: ubersmith/php
 {% endif %}
   cron:
-    image: {{ registry }}/cron:{{ ubersmith_version }}.0
+    image: {{ registry }}/cron:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: {{ container_domain }}
     restart: unless-stopped
     volumes:
@@ -96,7 +96,7 @@ services:
         tag: ubersmith/cron
 {% endif %}
   mail:
-    image: {{ registry }}/mail:{{ ubersmith_version }}.0
+    image: {{ registry }}/mail:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: {{ container_domain }}
     restart: unless-stopped
     ports:
@@ -116,7 +116,7 @@ services:
         tag: ubersmith/mail
 {% endif %}
   rwhois:
-    image: {{ registry }}/xinetd:{{ ubersmith_version }}.0
+    image: {{ registry }}/xinetd:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: {{ container_domain }}
     restart: unless-stopped
     ports:
@@ -163,7 +163,7 @@ services:
     depends_on:
       - db
   rsyslog:
-    image: {{ registry }}/rsyslog:{{ ubersmith_version }}.0
+    image: {{ registry }}/rsyslog:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: rsyslog.{{ container_domain }}
     volumes:
       - "{{ ubersmith_home }}/logs/rsyslog/:/var/run/rsyslog/dev/"
