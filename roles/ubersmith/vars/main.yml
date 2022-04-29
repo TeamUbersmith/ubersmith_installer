@@ -28,4 +28,4 @@
     redis_version: 6
     certbot_version: latest
 
-registry: registry.digitalocean.com/ubersmith
+  registry: registry.digitalocean.com/ubersmith
