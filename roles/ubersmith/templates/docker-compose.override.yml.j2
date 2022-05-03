@@ -33,7 +33,7 @@ services:
       - "{{ ubersmith_home }}/conf/ssl:/var/www/ubersmith_root/conf/ssl"
       - "{{ ubersmith_home }}/conf/httpd:/var/www/ubersmith_root/conf/httpd"
       - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
-      - "{{ ubersmith_home }}/conf/httpd/sites-enabled:/etc/apache2/sites-enabled"
+      - "{{ ubersmith_home }}/conf/httpd/sites-enabled:/usr/local/apache2/conf/sites-enabled"
 {% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
 {% endif %}
