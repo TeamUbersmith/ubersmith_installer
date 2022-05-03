@@ -12,7 +12,7 @@ if command -v pip3 >/dev/null 2>&1; then
     echo "Installing contemporary version of pip3..."
     pip3 install -q --user --upgrade pip
     echo "Installing Ansible..."
-    $HOME/.local/bin/pip3 uninstall ansible -y
+    $HOME/.local/bin/pip3 uninstall ansible -q -y
     $HOME/.local/bin/pip3 install "ansible-core>=2.11,<2.12" -q --upgrade --user --force-reinstall
 else
     echo "The pip3 utility is missing; please install pip3."
