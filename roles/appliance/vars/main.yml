@@ -12,4 +12,4 @@
     backup_version: 2.4
     appweb_container_repo: "appliance"
 
-  registry: registry.digitalocean.com/ubersmith
+  registry: ghcr.io/teamubersmith

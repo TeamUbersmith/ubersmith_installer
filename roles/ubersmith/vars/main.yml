@@ -25,4 +25,4 @@
     haproxy_version: 1.7-alpine
     certbot_version: latest
 
-  registry: registry.digitalocean.com/ubersmith
+  registry: ghcr.io/teamubersmith
