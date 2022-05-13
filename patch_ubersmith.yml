@@ -76,9 +76,15 @@
           msg: "{{ patch_id.user_input }}"
 
       - name: retrieve assets for selected patch
-        ansible.builtin.get_url:
-          url: "{{ _patch[3] }}"
-          dest: "{{ ubersmith_home }}/app/patches/{{ _patch[0] }}.tar.gz"
+        ansible.builtin.set_fact:
+          my_patch: "{{ lookup('url', 'https://api.github.com/repos/TeamUbersmith/ubersmith-patches/releases/{{ patch_id }}', headers={'Accept':'application/vnd.github.v3+json'})}}"
+
+      - name: debug my_patch
+        ansible.builtin.debug:
+          msg: "{{ my_patch }}"
+
+          # url: "{{ _patch[3] }}"
+          # dest: "{{ ubersmith_home }}/app/patches/{{ _patch[0] }}.tar.gz"
 
       # - name: build prompt
       #   set_fact:
