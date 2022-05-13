@@ -122,6 +122,8 @@
        - "{{ ubersmith_home }}/app/custom/include/order_modules"
        - "{{ ubersmith_home }}/app/custom/.well-known"
        - "{{ ubersmith_home }}/app/custom/.well-known/acme-challenge"
+       - "{{ ubersmith_home }}/app/patches"
+
     tags:
       - mysql_config
       - httpd_config

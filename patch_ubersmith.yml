@@ -40,6 +40,15 @@
       #   ansible.builtin.debug: 
       #     msg: "{{ all_patches }}"
 
+      # Create the directory structure required for Ubersmith to store patches
+      - name: create ubersmith configuration directories
+        file:
+          path: "{{ ubersmith_home }}/app/patches"
+          state: directory
+          owner: "{{ ansible_user_id }}"
+          group: "{{ ansible_user_gid }}"
+          mode: 0775
+
       - name: determine available patches
         set_fact:
           available_patches: "{{ all_patches | to_json | from_json | community.general.json_query(patch_name_query) }}"
@@ -67,7 +76,9 @@
 
       - name: retrieve assets for selected patch
         ansible.builtin.get_url:
-        
+          url: "{{ _patch[3] }}"
+          dest: "{{ ubersmith_home }}/app/patches/{{ _patch[0] }}.tar.gz"
+
       # - name: build prompt
       #   set_fact:
           # patch_message: >-
