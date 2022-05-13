@@ -90,8 +90,14 @@
           src: "{{ my_patch['assets'][0]['browser_download_url'] }}"
           dest: "{{ ubersmith_home }}/app/patches"
           remote_src: yes
+          list_files: true
+        register: patch_files
 
-      - name: write applied patches to .patched file
+      - name: debug patch_files
+        ansible.builtin.debug:
+          msg: "{{ patch_files.files }}"
+
+      - name: write patch data to .patched file
         community.general.ini_file:
           path: "{{ ubersmith_home }}/.patched"
           section: "Patch {{ patch_id.user_input }}"
@@ -102,3 +108,4 @@
           patch_data:
             installer: "{{ ansible_user_id }}"
             install_date: "{{ '%a, %d %b %Y %T %z' | strftime }}"
+            github_page: "{{ my_patch['html_url'] }}"
