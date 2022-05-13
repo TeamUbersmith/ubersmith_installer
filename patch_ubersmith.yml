@@ -19,7 +19,7 @@
         tags:
           - upgrade_only
 
-      - name: fail if ubersmith has been patched
+      - name: pause for admin if ubersmith has been patched
         ansible.builtin.pause:
           prompt: "Ubersmith appears to be patched. Review the patch configuration file in {{ ubersmith_home }}/.patched before proceeding to avoid conflicts."
         when: 
