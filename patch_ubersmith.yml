@@ -16,8 +16,6 @@
         ansible.builtin.stat:
           path: "{{ ubersmith_home }}/.patched"
         register: patched
-        when:
-          - interactive
         tags:
           - upgrade_only
 
