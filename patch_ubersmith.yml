@@ -77,7 +77,9 @@
 
       - name: retrieve assets for selected patch
         ansible.builtin.set_fact:
-          my_patch: "{{ lookup('url', 'https://api.github.com/repos/TeamUbersmith/ubersmith-patches/releases/{{ patch_id }}', headers={'Accept':'application/vnd.github.v3+json'})}}"
+          my_patch: "{{ lookup('url', release_url, headers={'Accept':'application/vnd.github.v3+json'})}}"
+        vars:
+          release_url: "https://api.github.com/repos/TeamUbersmith/ubersmith-patches/releases/{{ patch_id }}"
 
       - name: debug my_patch
         ansible.builtin.debug:
