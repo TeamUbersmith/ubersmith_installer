@@ -43,7 +43,7 @@
 
       # Create the directory structure required for Ubersmith to store patches
       - name: create ubersmith configuration directories
-        file:
+        ansible.builtin.file:
           path: "{{ ubersmith_home }}/app/patches"
           state: directory
           owner: "{{ ansible_user_id }}"
@@ -51,13 +51,13 @@
           mode: 0775
 
       - name: determine available patches
-        set_fact:
+        ansible.builtin.set_fact:
           available_patches: "{{ all_patches | to_json | from_json | community.general.json_query(patch_name_query) }}"
         vars:
           patch_name_query: "[?contains(name,'{{ ubersmith_version }}')].[id, name, html_url, assets[].browser_download_url | [0]]"
 
       - name: prompt for patch id
-        pause:
+        ansible.builtin.pause:
           prompt: |-
 
               === Available Patches for Ubersmith {{ ubersmith_version}} ===
@@ -79,14 +79,13 @@
         ansible.builtin.set_fact:
           my_patch: "{{ lookup('url', release_url, headers={'Accept':'application/vnd.github.v3+json'})}}"
         vars:
-          release_url: "https://api.github.com/repos/TeamUbersmith/ubersmith-patches/releases/{{ patch_id }}"
+          release_url: "https://api.github.com/repos/TeamUbersmith/ubersmith-patches/releases/{{ patch_id.user_input }}"
 
-      - name: debug my_patch
-        ansible.builtin.debug:
-          msg: "{{ my_patch }}"
-
-          # url: "{{ _patch[3] }}"
-          # dest: "{{ ubersmith_home }}/app/patches/{{ _patch[0] }}.tar.gz"
+      - name: retrieve selected patch
+        ansible.builtin.unarchive:
+          src: "{{ my_patch.assets.browser_download_url }}"
+          dest: "{{ ubersmith_home }}/app/patches"
+          remote_src: yes
 
       # - name: build prompt
       #   set_fact:
