@@ -1,4 +1,5 @@
 ---
+# If running on macOS for some weird reason, this is needed for the url lookup to work
 # export "OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES"
 
   - hosts: local
@@ -7,39 +8,24 @@
       ubersmith_version: "{{ lookup('ini', 'ubersmith_installed_version section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
       all_patches: "{{ lookup('url', 'https://api.github.com/repos/TeamUbersmith/ubersmith-patches/releases', headers={'Accept':'application/vnd.github.v3+json'})}}"
       ubersmith_home: "{{ lookup('ini', 'ubersmith_home section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
-      # patch_name_query: "[?contains(name,'{{ ubersmith_version }}')].[id, name, html_url, assets[].browser_download_url | [0]]"
-      # available_patches: "{{ all_patches | to_json | from_json | community.general.json_query(patch_name_query) }}"
-
-    # vars_prompt:
-
-    #   - name: "patch_id"
-    #     prompt: >-
-    #       === Available Patches for Ubersmith {{ ubersmith_version}} ===
-    #       {% for _patch in available_patches %}
-    #       Name: {{ _patch[1] }}
-    #       URL:  {{ _patch[2] }}
-    #       ID:   {{ _patch[0] }}
-
-    #       {% endfor %}
-    #     private: no
 
     tasks:
 
-      # Query the Github API to get a list of available patches
-      # - name: retrieve available patch releases
-      #   ansible.builtin.uri:
-      #     url: https://api.github.com/repos/TeamUbersmith/ubersmith-patches/releases
-      #     headers:
-      #       Accept: application/vnd.github.v3+json
-      #   register: all_patches
+      # See if {{ ubersmith_home }}/.patched exists, pause if it does.
+      - name: determine if the installation has been patched
+        ansible.builtin.stat:
+          path: "{{ ubersmith_home }}/.patched"
+        register: patched
+        when:
+          - interactive
+        tags:
+          - upgrade_only
 
-      # - name: debug ubersmith_version
-      #   ansible.builtin.debug:
-      #     msg: "{{ ubersmith_version }}"
-
-      # - name: debug available_patches
-      #   ansible.builtin.debug: 
-      #     msg: "{{ all_patches }}"
+      - name: fail if ubersmith has been patched
+        ansible.builtin.pause:
+          prompt: "Ubersmith appears to be patched. Review the patch configuration file in {{ ubersmith_home }}/.patched before proceeding to avoid conflicts."
+        when: 
+          - patched.stat.exists
 
       # Create the directory structure required for Ubersmith to store patches
       - name: create ubersmith configuration directories
@@ -93,9 +79,9 @@
           list_files: true
         register: patch_files
 
-      - name: debug patch_files
-        ansible.builtin.debug:
-          msg: "{{ patch_files.files }}"
+      # - name: debug patch_files
+      #   ansible.builtin.debug:
+      #     msg: "{{ patch_files.files }}"
 
       - name: write patch data to .patched file
         community.general.ini_file:
