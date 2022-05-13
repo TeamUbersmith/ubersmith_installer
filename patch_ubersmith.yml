@@ -69,6 +69,15 @@
       #   ansible.builtin.debug:
       #     msg: "{{ my_patch['assets'] }}"
 
+      # Create the directory structure required for Ubersmith to store patches
+      - name: create directory for requested patch
+        ansible.builtin.file:
+          path: "{{ ubersmith_home }}/app/patches/{{ patch_id.user_input }}"
+          state: directory
+          owner: "{{ ansible_user_id }}"
+          group: "{{ ansible_user_gid }}"
+          mode: 0775
+
       - name: retrieve selected patch
         ansible.builtin.unarchive:
           src: "{{ my_patch['assets'][0]['browser_download_url'] }}"
