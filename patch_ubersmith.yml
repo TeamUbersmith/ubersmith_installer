@@ -83,7 +83,7 @@
 
       - name: retrieve selected patch
         ansible.builtin.unarchive:
-          src: "{{ my_patch.assets.browser_download_url }}"
+          src: "{{ my_patch['assets']['browser_download_url'] }}"
           dest: "{{ ubersmith_home }}/app/patches"
           remote_src: yes
 
