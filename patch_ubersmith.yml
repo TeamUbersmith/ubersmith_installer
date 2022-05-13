@@ -81,16 +81,15 @@
         vars:
           release_url: "https://api.github.com/repos/TeamUbersmith/ubersmith-patches/releases/{{ patch_id.user_input }}"
 
-      - name: debug assets
-        ansible.builtin.debug:
-          msg: "{{ my_patch['assets'] }}"
+      # - name: debug assets
+      #   ansible.builtin.debug:
+      #     msg: "{{ my_patch['assets'] }}"
 
-
-      # - name: retrieve selected patch
-      #   ansible.builtin.unarchive:
-      #     src: "{{ my_patch['assets']['browser_download_url'] }}"
-      #     dest: "{{ ubersmith_home }}/app/patches"
-      #     remote_src: yes
+      - name: retrieve selected patch
+        ansible.builtin.unarchive:
+          src: "{{ my_patch['assets'][0]['browser_download_url'] }}"
+          dest: "{{ ubersmith_home }}/app/patches"
+          remote_src: yes
 
       # - name: build prompt
       #   set_fact:
