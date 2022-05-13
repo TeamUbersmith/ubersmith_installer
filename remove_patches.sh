@@ -20,4 +20,4 @@ else
 fi
 
 echo "Patching Ubersmith..."
-ansible-playbook -i ./hosts -c local --skip-tags remove_patches patch_ubersmith.yml
+ansible-playbook -i ./hosts -c local -t remove_patches,restart patch_ubersmith.yml

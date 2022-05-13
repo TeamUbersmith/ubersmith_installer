@@ -11,13 +11,25 @@
 
     tasks:
 
+      - name: remove .patched file
+        ansible.builtin.file:
+          path: "{{ ubersmith_home }}/.patched"
+          state: absent
+        tags:
+          - remove_patches
+
+      - name: remove patches directory
+        ansible.builtin.file:
+          path: "{{ ubersmith_home }}/app/patches"
+          state: absent          
+        tags:
+          - remove_patches
+
       # See if {{ ubersmith_home }}/.patched exists, pause if it does.
       - name: determine if the installation has been patched
         ansible.builtin.stat:
           path: "{{ ubersmith_home }}/.patched"
         register: patched
-        tags:
-          - upgrade_only
 
       - name: pause for admin if ubersmith has been patched
         ansible.builtin.pause:
@@ -33,6 +45,8 @@
           owner: "{{ ansible_user_id }}"
           group: "{{ ansible_user_gid }}"
           mode: 0775
+        tags:
+          - remove_patches
 
       - name: determine available patches
         ansible.builtin.set_fact:
@@ -97,6 +111,8 @@
           restarted: yes
           services:
             - web
+        tags:
+          - restart
 
       - name: write patch data to .patched file
         community.general.ini_file:
