@@ -100,5 +100,5 @@
         loop: "{{ patch_data | dict2items }}"
         vars:
           patch_data:
-            installer: "{{ ansible_user }}"
+            installer: "{{ ansible_user_id }}"
             install_date: "{{ '%a, %d %b %Y %T %z' | strftime }}"
