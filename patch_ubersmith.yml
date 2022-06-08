@@ -104,7 +104,7 @@
       #   ansible.builtin.debug:
       #     msg: "{{ patch_files.files }}"
 
-      - name: restart the ubersmith web container; loading the patched files
+      - name: restart the ubersmith web container
         community.docker.docker_compose:
           project_src: "{{ ubersmith_home }}"
           project_name: ubersmith
