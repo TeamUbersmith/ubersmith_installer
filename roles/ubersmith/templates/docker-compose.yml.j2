@@ -115,6 +115,20 @@ services:
       options:
         tag: ubersmith/mail
 {% endif %}
+  pdns:
+    image: quay.io/ubersmith/pdns:{{ containers.pdns_version }}
+    environment:
+      MYSQL_USER: ubersmith
+      MYSQL_DATABASE: ubersmith
+      DATABASE_HOST: "db"
+    depends_on:
+      - db
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/pdns
+{% endif %}
   rwhois:
     image: quay.io/ubersmith/xinetd:{{ ubersmith_version }}.0
     hostname: {{ container_domain }}

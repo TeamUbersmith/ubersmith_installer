@@ -59,6 +59,17 @@ services:
       - "POSTCONF_SMTPD_TLS_CERT_FILE=/etc/ssl/certs/{{ container_domain }}.pem"
       - "POSTCONF_SMTPD_TLS_KEY_FILE=/etc/ssl/private/{{ container_domain }}.key" 
       - POSTCONF_SMTP_TLS_SECURITY_LEVEL=may
+  pdns:
+    ports:
+      - "53/udp"
+    environment:
+      MYSQL_PASSWORD: "booYeesholeghoo2ei"
+      PDNS_LOG_LEVEL: 5
+    volumes:
+{% if ansible_os_family != 'Darwin' %}
+      - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
+{% endif %}
+      - "/usr/local/ubersmith/conf/pdns/pdns.conf:/etc/pdns/pdns.conf"
   rwhois:
     volumes:
 {% if ansible_os_family != 'Darwin' %}
