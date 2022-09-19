@@ -63,7 +63,7 @@ services:
     ports:
       - "53/udp"
     environment:
-      MYSQL_PASSWORD: "booYeesholeghoo2ei"
+      MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
       PDNS_LOG_LEVEL: 5
     volumes:
 {% if ansible_os_family != 'Darwin' %}
