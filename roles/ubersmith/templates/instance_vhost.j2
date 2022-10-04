@@ -52,7 +52,8 @@
   Protocols h2 http/1.1
 
   Header always set Strict-Transport-Security "max-age=63072000"
-
+  Header add Content-Security-Policy "frame-ancestors 'self';"
+  
   SSLCertificateFile {{ ubersmith_root }}/conf/ssl/{{ item }}.pem
   SSLCertificateKeyFile {{ ubersmith_root }}/conf/ssl/{{ item }}.key
  # SSLCACertificateFile {{ ubersmith_root }}/conf/ssl/cabundle.pem
