@@ -5,7 +5,7 @@ and some OS level dependencies to be installed.
 
 # Documentation
 
-Full documentation for the installer can be found [here](https://docs.ubersmith.com/x/NYDdAg).
+Full documentation for the installer can be found [here](https://docs.ubersmith.com/article/ubersmith-installation-and-upgrade-utility-231.html).
 
 # Caveats
 
