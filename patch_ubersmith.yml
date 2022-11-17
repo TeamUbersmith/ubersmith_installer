@@ -45,8 +45,6 @@
           owner: "{{ ansible_user_id }}"
           group: "{{ ansible_user_gid }}"
           mode: 0775
-        tags:
-          - remove_patches
 
       - name: determine available patches
         ansible.builtin.set_fact:
