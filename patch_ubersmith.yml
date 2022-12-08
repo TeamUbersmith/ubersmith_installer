@@ -122,7 +122,7 @@
       - name: copy patch files into place
         community.docker.docker_container_exec:
           container: ubersmith_web_1
-          command: /bin/bash -c "cd /var/www/ubersmith_root/app/patches/{{ patch_id.user_input }}; cp -a --suffix .bak --backup . ../../www/"
+          command: /bin/bash -c "cd /var/www/ubersmith_root/app/patches/{{ patch_id.user_input }}/; cp -a --suffix .bak --backup . ../../www/"
 
       - name: write patch data to .patched file
         community.general.ini_file:
