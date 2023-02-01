@@ -15,6 +15,7 @@
 
     vars:
       interactive: true
+      uberapp_user_password: "{{ lookup('ansible.builtin.password', '/dev/null length=15') }}"
 
     roles:
       - common
