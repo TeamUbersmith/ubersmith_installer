@@ -247,7 +247,9 @@
     ansible.builtin.debug:
       msg:
       - "*** PLEASE NOTE ***"
-      - "The appliance user has been configured with username 'ubersmith' and password '{{ uberapp_user_password }}'."
-      - "Use these values to configure the appliance entry in Ubersmith."
+      - "The appliance user has been configured with the following credentials:
+      - "username: ubersmith"
+      - "password: {{ uberapp_user_password }}"
+      - "Please use these values to configure the appliance entry in Ubersmith."
     tags:
       - password
