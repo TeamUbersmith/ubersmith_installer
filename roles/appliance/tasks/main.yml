@@ -218,7 +218,7 @@
       login_port: 3307
       login_user: uberapp
       login_password: "{{ mysql_appliance_password }}"
-      query: UPDATE user SET password = %s WHERE user = %s
+      query: UPDATE user SET password = %s WHERE login = %s
       positional_args:
         - "{{ uberapp_user_password }}"
         - ubersmith
