@@ -4,6 +4,7 @@
   mysql_root_password: "{{ lookup('password', ansible_user_dir + '/.appliance_' + app_virtual_host + '_root_db_pass chars=ascii_letters,digits') }}"
   mysql_appliance_password: "{{ lookup('password', ansible_user_dir + '/.appliance_' + app_virtual_host + '_appliance_db_pass') }}"
   mysql_appliance_user_password: "{{ lookup('password', ansible_user_dir + '/.appliance_' + app_virtual_host + '_appliance_user_pass') }}"
+  uberapp_user_password: "{{ lookup('password', ansible_user_dir + '/.appliance_' + app_virtual_host + '_appliance_xmlrpc_pass') }}"
 
   appliance_version: 4.6.2
   

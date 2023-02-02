@@ -210,6 +210,21 @@
     tags:
       - upgrade_only
 
+  # Configure appliance user password
+  - name: configure uberapp user password
+    community.mysql.mysql_query:
+      login_db: uberapp
+      login_host: localhost
+      login_port: 3307
+      login_user: uberapp
+      login_password: "{{ mysql_appliance_password }}"
+      query: UPDATE user SET password = %s WHERE login = %s
+      positional_args:
+        - "{{ uberapp_user_password }}"
+        - ubersmith
+    tags:
+      - password
+
   # Only when upgrading, run the upgrade script.
   - name: run upgrade.php
     command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith exec -T app_web php /var/www/appliance_root/www/upgrade.php"
@@ -226,3 +241,15 @@
     ignore_errors: yes
     tags:
       - upgrade_only
+  
+  # Output the appliance xml-rpc user password
+  - name: output appliance xml-rpc username and password
+    ansible.builtin.debug:
+      msg:
+      - "*** PLEASE NOTE ***"
+      - "The appliance user has been configured with the following credentials:"
+      - "username: ubersmith"
+      - "password: {{ uberapp_user_password }}"
+      - "Please use these values to configure the appliance entry in Ubersmith."
+    tags:
+      - password
