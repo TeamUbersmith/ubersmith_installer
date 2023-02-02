@@ -15,7 +15,7 @@
 
     vars:
       interactive: true
-      uberapp_user_password: "{{ lookup('ansible.builtin.password', '/dev/null length=15') }}"
+      uberapp_user_password: "{{ lookup('ansible.builtin.password', ansible_user_dir + '/.appliance_' + app_virtual_host + '_appliance_xmlrpc_pass' length=15') }}"
 
     roles:
       - common
