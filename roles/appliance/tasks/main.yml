@@ -246,6 +246,7 @@
   - name: output appliance xml-rpc username and password
     ansible.builtin.debug:
       msg:
+      - "*** PLEASE NOTE ***"
       - "The appliance user has been configured with username 'ubersmith' and password '{{ mysql_appliance_password }}'."
       - "Use these values to configure the appliance entry in Ubersmith."
     tags:
