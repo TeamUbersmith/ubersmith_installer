@@ -64,6 +64,7 @@ services:
       - "POSTCONF_SMTPD_TLS_CERT_FILE=/etc/ssl/certs/{{ container_domain }}.pem"
       - "POSTCONF_SMTPD_TLS_KEY_FILE=/etc/ssl/private/{{ container_domain }}.key" 
       - POSTCONF_SMTP_TLS_SECURITY_LEVEL=may
+      # - POSTCONF_DEFAULT_TRANSPORT="DO_NOT_ROUTE"
   rwhois:
     volumes:
 {% if ansible_os_family != 'Darwin' %}
