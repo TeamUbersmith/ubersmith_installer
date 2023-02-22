@@ -465,7 +465,7 @@
     lineinfile:
       path: "{{ ubersmith_home }}/ubersmith_start.sh"
       regexp: "^#?\\s?docker-compose -p ubersmith up --scale redis=\\d -d redis"
-      line: "docker-compose -p ubersmith up --scale redis=3 -d redis"
+      line: "docker compose -p ubersmith up --scale redis=3 -d redis"
       insertafter: "^docker-compose -p ubersmith up (.*)"
     tags:
       - upgrade_only
@@ -474,7 +474,7 @@
   # Check to see if the installation is using a remote database    
   - name: check for remote database
     community.docker.docker_container_info:
-      name: ubersmith_web_1
+      name: ubersmith-web-1
     register: web_container_info
     tags:
       - upgrade_only
@@ -507,7 +507,7 @@
   # Only when upgrading, make sure redis data is committed before we copy it.  
   - name: trigger save of redis data if redis volume does not already exist
     community.docker.docker_container_exec:
-      container: ubersmith_redis_1
+      container: ubersmith-redis-1
       command: /bin/bash -c "/usr/local/bin/redis-cli SAVE"
     when: not redis_volume_output.exists
     ignore_errors: yes
@@ -516,7 +516,7 @@
 
   # Only when upgrading, copy redis data so it can be migrated to the redis-data container.
   - name: make a copy of dump.rdb if redis volume does not already exist
-    command: docker cp ubersmith_redis_1:/data/dump.rdb .
+    command: docker cp ubersmith-redis-1:/data/dump.rdb .
     args:
       chdir:  "{{ ubersmith_home }}"
     when: not redis_volume_output.exists
@@ -614,9 +614,9 @@
     retries: 10
     delay: 30
     with_items:
-      - ubersmith_web_1
-      - ubersmith_php_1
-      - ubersmith_solr_1
+      - ubersmith-web-1
+      - ubersmith-php-1
+      - ubersmith-solr-1
     when:
       - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"   
     tags:
@@ -624,7 +624,7 @@
 
   # Copy redis data dumped from the redis locking container to the redis data container's volume
   - name: copy dump.rdb if redis volume does not exist
-    command: docker cp dump.rdb ubersmith_redis-data_1:/data/dump.rdb
+    command: docker cp dump.rdb ubersmith-redis-data_1:/data/dump.rdb
     args:
       chdir:  "{{ ubersmith_home }}"
     when: not redis_volume_output.exists
@@ -635,7 +635,7 @@
   # Change ownership on the redis dump.rdb file to redis:redis
   - name: give redis user ownership over dump.rdb
     community.docker.docker_container_exec:
-      container: ubersmith_redis-data_1
+      container: ubersmith-redis-data-1
       command: /bin/bash -c "chown redis:redis /data/dump.rdb"
     when: not redis_volume_output.exists
     ignore_errors: yes
@@ -645,7 +645,7 @@
   # When moving to Percona Server 5.7, run mysql_upgrade. 0 and 2 return codes are acceptable.
   - name: run mysql_upgrade
     community.docker.docker_container_exec:
-      container: ubersmith_db_1
+      container: ubersmith-db-1
       command: /bin/sh -c 'mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD'
     register: command_result
     failed_when: 
@@ -675,7 +675,7 @@
   # Depending on system performance, the database container can take a long time to restart
   - name: check database container status
     community.docker.docker_container_info:
-      name: ubersmith_db_1
+      name: ubersmith-db-1
     register: db_docker_container_info
     until: db_docker_container_info.container.State.Health.Status == "healthy"
     retries: 6
@@ -690,7 +690,7 @@
   # For upgrades, run the updatedb.php script which performs the upgrade process.
   - name: run updatedb.php
     community.docker.docker_container_exec:
-      container: ubersmith_php_1
+      container: ubersmith-php-1
       command: "/bin/bash -c 'php {{ ubersmith_root }}/app/www/setup/updatedb.php ubersmith --debug'"
     register: updatedb_output
     tags:
@@ -709,7 +709,7 @@
   # For upgrades, remove the setup/ directory, allowing Ubersmith to start.
   - name: remove setup
     community.docker.docker_container_exec:
-      container: ubersmith_web_1
+      container: ubersmith-web-1
       command: "/bin/bash -c 'rm -rf {{ ubersmith_root }}/app/www/setup'"
     tags:
       - upgrade_only
