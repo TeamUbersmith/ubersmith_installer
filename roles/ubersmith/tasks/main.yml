@@ -443,8 +443,8 @@
   - name: update docker compose override file for apache virtual hosts
     replace:
       path: "{{ ubersmith_home }}/docker-compose.override.yml"
-      replace: "/etc/apache2/sites-enabled"
-      regexp: "/usr/local/apache2/conf/sites-enabled"
+      replace: "/usr/local/apache2/conf/sites-enabled"
+      regexp: "/etc/apache2/sites-enabled"
       backup: yes
     tags:
       - upgrade_only
