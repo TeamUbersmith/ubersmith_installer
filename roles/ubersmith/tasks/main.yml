@@ -439,6 +439,17 @@
       - upgrade_only
       - update_compose_override_template
 
+  # For existing installs, modify location of apache virtual host configuration
+  - name: update docker compose override file for apache virtual hosts
+    replace:
+      path: "{{ ubersmith_home }}/docker-compose.override.yml"
+      replace: "/etc/apache2/sites-enabled"
+      regexp: "/usr/local/apache2/conf/sites-enabled"
+      backup: yes
+    tags:
+      - upgrade_only
+      - update_compose_override_template
+
   # Copy a helper script which allows Ubersmith containers to be restarted.
   - name: copy ubersmith_restart
     copy:
