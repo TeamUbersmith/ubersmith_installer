@@ -70,7 +70,7 @@
       - postfix
       - sendmail
       - exim4
-    ignore_errors: yes
+    ignore_errors: true
     when: 
       - ansible_os_family != "Darwin"
       - ansible_os_family != "Windows"
@@ -136,7 +136,7 @@
       owner: root
       group: root
       mode: "0644"
-    ignore_errors: yes
+    ignore_errors: true
     notify:
       - restart rsyslog
     tags:
@@ -153,7 +153,7 @@
       owner: root
       group: root
       mode: "0644"
-    ignore_errors: yes
+    ignore_errors: true
     tags:
       - upgrade
     when: 
@@ -481,7 +481,7 @@
       - upgrade_only
       - upgrade_prep
 
-  # Check to see if the installation is using a remote database    
+  # Check to see if the installation is using a remote database
   - name: check for remote database
     community.docker.docker_container_info:
       name: ubersmith_web_1
@@ -520,7 +520,7 @@
       container: ubersmith_redis_1
       command: /bin/bash -c "/usr/local/bin/redis-cli SAVE"
     when: not redis_volume_output.exists
-    ignore_errors: yes
+    ignore_errors: true
     tags:
       - upgrade_only
 
@@ -530,7 +530,7 @@
     args:
       chdir:  "{{ ubersmith_home }}"
     when: not redis_volume_output.exists
-    ignore_errors: yes
+    ignore_errors: true
     tags:
       - upgrade_only
 
@@ -638,7 +638,7 @@
     args:
       chdir:  "{{ ubersmith_home }}"
     when: not redis_volume_output.exists
-    ignore_errors: yes
+    ignore_errors: true
     tags:
       - upgrade_only
 
@@ -648,7 +648,7 @@
       container: ubersmith_redis-data
       command: /bin/bash -c "chown redis:redis /data/dump.rdb"
     when: not redis_volume_output.exists
-    ignore_errors: yes
+    ignore_errors: true
     tags:
       - upgrade_only
 
