@@ -3,6 +3,7 @@ services:
   cron:
     volumes:
       - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
+      - "{{ ubersmith_home }}/app/patches:/var/www/ubersmith_root/app/patches"
 {% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
 {% endif %}
@@ -19,6 +20,7 @@ services:
   php:
     volumes:
       - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
+      - "{{ ubersmith_home }}/app/patches:/var/www/ubersmith_root/app/patches"
 {% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
 {% endif %}
@@ -34,6 +36,7 @@ services:
       - "{{ ubersmith_home }}/conf/httpd:/var/www/ubersmith_root/conf/httpd"
       - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
       - "{{ ubersmith_home }}/conf/httpd/sites-enabled:/usr/local/apache2/conf/sites-enabled"
+      - "{{ ubersmith_home }}/app/patches:/var/www/ubersmith_root/app/patches"
 {% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
 {% endif %}
@@ -49,6 +52,8 @@ services:
     #  USAGE_DATABASE_PASSWORD: usage_password
   mail:
     volumes:
+      - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
+      - "{{ ubersmith_home }}/app/patches:/var/www/ubersmith_root/app/patches"
 {% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
       - "{{ timezone_file.stat.lnk_source }}:/var/spool/postfix/etc/localtime"
@@ -59,6 +64,7 @@ services:
       - "POSTCONF_SMTPD_TLS_CERT_FILE=/etc/ssl/certs/{{ container_domain }}.pem"
       - "POSTCONF_SMTPD_TLS_KEY_FILE=/etc/ssl/private/{{ container_domain }}.key" 
       - POSTCONF_SMTP_TLS_SECURITY_LEVEL=may
+      # - POSTCONF_DEFAULT_TRANSPORT="DO_NOT_ROUTE"
   rwhois:
     volumes:
 {% if ansible_os_family != 'Darwin' %}

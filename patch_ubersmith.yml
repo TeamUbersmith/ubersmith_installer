@@ -1,0 +1,138 @@
+---
+# If running on macOS for some weird reason, this is needed for the url lookup to work
+# export "OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES"
+
+  - hosts: local
+
+    vars:
+      ubersmith_version: "{{ lookup('ini', 'ubersmith_installed_version section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
+      all_patches: "{{ lookup('url', 'https://api.github.com/repos/TeamUbersmith/ubersmith-patches/releases', headers={'Accept':'application/vnd.github.v3+json'})}}"
+      ubersmith_home: "{{ lookup('ini', 'ubersmith_home section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
+
+    tasks:
+
+      - name: remove .patched file
+        ansible.builtin.file:
+          path: "{{ ubersmith_home }}/.patched"
+          state: absent
+        tags:
+          - remove_patches
+
+      - name: remove patches directory
+        ansible.builtin.file:
+          path: "{{ ubersmith_home }}/app/patches"
+          state: absent          
+        tags:
+          - remove_patches
+
+      # See if {{ ubersmith_home }}/.patched exists, pause if it does.
+      - name: determine if the installation has been patched
+        ansible.builtin.stat:
+          path: "{{ ubersmith_home }}/.patched"
+        register: patched
+
+      - name: pause for admin if ubersmith has been patched
+        ansible.builtin.pause:
+          prompt: "Ubersmith appears to be patched. Review the patch configuration file in {{ ubersmith_home }}/.patched before proceeding to avoid conflicts."
+        when: 
+          - patched.stat.exists
+
+      # Create the directory structure required for Ubersmith to store patches
+      - name: create ubersmith configuration directories
+        ansible.builtin.file:
+          path: "{{ ubersmith_home }}/app/patches"
+          state: directory
+          owner: "{{ ansible_user_id }}"
+          group: "{{ ansible_user_gid }}"
+          mode: 0775
+
+      - name: determine available patches
+        ansible.builtin.set_fact:
+          available_patches: "{{ all_patches | to_json | from_json | community.general.json_query(patch_name_query) }}"
+        vars:
+          patch_name_query: "[?contains(name,'{{ ubersmith_version }}')].[id, name, html_url, assets[].browser_download_url | [0]]"
+
+      - name: prompt for patch id
+        ansible.builtin.pause:
+          prompt: |-
+
+              === Available Patches for Ubersmith {{ ubersmith_version}} ===
+              {% for _patch in available_patches %}
+              Name: {{ _patch[1] }}
+              URL : {{ _patch[2] }}
+              ID  : {{ _patch[0] }}
+
+              {% endfor %}
+
+              Enter the patch ID to apply
+        register: patch_id
+
+      # - name: debug patch input
+      #   ansible.builtin.debug:
+      #     msg: "{{ patch_id.user_input }}"
+
+      - name: retrieve assets for selected patch
+        ansible.builtin.set_fact:
+          my_patch: "{{ lookup('url', release_url, headers={'Accept':'application/vnd.github.v3+json'})}}"
+        vars:
+          release_url: "https://api.github.com/repos/TeamUbersmith/ubersmith-patches/releases/{{ patch_id.user_input }}"
+
+      # - name: debug assets
+      #   ansible.builtin.debug:
+      #     msg: "{{ my_patch['assets'] }}"
+
+      # Create the directory structure required for Ubersmith to store patches
+      - name: create directory for requested patch
+        ansible.builtin.file:
+          path: "{{ ubersmith_home }}/app/patches/{{ patch_id.user_input }}"
+          state: directory
+          owner: "{{ ansible_user_id }}"
+          group: "{{ ansible_user_gid }}"
+          mode: 0775
+
+      - name: retrieve selected patch
+        ansible.builtin.unarchive:
+          src: "{{ my_patch['assets'][0]['browser_download_url'] }}"
+          dest: "{{ ubersmith_home }}/app/patches/{{ patch_id.user_input }}"
+          remote_src: yes
+          list_files: true
+        register: patch_files
+
+      # - name: debug patch_files
+      #   ansible.builtin.debug:
+      #     msg: "{{ patch_files.files }}"
+
+      - name: restart the ubersmith web container
+        community.docker.docker_compose:
+          project_src: "{{ ubersmith_home }}"
+          project_name: ubersmith
+          restarted: yes
+          services:
+            - web
+        tags:
+          - restart
+
+      # Change ownership on patch files to ubersmith:ubersmith
+      - name: give ubersmith user ownership over patch files
+        community.docker.docker_container_exec:
+          container: ubersmith_web_1
+          command: /bin/bash -c "cd /var/www/ubersmith_root/app/patches; chown -R ubersmith:ubersmith *"
+
+      # Copy patch files into place, creating a backup
+      - name: copy patch files into place
+        community.docker.docker_container_exec:
+          container: ubersmith_web_1
+          command: /bin/bash -c "cd /var/www/ubersmith_root/app/patches/{{ patch_id.user_input }}/; cp -a --suffix .bak --backup . ../../www/"
+
+      - name: write patch data to .patched file
+        community.general.ini_file:
+          path: "{{ ubersmith_home }}/.patched"
+          section: "Patch {{ patch_id.user_input }}"
+          option: "{{ item.key }}"
+          value: "{{ item.value }}"
+        loop: "{{ patch_data | dict2items }}"
+        vars:
+          patch_data:
+            installer: "{{ ansible_user_id }}"
+            install_date: "{{ '%a, %d %b %Y %T %z' | strftime }}"
+            github_page: "{{ my_patch['html_url'] }}"

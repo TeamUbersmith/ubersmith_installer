@@ -122,6 +122,7 @@
        - "{{ ubersmith_home }}/app/custom/include/order_modules"
        - "{{ ubersmith_home }}/app/custom/.well-known"
        - "{{ ubersmith_home }}/app/custom/.well-known/acme-challenge"
+       - "{{ ubersmith_home }}/app/patches"
     tags:
       - mysql_config
       - httpd_config
@@ -645,7 +646,7 @@
   # Change ownership on the redis dump.rdb file to redis:redis
   - name: give redis user ownership over dump.rdb
     community.docker.docker_container_exec:
-      container: ubersmith_redis-data
+      container: ubersmith_redis-data_1
       command: /bin/bash -c "chown redis:redis /data/dump.rdb"
     when: not redis_volume_output.exists
     ignore_errors: true
