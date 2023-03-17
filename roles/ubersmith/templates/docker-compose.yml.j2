@@ -4,6 +4,10 @@ services:
     image: {{ registry }}/solr:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: solr.{{ container_domain }}
     restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     volumes:
       - "search:/opt/solr"
 {% if ansible_os_family != 'Darwin' %}
