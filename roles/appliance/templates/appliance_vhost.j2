@@ -1,0 +1,57 @@
+<VirtualHost *:80>
+  ServerAdmin {{ admin_email }}
+  DocumentRoot {{ appliance_root }}/www
+  ServerName appliance.{{ app_virtual_host }}
+  ServerAlias www.appliance.{{ app_virtual_host }}
+  IncludeOptional {{ ubersmith_root }}/conf/httpd/*.appliance.{{ app_virtual_host }}.conf
+
+  ErrorLog /dev/stderr
+  CustomLog /dev/stdout combined
+  LimitRequestBody 53000000
+ 
+  Options +FollowSymLinks
+  DirectoryIndex xmlrpc.php
+
+</VirtualHost>
+
+<VirtualHost *:443>
+  ServerAdmin {{ admin_email }}
+  DocumentRoot {{ appliance_root }}/www
+  ServerName appliance.{{ app_virtual_host }}
+  ServerAlias www.appliance.{{ app_virtual_host }}
+  ErrorLog /dev/stderr
+  CustomLog /dev/stdout combined
+
+  SSLCertificateFile /var/www/appliance_root/conf/ssl/appliance.pem
+  SSLCertificateKeyFile /var/www/appliance_root/conf/ssl/appliance.key
+  SSLProtocol all -SSLv2 -SSLv3 -TLSv1
+  SSLCipherSuite ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA
+  SSLHonorCipherOrder on
+  SSLCompression off
+  
+  SSLEngine On
+  
+  Header add Strict-Transport-Security "max-age=15768000"
+  
+  Options +FollowSymLinks
+  DirectoryIndex xmlrpc.php
+  
+</VirtualHost>
+
+<Directory /var/www/appliance_root/www >
+	AllowOverride None
+	
+	<LimitExcept POST GET>
+		Require all denied
+	</LimitExcept>
+</Directory>
+
+<Directory /var/www/appliance_root/www/include >
+	AllowOverride None
+	
+	<LimitExcept POST GET>
+		Require all denied
+	</LimitExcept>
+</Directory>
+
+ServerTokens Prod

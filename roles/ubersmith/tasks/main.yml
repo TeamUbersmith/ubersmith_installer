@@ -70,7 +70,7 @@
       - postfix
       - sendmail
       - exim4
-    ignore_errors: yes
+    ignore_errors: true
     when: 
       - ansible_os_family != "Darwin"
       - ansible_os_family != "Windows"
@@ -137,7 +137,7 @@
       owner: root
       group: root
       mode: "0644"
-    ignore_errors: yes
+    ignore_errors: true
     notify:
       - restart rsyslog
     tags:
@@ -154,7 +154,7 @@
       owner: root
       group: root
       mode: "0644"
-    ignore_errors: yes
+    ignore_errors: true
     tags:
       - upgrade
     when: 
@@ -440,6 +440,17 @@
       - upgrade_only
       - update_compose_override_template
 
+  # For existing installs, modify location of apache virtual host configuration
+  - name: update docker compose override file for apache virtual hosts
+    replace:
+      path: "{{ ubersmith_home }}/docker-compose.override.yml"
+      replace: "/usr/local/apache2/conf/sites-enabled"
+      regexp: "/etc/apache2/sites-enabled"
+      backup: yes
+    tags:
+      - upgrade_only
+      - update_compose_override_template
+
   # Copy a helper script which allows Ubersmith containers to be restarted.
   - name: copy ubersmith_restart
     copy:
@@ -471,7 +482,7 @@
       - upgrade_only
       - upgrade_prep
 
-  # Check to see if the installation is using a remote database    
+  # Check to see if the installation is using a remote database
   - name: check for remote database
     community.docker.docker_container_info:
       name: ubersmith_web_1
@@ -510,7 +521,7 @@
       container: ubersmith_redis_1
       command: /bin/bash -c "/usr/local/bin/redis-cli SAVE"
     when: not redis_volume_output.exists
-    ignore_errors: yes
+    ignore_errors: true
     tags:
       - upgrade_only
 
@@ -520,7 +531,7 @@
     args:
       chdir:  "{{ ubersmith_home }}"
     when: not redis_volume_output.exists
-    ignore_errors: yes
+    ignore_errors: true
     tags:
       - upgrade_only
 
@@ -628,7 +639,7 @@
     args:
       chdir:  "{{ ubersmith_home }}"
     when: not redis_volume_output.exists
-    ignore_errors: yes
+    ignore_errors: true
     tags:
       - upgrade_only
 
@@ -638,7 +649,7 @@
       container: ubersmith_redis-data_1
       command: /bin/bash -c "chown redis:redis /data/dump.rdb"
     when: not redis_volume_output.exists
-    ignore_errors: yes
+    ignore_errors: true
     tags:
       - upgrade_only
 
@@ -729,3 +740,10 @@
       - { var: 'ubersmith_installed_version', val: "{{ ubersmith_version }}" }
     tags:
       - upgrade
+
+  # Cleanup unused Docker images to preserve disk space.
+  - name: docker image cleanup
+    community.docker.docker_prune:
+      images: true
+    tags:
+      - upgrade_only
