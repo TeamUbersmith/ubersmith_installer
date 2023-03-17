@@ -15,6 +15,7 @@ if command -v pip3 >/dev/null 2>&1; then
     $HOME/.local/bin/pip3 uninstall ansible -q -y
     $HOME/.local/bin/pip3 uninstall ansible-base -q -y
     $HOME/.local/bin/pip3 install "ansible-core>=2.11,<2.12" -q --upgrade --user --force-reinstall
+    $HOME/.local/bin/pip3 install pymysql pyopenssl -q --upgrade --user --force-reinstall
 else
     echo "The pip3 utility is missing; please install pip3."
     echo "https://docs.ubersmith.com/display/UbersmithDocumentation/Ubersmith+Installation+and+Upgrade+Utility"
