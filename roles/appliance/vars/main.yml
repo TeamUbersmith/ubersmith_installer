@@ -9,7 +9,7 @@
   appliance_version: 4.6.3
   
   containers:
-    release_version: r1
+    release_version: r4
     backup_version: 2.4
     appweb_container_repo: "appliance"
 
