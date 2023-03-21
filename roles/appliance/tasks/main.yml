@@ -203,19 +203,19 @@
       - compose_up
       - upgrade
 
-  # The database can take a little bit to start, so wait before proceeding with the upgrade.
+  # The database can take a little bit to start, so wait
   - name: wait for containers to come online
     wait_for:
       timeout: 15
     tags:
-      - upgrade_only
+      - upgrade
 
   # Configure appliance user password
   - name: configure uberapp user password
     community.mysql.mysql_query:
       login_db: uberapp
       login_host: localhost
-      login_port: 3307
+      login_port: 3306
       login_user: uberapp
       login_password: "{{ mysql_appliance_password }}"
       query: UPDATE user SET password = %s WHERE login = %s
