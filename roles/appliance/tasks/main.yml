@@ -205,10 +205,16 @@
 
   # The database can take a little bit to start, so wait
   - name: wait for containers to come online
-    wait_for:
-      timeout: 15
-    tags:
-      - upgrade
+    community.docker.docker_container_info:
+      name: "{{ item }}"
+    register: db_docker_container_info
+    until: db_docker_container_info.container.State.Health.Status == "healthy"
+    retries: 10
+    delay: 30
+    with_items:
+      - ubersmith_app_web_1
+      - ubersmith_app_db_1
+      - ubersmith_app_cron_1
 
   # Configure appliance user password
   - name: configure uberapp user password
