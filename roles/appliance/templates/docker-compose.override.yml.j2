@@ -11,6 +11,7 @@ services:
       - "{{ appliance_home }}/logs/appliance:/var/www/appliance_root/logs"
       - "{{ appliance_home }}/conf/ssl/{{ app_virtual_host }}.pem:/var/www/appliance_root/conf/ssl/appliance.pem"
       - "{{ appliance_home }}/conf/ssl/{{ app_virtual_host }}.key:/var/www/appliance_root/conf/ssl/appliance.key"
+      - "{{ appliance_home }}/conf/httpd/sites-enabled:/etc/apache2/sites-enabled"
   app_db:
     environment:
       MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"

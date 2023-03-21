@@ -24,8 +24,10 @@
       group: "{{ ansible_user_gid }}"
       mode: 0775
     with_items:
-       - "{{ appliance_home }}/conf/mysql"
        - "{{ appliance_home }}/conf/cron"
+       - "{{ ubersmith_home }}/conf/httpd"
+       - "{{ ubersmith_home }}/conf/httpd/sites-enabled"       
+       - "{{ appliance_home }}/conf/mysql"
        - "{{ appliance_home }}/conf/php"
        - "{{ appliance_home }}/conf/ssl"
        - "{{ appliance_home }}/logs"
@@ -60,6 +62,18 @@
     when: 
       - ansible_os_family != "Darwin"
       - ansible_os_family != "Windows"
+
+  # The Apache Virtual Host entry is created on the local filesystem to facilitate
+  # editing without having to enter the container. A restart of the 'app_web' container is
+  # required if this file is modified.
+  - name: create ubersmith apache virtual host configuration file
+    ansible.builtin.template:
+      src: appliance_vhost.j2
+      dest: "{{ appliance_home }}/conf/httpd/sites-enabled/appliance.conf"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: "0640"
+      backup: yes
 
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
