@@ -189,7 +189,9 @@
       chdir: "{{ appliance_home }}/conf/ssl"
       creates: "{{ appliance_home }}/conf/ssl/{{ app_virtual_host }}.pem"
     when: ansible_os_family != "Windows"
-
+    tags:
+      - upgrade
+      
   # Retrieve Ubersmith images from the repository.  
   - name: run docker compose pull
     command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith pull"
