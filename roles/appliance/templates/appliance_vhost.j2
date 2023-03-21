@@ -1,5 +1,5 @@
 <VirtualHost *:80>
-  ServerAdmin {{ admin_email }}
+  ServerAdmin root@appliance
   DocumentRoot {{ appliance_root }}/www
   ServerName appliance.{{ app_virtual_host }}
   ServerAlias www.appliance.{{ app_virtual_host }}
@@ -15,7 +15,7 @@
 </VirtualHost>
 
 <VirtualHost *:443>
-  ServerAdmin {{ admin_email }}
+  ServerAdmin root@appliance
   DocumentRoot {{ appliance_root }}/www
   ServerName appliance.{{ app_virtual_host }}
   ServerAlias www.appliance.{{ app_virtual_host }}
