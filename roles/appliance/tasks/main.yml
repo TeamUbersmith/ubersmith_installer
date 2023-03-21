@@ -215,7 +215,7 @@
     community.mysql.mysql_query:
       login_db: uberapp
       login_host: localhost
-      login_port: 3306
+      login_port: 3307
       login_user: uberapp
       login_password: "{{ mysql_appliance_password }}"
       query: UPDATE user SET password = %s WHERE login = %s
