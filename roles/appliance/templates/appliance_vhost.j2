@@ -3,7 +3,6 @@
   DocumentRoot {{ appliance_root }}/www
   ServerName appliance.{{ app_virtual_host }}
   ServerAlias www.appliance.{{ app_virtual_host }}
-  IncludeOptional {{ ubersmith_root }}/conf/httpd/*.appliance.{{ app_virtual_host }}.conf
 
   ErrorLog /dev/stderr
   CustomLog /dev/stdout combined
