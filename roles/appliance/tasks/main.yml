@@ -123,6 +123,16 @@
       - upgrade
       - update_compose_override_template
 
+  # Update older override files to use the virtual host configuration file
+  - name: ensure http virtual host configuration line exists
+    lineinfile:
+      path: "{{ appliance_home }}/docker-compose.override.yml"
+      line: '      - "{{ appliance_home }}/conf/httpd/sites-enabled:/etc/apache2/sites-enabled"'
+      insertafter: '      - "{{ appliance_home }}/conf/ssl/{{ app_virtual_host }}.key:/var/www/appliance_root/conf/ssl/appliance.key"'
+    tags:
+      - upgrade
+      - update_compose_override_template
+
   # Copy over helper scripts 
   - name: copy backup script
     copy:
