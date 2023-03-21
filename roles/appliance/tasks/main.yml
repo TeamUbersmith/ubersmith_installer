@@ -44,7 +44,9 @@
       owner: root
       group: root
       mode: 0644
-    ignore_errors: yes
+    ignore_errors: true
+    notify:
+      - restart rsyslog
     tags:
       - upgrade
     when: 
@@ -56,7 +58,7 @@
     copy:
       dest: /etc/logrotate.d/ubersmith-logs
       src: ubersmith-logs
-    ignore_errors: yes
+    ignore_errors: true
     tags:
       - upgrade
     when: 
