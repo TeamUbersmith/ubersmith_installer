@@ -1,9 +1,13 @@
 version: '3'
 services:
   solr:
-    image: quay.io/ubersmith/solr:{{ containers.solr_version }}
+    image: {{ registry }}/solr:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: solr.{{ container_domain }}
     restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     volumes:
       - "search:/opt/solr"
 {% if ansible_os_family != 'Darwin' %}
@@ -13,7 +17,7 @@ services:
         tag: ubersmith/solr
 {% endif %}
   db:
-    image: quay.io/ubersmith/ps57:{{ ubersmith_version }}.0
+    image: {{ registry }}/ps57:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: database.{{ container_domain }}
     restart: unless-stopped
     ports:
@@ -34,7 +38,7 @@ services:
         tag: ubersmith/db
 {% endif %}
   web:
-    image: quay.io/ubersmith/{{ containers.web_container_repo }}:{{ containers.web_version }}
+    image: {{ registry }}/{{ containers.web_container_repo }}:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: {{ container_domain }}
     restart: unless-stopped
     environment:
@@ -67,7 +71,7 @@ services:
         tag: ubersmith/web
 {% endif %}
   php:
-    image: quay.io/ubersmith/php73:{{ ubersmith_version }}.0
+    image: {{ registry }}/php73:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: {{ container_domain }}
     restart: unless-stopped
     volumes:
@@ -82,7 +86,7 @@ services:
         tag: ubersmith/php
 {% endif %}
   cron:
-    image: quay.io/ubersmith/cron:{{ ubersmith_version }}.0
+    image: {{ registry }}/cron:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: {{ container_domain }}
     restart: unless-stopped
     volumes:
@@ -96,7 +100,7 @@ services:
         tag: ubersmith/cron
 {% endif %}
   mail:
-    image: quay.io/ubersmith/mail:{{ ubersmith_version }}.0
+    image: {{ registry }}/mail:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: {{ container_domain }}
     restart: unless-stopped
     ports:
@@ -116,7 +120,7 @@ services:
         tag: ubersmith/mail
 {% endif %}
   rwhois:
-    image: quay.io/ubersmith/xinetd:{{ ubersmith_version }}.0
+    image: {{ registry }}/xinetd:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: {{ container_domain }}
     restart: unless-stopped
     ports:
@@ -132,10 +136,10 @@ services:
         tag: ubersmith/rwhois
 {% endif %}
   redis:
-    image: quay.io/ubersmith/redis:{{ containers.redis_version }}
+    image: {{ registry }}/redis:{{ ubersmith_version }}-{{ containers.release_version }}
     restart: unless-stopped
   redis-data:
-    image: quay.io/ubersmith/redis:{{ containers.redis_version }}
+    image: {{ registry }}/redis:{{ ubersmith_version }}-{{ containers.release_version }}
     restart: unless-stopped
 {% if ansible_os_family != 'Darwin' %}
     logging:
@@ -152,7 +156,7 @@ services:
     environment:
       REDIS_HOSTS: default:ubersmith_redis-data_1:6379:3
   backup:
-    image: quay.io/ubersmith/xtrabackup:{{ containers.backup_version }}
+    image: {{ registry }}/xtrabackup:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: backups.{{ container_domain }}
     # entrypoint: /mysqldump.sh
     environment:
@@ -163,7 +167,7 @@ services:
     depends_on:
       - db
   rsyslog:
-    image: quay.io/ubersmith/rsyslog:{{ ubersmith_version }}.0
+    image: {{ registry }}/rsyslog:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: rsyslog.{{ container_domain }}
     volumes:
       - "{{ ubersmith_home }}/logs/rsyslog/:/var/run/rsyslog/dev/"

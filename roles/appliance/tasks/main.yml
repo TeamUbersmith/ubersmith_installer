@@ -24,8 +24,10 @@
       group: "{{ ansible_user_gid }}"
       mode: 0775
     with_items:
-       - "{{ appliance_home }}/conf/mysql"
        - "{{ appliance_home }}/conf/cron"
+       - "{{ appliance_home }}/conf/httpd"
+       - "{{ appliance_home }}/conf/httpd/sites-enabled"       
+       - "{{ appliance_home }}/conf/mysql"
        - "{{ appliance_home }}/conf/php"
        - "{{ appliance_home }}/conf/ssl"
        - "{{ appliance_home }}/logs"
@@ -42,7 +44,9 @@
       owner: root
       group: root
       mode: 0644
-    ignore_errors: yes
+    ignore_errors: true
+    notify:
+      - restart rsyslog
     tags:
       - upgrade
     when: 
@@ -54,12 +58,27 @@
     copy:
       dest: /etc/logrotate.d/ubersmith-logs
       src: ubersmith-logs
-    ignore_errors: yes
+    ignore_errors: true
     tags:
       - upgrade
     when: 
       - ansible_os_family != "Darwin"
       - ansible_os_family != "Windows"
+
+  # The Apache Virtual Host entry is created on the local filesystem to facilitate
+  # editing without having to enter the container. A restart of the 'app_web' container is
+  # required if this file is modified.
+  - name: create ubersmith apache virtual host configuration file
+    ansible.builtin.template:
+      src: appliance_vhost.j2
+      dest: "{{ appliance_home }}/conf/httpd/sites-enabled/appliance.conf"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: "0640"
+      backup: yes
+      force: false
+    tags:
+      - upgrade
 
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
@@ -105,6 +124,16 @@
       replace: "version: '3'"
       regexp: "version: '2'"
       backup: yes
+    tags:
+      - upgrade
+      - update_compose_override_template
+
+  # Update older override files to use the virtual host configuration file
+  - name: ensure http virtual host configuration line exists
+    lineinfile:
+      path: "{{ appliance_home }}/docker-compose.override.yml"
+      line: '      - "{{ appliance_home }}/conf/httpd/sites-enabled:/etc/apache2/sites-enabled"'
+      insertafter: '      - "{{ appliance_home }}/conf/ssl/{{ app_virtual_host }}.key:/var/www/appliance_root/conf/ssl/appliance.key"'
     tags:
       - upgrade
       - update_compose_override_template
@@ -160,7 +189,9 @@
       chdir: "{{ appliance_home }}/conf/ssl"
       creates: "{{ appliance_home }}/conf/ssl/{{ app_virtual_host }}.pem"
     when: ansible_os_family != "Windows"
-
+    tags:
+      - upgrade
+      
   # Retrieve Ubersmith images from the repository.  
   - name: run docker compose pull
     command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith pull"
@@ -203,12 +234,33 @@
       - compose_up
       - upgrade
 
-  # The database can take a little bit to start, so wait before proceeding with the upgrade.
+  # The database can take a little bit to start, so wait
   - name: wait for containers to come online
-    wait_for:
-      timeout: 15
+    community.docker.docker_container_info:
+      name: "{{ item }}"
+    register: db_docker_container_info
+    until: db_docker_container_info.container.State.Health.Status == "healthy"
+    retries: 10
+    delay: 30
+    with_items:
+      - ubersmith_app_web_1
+      - ubersmith_app_db_1
+      - ubersmith_app_cron_1
+
+  # Configure appliance user password
+  - name: configure uberapp user password
+    community.mysql.mysql_query:
+      login_db: uberapp
+      login_host: localhost
+      login_port: 3307
+      login_user: uberapp
+      login_password: "{{ mysql_appliance_password }}"
+      query: UPDATE user SET password = %s WHERE login = %s
+      positional_args:
+        - "{{ uberapp_user_password }}"
+        - ubersmith
     tags:
-      - upgrade_only
+      - password
 
   # Only when upgrading, run the upgrade script.
   - name: run upgrade.php
@@ -222,7 +274,19 @@
 
   # Cleanup unused Docker images to preserve disk space.
   - name: docker image cleanup
-    shell: "docker rmi -f $(docker images -q -f dangling=true)"
-    ignore_errors: yes
+    community.docker.docker_prune:
+      images: true
     tags:
       - upgrade_only
+  
+  # Output the appliance xml-rpc user password
+  - name: output appliance xml-rpc username and password
+    ansible.builtin.debug:
+      msg:
+      - "*** PLEASE NOTE ***"
+      - "The appliance user has been configured with the following credentials:"
+      - "username: ubersmith"
+      - "password: {{ uberapp_user_password }}"
+      - "Please use these values to configure the appliance entry in Ubersmith."
+    tags:
+      - password

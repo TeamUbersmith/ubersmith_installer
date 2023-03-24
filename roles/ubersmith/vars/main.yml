@@ -13,22 +13,16 @@
   mysql_root_password: "{{ lookup('password', ansible_user_dir + '/.ubersmith_' + main_virtual_host + '_root_db_pass chars=ascii_letters,digits') }}"
   mysql_ubersmith_password: "{{ lookup('password', ansible_user_dir + '/.ubersmith_' + main_virtual_host + '_ubersmith_db_pass') }}"
 
-  ubersmith_version: 4.6.2
+  ubersmith_version: 4.6.3
   ubersmith_installed_version: 4.0.0
   
   mysql_version: 5.7
 
   containers:
-    backup_version: 2.4
-    solr_version: 4.10.4
-    web_version: "{{ ubersmith_version }}.0"
+    release_version: r4
     web_container_repo: "ubersmith"
-    # php_version: 7.3
-    # cron_version: 7.0
-    # mail_version: 4.0
-    # rwhois_version: 4.0
     pmm_version: 2
     haproxy_version: 1.7-alpine
-    redis_version: 6
-    # rsyslog_version: 1.1
     certbot_version: latest
+
+  registry: ghcr.io/teamubersmith

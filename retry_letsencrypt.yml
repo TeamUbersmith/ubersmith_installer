@@ -88,14 +88,14 @@
       - name: perform a graceful restart of apache in the web container
         community.docker.docker_container_exec:
           container: ubersmith_web_1
-          command: /bin/bash -c "/usr/sbin/apache2ctl graceful"
+          command: /bin/bash -c "/usr/local/apache2/bin/apachectl graceful"
 
       # Create a cron task to keep the certificate renewed
       - name: create certbot container cron task
         ansible.builtin.cron:
           name: "check for le renewal"
           user: "{{ ansible_user_id }}"
-          job: "cd {{ ubersmith_home }}; {{ ansible_user_dir }}/.local/bin/docker-compose up certbot; {{ ansible_user_dir }}/.local/bin/docker-compose exec web /usr/sbin/apache2ctl graceful"
+          job: "cd {{ ubersmith_home }}; {{ ansible_user_dir }}/.local/bin/docker-compose up certbot; {{ ansible_user_dir }}/.local/bin/docker-compose exec web /usr/local/apache2/bin/apachectl graceful"
           special_time: daily
         tags:
           - le_renewal
