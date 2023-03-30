@@ -1,5 +1,5 @@
 ---
-  docker_ok_version: "17.00"
+  docker_ok_version: "20.10.18"
   docker_compose_version: "1.29.2"
   supported_os: "{'Debian', 'CentOS', 'Ubuntu'}"
   supported_centos_ver: 8
