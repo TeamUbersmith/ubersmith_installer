@@ -105,7 +105,7 @@
   - name: verify docker version
     ansible.builtin.fail:
       msg:  "The Docker version installed is not supported. Please upgrade Docker (https://docs.docker.com/engine/installation/)."
-    when: docker_result.host_info.ServerVersion is version_compare(docker_ok_version, '<=' )
+    when: docker_result.host_info.ServerVersion is version(docker_ok_version, '<')
     tags:
       - upgrade
 
