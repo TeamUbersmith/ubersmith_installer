@@ -1,7 +1,15 @@
 ---
 
   fcgi_host: php
-  gc_maxlifetime: 86400
+
+  php_gc_maxlifetime: 86400
+  php_memory_limit: 512M
+  php_default_socket_timeout: 6000
+  php_max_input_time: 6000
+  php_max_execution_time: 3600
+  php_upload_max_filesize: 16M
+  php_post_max_size: 50M
+  
   php_version: 7.3
   old_php_versions:
     - 5.6

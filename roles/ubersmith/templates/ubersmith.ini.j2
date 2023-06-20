@@ -1,3 +1,9 @@
 ; configuration for ubersmith overrides
 ; priority=20
-session.gc_maxlifetime = {{ gc_maxlifetime }}
+session.gc_maxlifetime = {{ php_gc_maxlifetime }}
+memory_limit = {{ php_memory_limit }}
+default_socket_timeout = {{ php_default_socket_timeout }}
+max_input_time = {{ php_max_input_time }}
+max_execution_time = {{ php_max_execution_time }}
+upload_max_filesize = {{ php_upload_max_filesize }}
+post_max_size = {{ php_post_max_size }}
