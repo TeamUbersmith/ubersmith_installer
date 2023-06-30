@@ -11,6 +11,72 @@
 
     tasks:
 
+      - name: remove patches directory
+        ansible.builtin.file:
+          path: "{{ ubersmith_home }}/app/patches"
+          state: absent          
+        tags:
+          - remove_patches
+
+      - name: get existing webroot volume
+        community.docker.docker_volume_info:
+          name: ubersmith_webroot
+        register: webroot_volume_output
+        tags:
+          - remove_patches
+
+      - name: stop existing containers
+        community.docker.docker_compose:
+          project_src: "{{ ubersmith_home }}"
+          state: absent
+          remove_volumes: no
+          project_name: ubersmith
+        tags:
+          - remove_patches
+
+      - name: remove ubersmith webroot volume if present
+        community.docker.docker_volume:
+          name: ubersmith_webroot
+          state: absent
+        when: webroot_volume_output.exists
+        tags:
+          - remove_patches
+
+      - name: update and start ubersmith containers
+        community.docker.docker_compose:
+          project_src: "{{ ubersmith_home }}"
+          project_name: ubersmith
+          services:
+            - web
+            - cron
+            - db
+            - php
+            - solr
+            - mail
+            - rwhois
+            - redis
+            - redis-data
+        tags:
+          - remove_patches
+
+      - name: remove setup
+        community.docker.docker_container_exec:
+          container: ubersmith_web_1
+          command: "/bin/bash -c 'rm -rf {{ ubersmith_root }}/app/www/setup'"
+        tags:
+          - remove_patches
+
+      - name: scale redis containers
+        community.docker.docker_compose:
+          project_src: "{{ ubersmith_home }}"
+          project_name: ubersmith
+          scale:
+            redis: 3
+          services:
+            - redis
+        tags:
+          - remove_patches
+
       - name: remove .patched file
         ansible.builtin.file:
           path: "{{ ubersmith_home }}/.patched"
@@ -18,12 +84,6 @@
         tags:
           - remove_patches
 
-      - name: remove patches directory
-        ansible.builtin.file:
-          path: "{{ ubersmith_home }}/app/patches"
-          state: absent          
-        tags:
-          - remove_patches
 
       # See if {{ ubersmith_home }}/.patched exists, pause if it does.
       - name: determine if the installation has been patched
