@@ -5,7 +5,7 @@ set -e
 # See documentation at https://docs.ubersmith.com/display/UbersmithDocumentation/Ubersmith+Installation+and+Upgrade+Utility
 
 export PYTHONUSERBASE="$HOME/.local"
-export PATH="$HOME/.local/bin:$HOME/.local/ubersmith_venv:$PATH"
+export PATH="$HOME/.local/bin:$HOME/.local/ubersmith_venv/bin:$PATH"
 
 echo "Installing Python virtualenv..."
 python -m pip install -q --user virtualenv
