@@ -55,7 +55,7 @@
     pip:
       name: docker
       state: present
-      extra_args: "--user"
+      virtualenv: "{{ virtualenv_path }}"
     when:
       - interactive
       - ansible_distribution == 'CentOS'
@@ -68,7 +68,7 @@
       name: docker-compose
       state: present
       version: "{{ docker_compose_version }}"
-      extra_args: "--user"
+      virtualenv: "{{ virtualenv_path }}"
     when:
       - interactive
     tags:

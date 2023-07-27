@@ -5,3 +5,5 @@
   supported_centos_ver: 8
   supported_debian_ver: 10
   supported_ubuntu_ver: 20
+
+  virtualenv_path: "{{ ansible_user_dir }}/.local/ubersmith_venv"
