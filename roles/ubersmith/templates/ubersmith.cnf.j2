@@ -1,8 +1,8 @@
 # Ubersmith Specific MySQL Settings
-
 [mysqld]
 thread_cache_size  = 16
 max_allowed_packet = 64M
+default_authentication_plugin=mysql_native_password
 
 # 30% of Available Memory at install time 
 innodb_buffer_pool_size        = {{ (ansible_memfree_mb * 0.3)|round|int }}M
@@ -11,17 +11,12 @@ innodb_flush_log_at_trx_commit = 2
 innodb_log_file_size           = 128M
 local-infile                   = 0
 
-{% if mysql_version == 5.7 %}
-sql_mode = "NO_ENGINE_SUBSTITUTION,NO_AUTO_CREATE_USER"
-{% endif %}
-
 # Uncomment and restart MySQL to use PMM
 
 # slow_query_log=ON
 # long_query_time=0
 # log_slow_rate_limit=100
 # log_slow_rate_type=query
-# log_slow_verbosity=full
 # log_slow_admin_statements=ON
 # log_slow_slave_statements=ON
 # slow_query_log_always_write_time=1
