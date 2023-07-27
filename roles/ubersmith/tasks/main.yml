@@ -188,17 +188,7 @@
       mode: "0644"
     tags:
       - mysql_config
-  
-  # The database server configuration requires a change to sql_mode when running 
-  # Percona Server 5.7
-  - name: ensure sql_mode line exists
-    lineinfile:
-      path: "{{ ubersmith_home }}/conf/mysql/ubersmith.cnf"
-      line: 'sql_mode = "NO_ENGINE_SUBSTITUTION,NO_AUTO_CREATE_USER"'
-    when:
-      - mysql_version == 5.7
-    tags:
-      - upgrade_only
+      - upgrade
 
   # The PHP override configuration file is created on the local filesystem to facilitate
   # editing without having to enter the container. A restart of the 'php' container is
@@ -653,7 +643,7 @@
     tags:
       - upgrade_only
 
-  # When moving to Percona Server 5.7, run mysql_upgrade. 0 and 2 return codes are acceptable.
+  # When upgrading Percona Server, run mysql_upgrade. 0 and 2 return codes are acceptable.
   - name: run mysql_upgrade
     community.docker.docker_container_exec:
       container: ubersmith_db_1
@@ -663,7 +653,6 @@
      - command_result.rc != 0
      - command_result.rc != 2
     when:
-      - mysql_version == 5.7
       - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"
     tags:
       - upgrade_only
