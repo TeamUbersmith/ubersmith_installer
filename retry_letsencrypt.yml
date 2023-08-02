@@ -87,7 +87,7 @@
       # Running apache2ctl graceful will reload apache with the new certificates  
       - name: perform a graceful restart of apache in the web container
         community.docker.docker_container_exec:
-          container: ubersmith_web_1
+          container: ubersmith-web-1
           command: /bin/bash -c "/usr/local/apache2/bin/apachectl graceful"
 
       # Create a cron task to keep the certificate renewed
