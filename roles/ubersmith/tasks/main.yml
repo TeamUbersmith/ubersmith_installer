@@ -589,7 +589,6 @@
 
   - name: scale redis containers
     # docker compose up -d --scale redis=3 redis
-  - name: update and start ubersmith containers
     command: docker compose up -d --scale redis=3 redis
     args:
       chdir: "{{ ubersmith_home }}"
