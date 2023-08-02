@@ -4,9 +4,6 @@ set -e
 # SSL and Python development libraries are required.
 # See documentation at https://docs.ubersmith.com/display/UbersmithDocumentation/Ubersmith+Installation+and+Upgrade+Utility
 
-
-
-export PYTHONUSERBASE="$HOME/.local/ubersmith_venv"
 export PATH="$HOME/.local/bin:$HOME/.local/ubersmith_venv/bin:$PATH"
 
 if [ ! -d "$HOME/.local/ubersmith_venv" ]; then
@@ -15,8 +12,9 @@ if [ ! -d "$HOME/.local/ubersmith_venv" ]; then
 
     echo "Creating Ubersmith Python virtualenv..."
     $HOME/.local/bin/virtualenv -q $HOME/.local/ubersmith_venv
-    source $HOME/.local/ubersmith_venv/bin/activate
 fi
+
+source $HOME/.local/ubersmith_venv/bin/activate
 
 echo "Installing Ansible..."
 pip3 install -q "ansible-core>=2.14,<2.15"
