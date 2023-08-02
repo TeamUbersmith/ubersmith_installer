@@ -95,7 +95,7 @@
         ansible.builtin.cron:
           name: "check for le renewal"
           user: "{{ ansible_user_id }}"
-          job: "cd {{ ubersmith_home }}; {{ ansible_user_dir }}/.local/bin/docker-compose up certbot; {{ ansible_user_dir }}/.local/bin/docker-compose exec web /usr/local/apache2/bin/apachectl graceful"
+          job: "cd {{ ubersmith_home }}; docker compose up certbot; docker compose exec web /usr/local/apache2/bin/apachectl graceful"
           special_time: daily
         tags:
           - le_renewal

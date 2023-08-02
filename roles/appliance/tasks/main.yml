@@ -194,7 +194,7 @@
       
   # Retrieve Ubersmith images from the repository.  
   - name: run docker compose pull
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith pull"
+    command: "docker compose -p ubersmith pull"
     args:
       chdir: "{{ appliance_home }}"
     tags:
@@ -203,7 +203,7 @@
 
   # Only when upgrading, stop and remove existing Ubersmith containers.
   - name: stop existing containers
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith rm -sf"
+    command: "docker compose -p ubersmith rm -sf"
     args:
       chdir:  "{{ appliance_home }}"
     tags:
@@ -227,7 +227,7 @@
       - upgrade_only
 
   - name: run docker compose up -d
-    command: docker-compose -p ubersmith up -d
+    command: docker compose -p ubersmith up -d
     args:
       chdir: "{{ appliance_home }}"
     tags:
@@ -264,7 +264,7 @@
 
   # Only when upgrading, run the upgrade script.
   - name: run upgrade.php
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith exec -T app_web php /var/www/appliance_root/www/upgrade.php"
+    command: "docker compose -p ubersmith exec -T app_web php /var/www/appliance_root/www/upgrade.php"
     args:
       chdir:  "{{ appliance_home }}"
     environment:

@@ -4,11 +4,10 @@ set -e
 # SSL and Python development libraries are required.
 # See documentation at https://docs.ubersmith.com/display/UbersmithDocumentation/Ubersmith+Installation+and+Upgrade+Utility
 
-export PYTHONUSERBASE="$HOME/.local"
-export PATH="$HOME/.local/bin:$HOME/.local/ubersmith_venv/bin:$PATH"
-
 echo "Installing Python virtualenv..."
 python -m pip install -q --user virtualenv
+
+export PATH="$HOME/.local/bin:$HOME/.local/ubersmith_venv/bin:$PATH"
 
 echo "Creating Ubersmith Python virtualenv..."
 $HOME/.local/bin/virtualenv -q $HOME/.local/ubersmith_venv
@@ -22,3 +21,7 @@ ansible-galaxy install -r requirements.yml
 
 echo "Upgrading Ubersmith..."
 ansible-playbook -i ./hosts -c local -t upgrade,upgrade_only upgrade_ubersmith.yml
+
+deactivate
+
+export PYTHONUSERBASE="$HOME/.local/ubersmith_venv"

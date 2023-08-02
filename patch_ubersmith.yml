@@ -103,12 +103,9 @@
       #     msg: "{{ patch_files.files }}"
 
       - name: restart the ubersmith web container
-        community.docker.docker_compose:
-          project_src: "{{ ubersmith_home }}"
-          project_name: ubersmith
-          restarted: yes
-          services:
-            - web
+        command: docker compose restart web
+        args:
+          chdir: "{{ ubersmith_home }}"
         tags:
           - restart
 

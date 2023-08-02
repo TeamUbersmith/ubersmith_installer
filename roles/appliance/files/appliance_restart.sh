@@ -2,4 +2,4 @@
 #
 # Issues a restart to all Ubersmith containers.
 
-docker-compose -p ubersmith restart
+docker compose -p ubersmith restart
