@@ -2,7 +2,7 @@
 set -e
 
 # SSL and Python development libraries are required.
-# See documentation at https://docs.ubersmith.com/display/UbersmithDocumentation/Ubersmith+Installation+and+Upgrade+Utility
+# See documentation at https://docs.ubersmith.com/article/ubersmith-installation-and-upgrade-utility-231.html
 
 export PYTHONUSERBASE="$HOME/.local"
 export PATH="$HOME/.local/bin:$PATH"
