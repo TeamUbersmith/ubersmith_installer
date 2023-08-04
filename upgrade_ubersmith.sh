@@ -13,14 +13,15 @@ if command -v pip3 >/dev/null 2>&1; then
     pip3 install -q --user --upgrade pip
     echo "Installing Ansible..."
     $HOME/.local/bin/pip3 uninstall ansible -q -y
-    $HOME/.local/bin/pip3 uninstall ansible-base -q -y
-    $HOME/.local/bin/pip3 install "ansible-core>=2.11,<2.12" -q --upgrade --user --force-reinstall
-    $HOME/.local/bin/pip3 install --upgrade --user pyopenssl
+    $HOME/.local/bin/pip3 install -q --user "pyyaml==5.3.1"
+    $HOME/.local/bin/pip3 install "ansible-core>=2.11,<2.12" -q --upgrade --user 
+    $HOME/.local/bin/pip3 install -q --upgrade --user pyopenssl
 else
     echo "The pip3 utility is missing; please install pip3."
     echo "https://docs.ubersmith.com/display/UbersmithDocumentation/Ubersmith+Installation+and+Upgrade+Utility"
     exit 1
 fi
+
 echo "Installing Dependencies..."
 ansible-galaxy install -r requirements.yml
 echo "Upgrading Ubersmith..."
