@@ -8,7 +8,7 @@ default_authentication_plugin=mysql_native_password
 innodb_buffer_pool_size        = {{ (ansible_memfree_mb * 0.3)|round|int }}M
 innodb_flush_method            = O_DIRECT
 innodb_flush_log_at_trx_commit = 2
-innodb_log_file_size           = 128M
+innodb_redo_log_capacity         = 128M
 local-infile                   = 0
 
 # sql_mode = "STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"
