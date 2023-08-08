@@ -9,6 +9,8 @@ services:
 {% endif %}
       # - "{{ ubersmith_home }}/conf/cron:/etc/cron.d"
   db:
+    cap_add:
+      - SYS_NICE
     environment:
       MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
       MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"

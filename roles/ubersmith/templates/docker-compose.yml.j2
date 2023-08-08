@@ -50,10 +50,10 @@ services:
       HTTPS_FORCE: 1
       REASON_LOG: 0
       STORAGE_BACKEND: redis
-      REDIS_HOST: tcp://ubersmith-redis-data_1:6379?database=2
-      SESSION_HOST: tcp://ubersmith-redis-data_1:6379?database=0
-      PLUGIN_LOG_HOST: tcp://ubersmith-redis-data_1:6379?database=3
-      QUEUE_HOST: tcp://ubersmith-redis-data_1:6379?database=4
+      REDIS_HOST: tcp://ubersmith-redis-data-1:6379?database=2
+      SESSION_HOST: tcp://ubersmith-redis-data-1:6379?database=0
+      PLUGIN_LOG_HOST: tcp://ubersmith-redis-data-1:6379?database=3
+      QUEUE_HOST: tcp://ubersmith-redis-data-1:6379?database=4
       APPLIANCE_TIMEOUT: 30
       ALIPAY_ENABLE: 1
     volumes:
@@ -152,7 +152,7 @@ services:
     restart: "no"
     hostname: rediscommander.{{ container_domain }}
     environment:
-      REDIS_HOSTS: default:ubersmith-redis-data_1:6379:3
+      REDIS_HOSTS: default:ubersmith-redis-data-1:6379:3
   backup:
     image: {{ registry }}/xtrabackup:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: backups.{{ container_domain }}
