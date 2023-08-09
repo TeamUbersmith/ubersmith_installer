@@ -221,9 +221,9 @@
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0755
-    when: lets_encrypt_certificate == 'yes'
     tags:
       - certbot
+      - certbot_deploy_hook
       - upgrade
 
   # This deploy hook will copy certificates into conf/ssl after they've been renewed.
@@ -234,9 +234,9 @@
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0755
-    when: lets_encrypt_certificate == 'yes'
     tags:
       - certbot
+      - certbot_deploy_hook
       - upgrade
 
   # Create a self signed certificate for temporary use to secure HTTP and SMTP traffic.
