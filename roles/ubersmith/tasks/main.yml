@@ -3,7 +3,7 @@
   # In the event of a failed upgrade attempt, ensure the bare minimum of containers is running before proceeding
   # docker compose up -d web db php
   - name: check ubersmith containers before proceeding with upgrade
-    command: docker compose up -d web db php
+    ansible.builtin.command: docker compose up -d web db php
     args:
       chdir: "{{ ubersmith_home }}"
     tags:
@@ -522,7 +522,7 @@
 
   # Only when upgrading, copy redis data so it can be migrated to the redis-data container.
   - name: make a copy of dump.rdb if redis volume does not already exist
-    command: docker cp ubersmith-redis-1:/data/dump.rdb .
+    ansible.builtin.command: docker cp ubersmith-redis-1:/data/dump.rdb .
     args:
       chdir:  "{{ ubersmith_home }}"
     when: not redis_volume_output.exists
@@ -533,7 +533,7 @@
   # Only when upgrading, stop and remove existing Ubersmith containers.
   # docker compose rm -s -f
   - name: stop existing containers
-    command: docker compose rm -s -f
+    ansible.builtin.command: docker compose rm -s -f
     args:
       chdir: "{{ ubersmith_home }}"
     tags:
@@ -581,15 +581,18 @@
   # Retrieve Ubersmith images from the repository and start containers
   # docker compose up -d --quiet-pull --no-color web cron db php solr mail rwhois redis redis-data
   - name: update and start ubersmith containers
-    command: docker compose up -d --quiet-pull --no-color web cron db php solr mail rwhois redis redis-data
+    ansible.builtin.command: docker compose up -d --quiet-pull --no-color web cron db php solr mail rwhois redis redis-data
     args:
       chdir: "{{ ubersmith_home }}"
+    environment:
+      MAINTENANCE: 1
     tags:
       - upgrade
+      - maintenance_enable
 
   - name: scale redis containers
     # docker compose up -d --scale redis=3 redis
-    command: docker compose up -d --scale redis=3 redis
+    ansible.builtin.command: docker compose up -d --scale redis=3 redis
     args:
       chdir: "{{ ubersmith_home }}"
     tags:
@@ -616,7 +619,7 @@
 
   # Copy redis data dumped from the redis locking container to the redis data container's volume
   - name: copy dump.rdb if redis volume does not exist
-    command: docker cp dump.rdb ubersmith-redis-data-1:/data/dump.rdb
+    ansible.builtin.command: docker cp dump.rdb ubersmith-redis-data-1:/data/dump.rdb
     args:
       chdir:  "{{ ubersmith_home }}"
     when: not redis_volume_output.exists
@@ -652,7 +655,7 @@
   # After running mysql_upgrade, MySQL needs to be restarted
   # docker compose restart db
   - name: restart database container after mysql_upgrade
-    command: docker compose restart db
+    ansible.builtin.command: docker compose restart db
     args:
       chdir: "{{ ubersmith_home }}"
     when:
@@ -702,6 +705,17 @@
       command: "/bin/bash -c 'rm -rf {{ ubersmith_root }}/app/www/setup'"
     tags:
       - upgrade_only
+
+  # Disable maintenance mode
+  - name: start web container with maintenance mode disabled
+    ansible.builtin.command: docker compose up -d --no-color web
+    args:
+      chdir: "{{ ubersmith_home }}"
+    environment:
+      MAINTENANCE: 0
+    tags:
+      - upgrade
+      - maintenance_disable
 
   # Store the configuration values specified during the deploy for use during
   # future upgrades.

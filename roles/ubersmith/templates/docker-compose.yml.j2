@@ -46,7 +46,7 @@ services:
       UBER_HOSTNAME: {{ container_domain }}
       LOCK_BACKEND: redis
       LOCK_SERVERS: "ubersmith-redis-1:6379:1,ubersmith-redis-2:6379:1,ubersmith-redis-3:6379:1"
-      MAINTENANCE: 0
+      MAINTENANCE: "${MAINTENANCE}"
       HTTPS_FORCE: 1
       REASON_LOG: 0
       STORAGE_BACKEND: redis
