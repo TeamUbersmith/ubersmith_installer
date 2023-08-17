@@ -585,7 +585,7 @@
     args:
       chdir: "{{ ubersmith_home }}"
     environment:
-      MAINTENANCE: 1
+      MAINTENANCE: "1"
     tags:
       - upgrade
       - maintenance_enable
@@ -712,7 +712,7 @@
     args:
       chdir: "{{ ubersmith_home }}"
     environment:
-      MAINTENANCE: 0
+      MAINTENANCE: "0"
     tags:
       - upgrade
       - maintenance_disable
