@@ -2,7 +2,7 @@
   # Store the configuration values specified during the deploy for use during
   # future upgrades.
   - name: set up ini_file for future use
-    ini_file:
+    community.general.ini_file:
       dest: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
       section: ubersmith_installer
       option: "{{ item.var }}"
@@ -17,7 +17,7 @@
   # Create the directory structure required for Ubersmith to store configuration data
   # and other related files
   - name: create appliance configuration directories
-    file:
+    ansible.builtin.file:
       path: "{{ item }}"
       state: directory
       owner: "{{ ansible_user_id }}"
@@ -38,7 +38,7 @@
       - upgrade
 
   - name: create rsyslog configuration
-    copy:
+    ansible.builtin.copy:
       dest: /etc/rsyslog.d/30-ubersmith.conf
       src: 30-ubersmith.conf
       owner: root
@@ -55,7 +55,7 @@
 
   # Add logrotate directives to keep Ubersmith logs compressed and rotated.
   - name: create log rotation configuration
-    copy:
+    ansible.builtin.copy:
       dest: /etc/logrotate.d/ubersmith-logs
       src: ubersmith-logs
     ignore_errors: true
@@ -82,7 +82,7 @@
 
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
-    shell: readlink -f /etc/localtime
+    ansible.builtin.shell: readlink -f /etc/localtime
     register: timezone_file
     tags:
       - compose_override_template
@@ -93,7 +93,7 @@
   # Create the main Docker Compose file, which defines Ubersmith services as containers
   # and includes their configurations. This file may change with every release.
   - name: create docker compose file
-    template:
+    ansible.builtin.template:
       src: docker-compose.yml.j2
       dest: "{{ appliance_home }}/docker-compose.yml"
       owner: "{{ ansible_user_id }}"
@@ -107,7 +107,7 @@
   # Create the override Docker Compose file. This file contains site specific changes and
   # will not be modified by future upgrades.
   - name: create docker compose override file
-    template:
+    ansible.builtin.template:
       src: docker-compose.override.yml.j2
       dest: "{{ appliance_home }}/docker-compose.override.yml"
       owner: "{{ ansible_user_id }}"
@@ -119,7 +119,7 @@
 
   # For existing installs, update to Docker Compose v3
   - name: update docker compose override file
-    replace:
+    ansible.builtin.replace:
       path: "{{ appliance_home }}/docker-compose.override.yml"
       replace: "version: '3'"
       regexp: "version: '2'"
@@ -130,7 +130,7 @@
 
   # Update older override files to use the virtual host configuration file
   - name: ensure http virtual host configuration line exists
-    lineinfile:
+    ansible.builtin.lineinfile:
       path: "{{ appliance_home }}/docker-compose.override.yml"
       line: '      - "{{ appliance_home }}/conf/httpd/sites-enabled:/etc/apache2/sites-enabled"'
       insertafter: '      - "{{ appliance_home }}/conf/ssl/{{ app_virtual_host }}.key:/var/www/appliance_root/conf/ssl/appliance.key"'
@@ -140,7 +140,7 @@
 
   # Copy over helper scripts 
   - name: copy backup script
-    copy:
+    ansible.builtin.copy:
       src: backup_rrds.sh
       dest: "{{ appliance_home }}"
       owner: "{{ ansible_user_id }}"
@@ -148,7 +148,7 @@
       mode: 0700
 
   - name: copy appliance_restart
-    copy:
+    ansible.builtin.copy:
       src: appliance_restart.sh
       dest: "{{ appliance_home }}"
       owner: "{{ ansible_user_id }}"
@@ -159,7 +159,7 @@
       - upgrade
   
   - name: copy appliance_start
-    copy:
+    ansible.builtin.copy:
       src: appliance_start.sh
       dest: "{{ appliance_home }}"
       owner: "{{ ansible_user_id }}"
@@ -170,7 +170,7 @@
       - upgrade
 
   - name: copy appliance_upgrade
-    copy:
+    ansible.builtin.copy:
       src: appliance_upgrade.sh
       dest: "{{ appliance_home }}"
       owner: "{{ ansible_user_id }}"
@@ -184,7 +184,7 @@
   # These files should be replaced with a certificate and key provided by an authorized CA.
   # The 'web' and 'mail' containers need to be restarted if these files are modified.
   - name: create self signed certificates
-    command: "openssl req -new -x509 -days 365 -sha256 -newkey rsa:2048 -nodes -keyout {{ app_virtual_host }}.key -out {{ app_virtual_host }}.pem -subj '/O=Ubersmith/OU=Hosting/CN={{ app_virtual_host }}'"
+    ansible.builtin.command: "openssl req -new -x509 -days 365 -sha256 -newkey rsa:2048 -nodes -keyout {{ app_virtual_host }}.key -out {{ app_virtual_host }}.pem -subj '/O=Ubersmith/OU=Hosting/CN={{ app_virtual_host }}'"
     args:
       chdir: "{{ appliance_home }}/conf/ssl"
       creates: "{{ appliance_home }}/conf/ssl/{{ app_virtual_host }}.pem"
@@ -194,7 +194,7 @@
       
   # Retrieve Ubersmith images from the repository.  
   - name: run docker compose pull
-    command: "docker compose -p ubersmith pull"
+    ansible.builtin.command: "docker compose -p ubersmith pull"
     args:
       chdir: "{{ appliance_home }}"
     tags:
@@ -203,7 +203,7 @@
 
   # Only when upgrading, stop and remove existing Ubersmith containers.
   - name: stop existing containers
-    command: "docker compose -p ubersmith rm -sf"
+    ansible.builtin.command: "docker compose -p ubersmith rm -sf"
     args:
       chdir:  "{{ appliance_home }}"
     tags:
@@ -212,14 +212,14 @@
   # Only when upgrading, get the list of docker volumes, so the webroot
   # can be replaced by the new version of Ubersmith.
   - name: get existing docker volumes
-    shell: "docker volume ls -q"
+    ansible.builtin.shell: "docker volume ls -q"
     register: volume_output
     tags:
       - upgrade_only
 
   # Remove the appliance webroot so the codebase can be replaced.
   - name: remove ubersmith appliance webroot volume if present
-    command: docker volume rm ubersmith_app_webroot
+    ansible.builtin.command: docker volume rm ubersmith_app_webroot
     args:
       chdir:  "{{ appliance_home }}"
     when: volume_output.stdout.find('ubersmith_app_webroot') != -1
@@ -227,7 +227,7 @@
       - upgrade_only
 
   - name: run docker compose up -d
-    command: docker compose -p ubersmith up -d
+    ansible.builtin.command: docker compose -p ubersmith up -d
     args:
       chdir: "{{ appliance_home }}"
     tags:
@@ -264,7 +264,7 @@
 
   # Only when upgrading, run the upgrade script.
   - name: run upgrade.php
-    command: "docker compose -p ubersmith exec -T app_web php /var/www/appliance_root/www/upgrade.php"
+    ansible.builtin.command: "docker compose -p ubersmith exec -T app_web php /var/www/appliance_root/www/upgrade.php"
     args:
       chdir:  "{{ appliance_home }}"
     environment:

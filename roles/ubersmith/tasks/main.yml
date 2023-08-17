@@ -11,7 +11,7 @@
 
   # Backups are important, but especially with database version changes in 4.6.0
   - name: remind admin to make a backup before proceeding with an upgrade
-    pause:
+    ansible.builtin.pause:
       prompt: "Please ensure you have made a backup of your Ubersmith database before proceeding with the upgrade process. (CTRL+C to continue)"
     when:
       - interactive
@@ -40,7 +40,7 @@
   # Store the configuration values specified during the deploy for use during
   # future upgrades.
   - name: set up ini file for future use
-    ini_file:
+    community.general.ini_file:
       dest: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
       section: ubersmith_installer
       option: "{{ item.var }}"
@@ -59,7 +59,7 @@
   # If this fails, it's okay, but the Ubersmith mail container won't start
   # if an MTA is still running and/or 25/tcp is in use.
   - name: stop and disable mail transfer agents
-    service:
+    ansible.builtin.service:
       name: "{{ item }}"
       enabled: no
       state: stopped
@@ -76,7 +76,7 @@
 
   # Updates to docker-compose remove the project_container_index syntax
   - name: alert admin to necessary license updates
-    pause:
+    ansible.builtin.pause:
       prompt: "When upgrading from versions prior to Ubersmith 4.3.0, a change is being made to the naming convention for the database host. Please contact support@ubersmith.com to ensure your license record is updated (CTRL+C to continue)"
     when:
       - interactive
@@ -87,7 +87,7 @@
   # Create the directory structure required for Ubersmith to store configuration data
   # and other related files
   - name: create ubersmith configuration directories
-    file:
+    ansible.builtin.file:
       path: "{{ item }}"
       state: directory
       owner: "{{ ansible_user_id }}"
@@ -128,7 +128,7 @@
   # Add configuration directives to rsyslog for handling incoming logs from Ubersmith
   # Docker containers.
   - name: create rsyslog configuration
-    copy:
+    ansible.builtin.copy:
       dest: /etc/rsyslog.d/30-ubersmith.conf
       src: 30-ubersmith.conf
       owner: root
@@ -145,7 +145,7 @@
 
   # Add logrotate directives to keep Ubersmith logs compressed and rotated.
   - name: create log rotation configuration
-    copy:
+    ansible.builtin.copy:
       dest: /etc/logrotate.d/ubersmith-logs
       src: ubersmith-logs
       owner: root
@@ -177,7 +177,7 @@
   # editing without having to enter the container. A restart of the 'db' container is
   # required if this file is modified.
   - name: create percona server configuration overrides
-    template:
+    ansible.builtin.template:
       src: ubersmith.cnf.j2
       dest: "{{ ubersmith_home }}/conf/mysql/ubersmith.cnf"
       owner: "{{ ansible_user_id }}"
@@ -191,7 +191,7 @@
   # editing without having to enter the container. A restart of the 'php' container is
   # required if this file is modified.
   - name: create ubersmith.ini file
-    template:
+    ansible.builtin.template:
       src: ubersmith.ini.j2
       dest: "{{ ubersmith_home }}/conf/php/ubersmith.ini"
       owner: "{{ ansible_user_id }}"
@@ -204,7 +204,7 @@
   # facilitate editing without having to enter the container. A restart of the 'rwhois'
   # container is required if this file is modified.
   - name: create rwhois configuration file
-    template:
+    ansible.builtin.template:
       src: rwhois.j2
       dest: "{{ ubersmith_home }}/conf/rwhois/rwhois"
       owner: "{{ ansible_user_id }}"
@@ -215,7 +215,7 @@
 
   # This deploy hook will copy certificates into conf/ssl after they've been renewed.
   - name: install web certbot deploy hook
-    template:
+    ansible.builtin.template:
       src: ubersmith-deploy.sh.j2
       dest: "{{ ubersmith_home }}/conf/certbot/etc/renewal-hooks/deploy/ubersmith-deploy.sh"
       owner: "{{ ansible_user_id }}"
@@ -228,7 +228,7 @@
 
   # This deploy hook will copy certificates into conf/ssl after they've been renewed.
   - name: install mail certbot deploy hook
-    template:
+    ansible.builtin.template:
       src: postfix-deploy.sh.j2
       dest: "{{ ubersmith_home }}/conf/certbot/etc/renewal-hooks/deploy/postfix-deploy.sh"
       owner: "{{ ansible_user_id }}"
@@ -343,7 +343,7 @@
 
   # Create a shell script to keep the Let's Encrypt certificate renewed
   - name: create certbot renewal shell script
-    template:
+    ansible.builtin.template:
       src: ubersmith_certbot_renew.sh.j2
       dest: "{{ ubersmith_home }}/ubersmith_certbot_renew.sh"
       owner: "{{ ansible_user_id }}"
@@ -383,7 +383,7 @@
   # Create the main Docker Compose file, which defines Ubersmith services as containers
   # and includes their configurations. This file may change with every release.
   - name: create docker compose file
-    template:
+    ansible.builtin.template:
       src: docker-compose.yml.j2
       dest: "{{ ubersmith_home }}/docker-compose.yml"
       owner: "{{ ansible_user_id }}"
@@ -399,7 +399,7 @@
   # Create the override Docker Compose file. This file contains site specific changes and
   # will not be modified by future upgrades.
   - name: create docker compose override file
-    template:
+    ansible.builtin.template:
       src: docker-compose.override.yml.j2
       dest: "{{ ubersmith_home }}/docker-compose.override.yml"
       owner: "{{ ansible_user_id }}"
@@ -413,7 +413,7 @@
   
   # For existing installs, update to Docker Compose v3
   - name: update docker compose override file
-    replace:
+    ansible.builtin.replace:
       path: "{{ ubersmith_home }}/docker-compose.override.yml"
       replace: "version: '3'"
       regexp: "version: '2'"
@@ -424,7 +424,7 @@
 
   # For existing installs, update to current supported PHP release
   - name: update docker compose override file for php version
-    replace:
+    ansible.builtin.replace:
       path: "{{ ubersmith_home }}/docker-compose.override.yml"
       replace: "/etc/php/{{ php_version }}"
       regexp: "/etc/php/{{ item }}"
@@ -437,7 +437,7 @@
 
   # For existing installs, modify location of apache virtual host configuration
   - name: update docker compose override file for apache virtual hosts
-    replace:
+    ansible.builtin.replace:
       path: "{{ ubersmith_home }}/docker-compose.override.yml"
       replace: "/usr/local/apache2/conf/sites-enabled"
       regexp: "/etc/apache2/sites-enabled"
@@ -448,7 +448,7 @@
 
   # Copy a helper script which allows Ubersmith containers to be restarted.
   - name: copy ubersmith_restart
-    copy:
+    ansible.builtin.copy:
       src: ubersmith_restart.sh
       dest: "{{ ubersmith_home }}"
       owner: "{{ ansible_user_id }}"
@@ -459,7 +459,7 @@
 
   # Copy a helper script which allows Ubersmith containers to be started.
   - name: copy ubersmith_start
-    copy:
+    ansible.builtin.copy:
       src: ubersmith_start.sh
       dest: "{{ ubersmith_home }}"
       owner: "{{ ansible_user_id }}"
@@ -468,7 +468,7 @@
 
   # Older versions scale redis to 1, we need it scaled to 3
   - name: ensure redis line exists
-    lineinfile:
+    ansible.builtin.lineinfile:
       path: "{{ ubersmith_home }}/ubersmith_start.sh"
       regexp: "^#?\\s?docker-compose -p ubersmith up --scale redis=\\d -d redis"
       line: "docker compose -p ubersmith up --scale redis=3 -d redis"
@@ -487,7 +487,7 @@
       - database_location
 
   - name: display web container info
-    debug:
+    ansible.builtin.debug:
       var: web_container_info
     when:
       - debug is defined
@@ -550,7 +550,7 @@
   # This is an unfortunate side effect of moving to Docker Compose v3, and the fact that
   # Ubersmith does not manage timezones within software (yet)
   - name: give the administrator a chance to update docker-compose.override.yml
-    pause:
+    ansible.builtin.pause:
       prompt: "Make sure docker-compose.override.yml has been updated to include a ports directive for web, and timezone volume entries for all containers (CTRL+C to continue)"
     when:
       - interactive
@@ -690,7 +690,7 @@
 
   # Show the upgrade output, in the event of any issues.
   - name: display updatedb.php debug output
-    debug: 
+    ansible.builtin.debug: 
       var: "{{ item }}"
     with_items:
       - updatedb_output.stderr
@@ -720,7 +720,7 @@
   # Store the configuration values specified during the deploy for use during
   # future upgrades.
   - name: set post upgrade values in ini file for future use
-    ini_file:
+    community.general.ini_file:
       dest: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
       section: ubersmith_installer
       option: "{{ item.var }}"
