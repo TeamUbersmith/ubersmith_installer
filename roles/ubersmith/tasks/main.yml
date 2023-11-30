@@ -530,10 +530,10 @@
     tags:
       - upgrade_only
 
-  # Only when upgrading, stop and remove existing Ubersmith containers.
+  # Only when upgrading, stop and remove default existing Ubersmith containers.
   # docker compose rm -s -f
   - name: stop existing containers
-    ansible.builtin.command: docker compose rm -s -f
+    ansible.builtin.command: docker compose rm -s -f web cron db php solr mail rwhois redis redis-data
     args:
       chdir: "{{ ubersmith_home }}"
     tags:
@@ -581,7 +581,7 @@
   # Retrieve Ubersmith images from the repository and start containers
   # docker compose up -d --quiet-pull --no-color web cron db php solr mail rwhois redis redis-data
   - name: update and start ubersmith containers
-    ansible.builtin.command: docker compose up -d --quiet-pull --no-color web cron db php solr mail rwhois redis redis-data
+    ansible.builtin.command: docker compose up -d --quiet-pull --no-color web cron db php solr mail rwhois redis-data
     args:
       chdir: "{{ ubersmith_home }}"
     environment:
@@ -659,7 +659,7 @@
     args:
       chdir: "{{ ubersmith_home }}"
     when:
-      - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"    
+      - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"
     tags:
       - upgrade_only
       - mysql_upgrade
