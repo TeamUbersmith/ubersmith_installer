@@ -69,7 +69,7 @@ services:
         tag: ubersmith/web
 {% endif %}
   php:
-    image: {{ registry }}/php81:{{ ubersmith_version }}-{{ containers.release_version }}
+    image: {{ registry }}/php82:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: {{ container_domain }}
     restart: unless-stopped
     volumes:
