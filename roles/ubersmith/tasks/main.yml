@@ -279,7 +279,9 @@
       host: 0.0.0.0
       port: 80
       state: drained
-    when: lets_encrypt_certificate == 'yes'
+    when:
+     - lets_encrypt_certificate is defined
+     - lets_encrypt_certificate == 'yes'
     tags:
       - certbot
 
@@ -298,7 +300,9 @@
         - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
         - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
     with_items: "{{ virtual_hosts }}"
-    when: lets_encrypt_certificate == 'yes'
+    when:
+     - lets_encrypt_certificate is defined
+     - lets_encrypt_certificate == 'yes'
     tags:
       - certbot
 
@@ -307,7 +311,9 @@
       host: 0.0.0.0
       port: 80
       state: drained
-    when: lets_encrypt_certificate == 'yes'
+    when:
+     - lets_encrypt_certificate is defined
+     - lets_encrypt_certificate == 'yes'
     tags:
       - certbot
 
@@ -327,7 +333,9 @@
         - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
         - "{{ ubersmith_home }}/conf/ssl:/opt/certbot/deploy"
     with_items: "{{ virtual_hosts }}"
-    when: lets_encrypt_certificate == 'yes'
+    when:
+     - lets_encrypt_certificate is defined
+     - lets_encrypt_certificate == 'yes'
     tags:
       - certbot
       - certbot_renewal
@@ -337,7 +345,9 @@
       host: 0.0.0.0
       port: 80
       state: drained
-    when: lets_encrypt_certificate == 'yes'
+    when:
+     - lets_encrypt_certificate is defined
+     - lets_encrypt_certificate == 'yes'
     tags:
       - certbot
 
@@ -362,7 +372,9 @@
       user: "{{ ansible_user_id }}"
       job: "{{ ubersmith_home }}/ubersmith_certbot_renew.sh"
       special_time: daily
-    when: lets_encrypt_certificate == 'yes'
+    when:
+     - lets_encrypt_certificate is defined
+     - lets_encrypt_certificate == 'yes'
     tags:
       - le_renewal
       - certbot
