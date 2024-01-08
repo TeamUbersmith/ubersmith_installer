@@ -545,7 +545,7 @@
   # Only when upgrading, stop and remove default existing Ubersmith containers.
   # docker compose rm -s -f
   - name: stop existing containers
-    ansible.builtin.command: docker compose rm -s -f web cron db php solr mail rwhois redis redis-data
+    ansible.builtin.command: docker compose rm -s -f web cron db php solr mail rwhois redis redis-data certbot
     args:
       chdir: "{{ ubersmith_home }}"
     tags:
