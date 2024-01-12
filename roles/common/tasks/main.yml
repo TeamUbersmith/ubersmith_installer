@@ -59,7 +59,6 @@
       version: "<7"
     when:
       - interactive
-      - ansible_distribution == 'CentOS'
     tags:
       - upgrade
 
