@@ -243,9 +243,9 @@
     retries: 10
     delay: 30
     with_items:
-      - ubersmith-app_web_1
-      - ubersmith-app_db_1
-      - ubersmith-app_cron_1
+      - ubersmith-app_web-1
+      - ubersmith-app_db-1
+      - ubersmith-app_cron-1
 
   # Configure appliance user password
   - name: configure uberapp user password
