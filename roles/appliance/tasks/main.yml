@@ -235,6 +235,26 @@
     tags:
       - upgrade_only
 
+  # Ensure permissions on database files are correct
+  - name: make sure UID/GID 1001 owns the database files
+    community.docker.docker_container:
+      name: busybox
+      image: "busybox"
+      container_default_behavior: compatibility
+      command: "chown -R 1001:1001 /mysql"
+      user: root
+      auto_remove: yes
+      log_driver: syslog
+      log_options:
+        tag: ubersmith/busybox
+      volumes:
+        - "ubersmith_app_database:/mysql"
+    when:
+      - "'DATABASE_HOST=app_db' in app_web_container_info.container.Config.Env"
+    tags:
+      - upgrade_only
+      - mysql_permissions
+
   - name: run docker compose up -d
     ansible.builtin.command: docker compose -p ubersmith up -d
     args:
