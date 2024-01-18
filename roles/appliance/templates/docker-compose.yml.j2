@@ -1,7 +1,7 @@
 version: '3'
 services:
   app_db:
-    image: {{ registry }}/appliance_db:{{ appliance_version }}-{{ containers.release_version }}
+    image: {{ registry }}/appliance_db_ps80:{{ appliance_version }}-{{ containers.release_version }}
     hostname: database.appliance.{{ app_virtual_host }}
     restart: unless-stopped
     ports:
