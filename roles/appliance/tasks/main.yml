@@ -180,6 +180,15 @@
     tags:
       - upgrade
 
+  # Check to see if the installation is using a remote database
+  - name: check for remote database
+    community.docker.docker_container_info:
+      name: ubersmith-app_web-1
+    register: app_web_container_info
+    tags:
+      - upgrade_only
+      - database_location
+
   # Create a self signed certificate for temporary use to secure HTTP and SMTP traffic.
   # These files should be replaced with a certificate and key provided by an authorized CA.
   # The 'web' and 'mail' containers need to be restarted if these files are modified.
@@ -246,6 +255,21 @@
       - ubersmith-app_web-1
       - ubersmith-app_db-1
       - ubersmith-app_cron-1
+
+  # When upgrading Percona Server, run mysql_upgrade. 0 and 2 return codes are acceptable.
+  - name: run mysql_upgrade
+    community.docker.docker_container_exec:
+      container: ubersmith-app_db-1
+      command: /bin/sh -c 'mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD'
+    register: command_result
+    failed_when: 
+     - command_result.rc != 0
+     - command_result.rc != 2
+    when:
+      - "'DATABASE_HOST=app_db' in app_web_container_info.container.Config.Env"
+    tags:
+      - upgrade_only
+      - mysql_upgrade
 
   # Configure appliance user password
   - name: configure uberapp user password
