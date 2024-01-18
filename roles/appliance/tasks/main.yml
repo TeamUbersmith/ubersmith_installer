@@ -241,7 +241,7 @@
       name: busybox
       image: "busybox"
       container_default_behavior: compatibility
-      command: "chown -R 1001:1001 /mysql"
+      command: "chown -R 1001:1001 /mysql && mv /mysql/ib_logfile0 /mysql/ib_logfile0_56 && mv /mysql/ib_logfile1 /mysql/ib_logfile1_56"
       user: root
       auto_remove: yes
       log_driver: syslog
