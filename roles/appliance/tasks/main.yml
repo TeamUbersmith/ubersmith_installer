@@ -262,6 +262,7 @@
     community.docker.docker_container:
       name: ubersmith-app_db_57
       image: "{{ registry }}/ps57:{{ appliance_version }}-{{ containers.release_version }}"
+      command: "mysqld --skip-grant-tables"
       container_default_behavior: compatibility
       auto_remove: yes
       log_driver: syslog
@@ -284,11 +285,14 @@
     until: db_docker_container_info.container.State.Health.Status == "healthy"
     retries: 10
     delay: 30
+    tags:
+      - upgrade_only
+      - mysql_upgrade_57
 
   - name: run mysql_upgrade for mysql 5.7
     community.docker.docker_container_exec:
       container: ubersmith-app_db_57
-      command: /bin/sh -c 'mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD'
+      command: /bin/sh -c 'mysql_upgrade -u root --skip-password'
     register: command_result
     failed_when: 
      - command_result.rc != 0
