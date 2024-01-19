@@ -261,7 +261,7 @@
   - name: step the database up to mysql 5.7, if necessary
     community.docker.docker_container:
       name: ubersmith-app_db_57
-      image: "{{ registry }}/ps57:{{ ubersmith_version }}-{{ containers.release_version }}"
+      image: "{{ registry }}/ps57:{{ appliance_version }}-{{ containers.release_version }}"
       container_default_behavior: compatibility
       auto_remove: yes
       log_driver: syslog
