@@ -188,6 +188,9 @@
     tags:
       - upgrade_only
       - database_location
+      - mysql_upgrade_57
+      - mysql_upgrade
+      - mysql_permissions
 
   # Create a self signed certificate for temporary use to secure HTTP and SMTP traffic.
   # These files should be replaced with a certificate and key provided by an authorized CA.
