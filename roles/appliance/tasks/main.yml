@@ -260,11 +260,9 @@
 
   - name: step the database up to mysql 5.7, if necessary
     community.docker.docker_container:
-      name: app_db_57
-      image: "{{ registry }}/appliance_db:{{ appliance_version }}-{{ containers.release_version }}"
+      name: ubersmith-app_db_57
+      image: "{{ registry }}/ps57:{{ ubersmith_version }}-{{ containers.release_version }}"
       container_default_behavior: compatibility
-      command: "mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD"
-      user: root
       auto_remove: yes
       log_driver: syslog
       log_options:
@@ -273,10 +271,39 @@
         - "ubersmith_app_database:/var/lib/mysql"
     when:
       - "'DATABASE_HOST=app_db' in app_web_container_info.container.Config.Env"
-      - mysql_version == 5.6
+      - mysql_version == "5.6"
     tags:
       - upgrade_only
       - mysql_upgrade_57
+
+  # The database can take a little bit to start, so wait
+  - name: wait for mysql 5.7 container to come online
+    community.docker.docker_container_info:
+      name: ubersmith-app_db_57
+    register: db_docker_container_info
+    until: db_docker_container_info.container.State.Health.Status == "healthy"
+    retries: 10
+    delay: 30
+
+  - name: run mysql_upgrade for mysql 5.7
+    community.docker.docker_container_exec:
+      container: ubersmith-app_db_57
+      command: /bin/sh -c 'mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD'
+    register: command_result
+    failed_when: 
+     - command_result.rc != 0
+     - command_result.rc != 2
+    when:
+      - "'DATABASE_HOST=app_db' in app_web_container_info.container.Config.Env"
+      - mysql_version == "5.6"
+    tags:
+      - upgrade_only
+      - mysql_upgrade_57
+
+  - name: remove mysql 5.7 container
+    community.docker.docker_container:
+      name: ubersmith-app_db_57
+      state: absent
 
   - name: run docker compose up -d
     ansible.builtin.command: docker compose -p ubersmith up -d
@@ -299,20 +326,20 @@
       - ubersmith-app_db-1
       - ubersmith-app_cron-1
 
-  # When upgrading Percona Server, run mysql_upgrade. 0 and 2 return codes are acceptable.
-  - name: run mysql_upgrade
-    community.docker.docker_container_exec:
-      container: ubersmith-app_db-1
-      command: /bin/sh -c 'mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD'
-    register: command_result
-    failed_when: 
-     - command_result.rc != 0
-     - command_result.rc != 2
-    when:
-      - "'DATABASE_HOST=app_db' in app_web_container_info.container.Config.Env"
-    tags:
-      - upgrade_only
-      - mysql_upgrade
+  # # When upgrading Percona Server, run mysql_upgrade. 0 and 2 return codes are acceptable.
+  # - name: run mysql_upgrade
+  #   community.docker.docker_container_exec:
+  #     container: ubersmith-app_db-1
+  #     command: /bin/sh -c 'mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD'
+  #   register: command_result
+  #   failed_when: 
+  #    - command_result.rc != 0
+  #    - command_result.rc != 2
+  #   when:
+  #     - "'DATABASE_HOST=app_db' in app_web_container_info.container.Config.Env"
+  #   tags:
+  #     - upgrade_only
+  #     - mysql_upgrade
 
   # Configure appliance user password
   - name: configure uberapp user password
