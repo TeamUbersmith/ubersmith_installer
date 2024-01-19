@@ -272,7 +272,7 @@
         - "ubersmith_app_database:/var/lib/mysql"
     when:
       - "'DATABASE_HOST=app_db' in app_web_container_info.container.Config.Env"
-      - mysql_version == "5.6"
+      - app_mysql_version == "5.6"
     tags:
       - upgrade_only
       - mysql_upgrade_57
@@ -299,7 +299,7 @@
      - command_result.rc != 2
     when:
       - "'DATABASE_HOST=app_db' in app_web_container_info.container.Config.Env"
-      - mysql_version == "5.6"
+      - app_mysql_version == "5.6"
     tags:
       - upgrade_only
       - mysql_upgrade_57
@@ -332,21 +332,6 @@
       - ubersmith-app_web-1
       - ubersmith-app_db-1
       - ubersmith-app_cron-1
-
-  # # When upgrading Percona Server, run mysql_upgrade. 0 and 2 return codes are acceptable.
-  # - name: run mysql_upgrade
-  #   community.docker.docker_container_exec:
-  #     container: ubersmith-app_db-1
-  #     command: /bin/sh -c 'mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD'
-  #   register: command_result
-  #   failed_when: 
-  #    - command_result.rc != 0
-  #    - command_result.rc != 2
-  #   when:
-  #     - "'DATABASE_HOST=app_db' in app_web_container_info.container.Config.Env"
-  #   tags:
-  #     - upgrade_only
-  #     - mysql_upgrade
 
   # Configure appliance user password
   - name: configure uberapp user password
@@ -405,6 +390,6 @@
       mode: "0644"
     with_items:
       - { var: 'appliance_installed_version', val: "{{ appliance_version }}" }
-      - { var: 'mysql_version', val: "8.0"}
+      - { var: 'app_mysql_version', val: "8.0"}
     tags:
       - upgrade

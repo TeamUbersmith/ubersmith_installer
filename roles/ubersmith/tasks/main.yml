@@ -649,33 +649,6 @@
     tags:
       - upgrade_only
 
-  # When upgrading Percona Server, run mysql_upgrade. 0 and 2 return codes are acceptable.
-  - name: run mysql_upgrade
-    community.docker.docker_container_exec:
-      container: ubersmith-db-1
-      command: /bin/sh -c 'mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD'
-    register: command_result
-    failed_when: 
-     - command_result.rc != 0
-     - command_result.rc != 2
-    when:
-      - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"
-    tags:
-      - upgrade_only
-      - mysql_upgrade
-
-  # After running mysql_upgrade, MySQL needs to be restarted
-  # docker compose restart db
-  - name: restart database container after mysql_upgrade
-    ansible.builtin.command: docker compose restart db
-    args:
-      chdir: "{{ ubersmith_home }}"
-    when:
-      - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"
-    tags:
-      - upgrade_only
-      - mysql_upgrade
-
   # Depending on system performance, the database container can take a long time to restart
   - name: check database container status
     community.docker.docker_container_info:
