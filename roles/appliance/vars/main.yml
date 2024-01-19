@@ -7,8 +7,6 @@
   uberapp_user_password: "{{ lookup('password', ansible_user_dir + '/.appliance_' + app_virtual_host + '_appliance_xmlrpc_pass') }}"
 
   appliance_version: 5.0.0
-  
-  mysql_version: 8.0
 
   containers:
     release_version: r10

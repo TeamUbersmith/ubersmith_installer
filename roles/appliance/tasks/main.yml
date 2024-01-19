@@ -371,6 +371,6 @@
       mode: "0644"
     with_items:
       - { var: 'appliance_installed_version', val: "{{ appliance_version }}" }
-      - { var: 'mysql_version', val: "{{ mysql_version }}"}
+      - { var: 'mysql_version', val: "8.0"}
     tags:
       - upgrade
