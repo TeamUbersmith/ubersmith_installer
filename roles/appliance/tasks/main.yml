@@ -308,6 +308,9 @@
     community.docker.docker_container:
       name: ubersmith-app_db_57
       state: absent
+    tags:
+      - upgrade_only
+      - mysql_upgrade_57
 
   - name: run docker compose up -d
     ansible.builtin.command: docker compose -p ubersmith up -d
