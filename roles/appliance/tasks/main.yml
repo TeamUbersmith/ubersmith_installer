@@ -241,7 +241,7 @@
       name: busybox
       image: "busybox"
       container_default_behavior: compatibility
-      command: "chown -R 1001:1001 /mysql && mv /mysql/ib_logfile0 /mysql/ib_logfile0_56 && mv /mysql/ib_logfile1 /mysql/ib_logfile1_56"
+      command: "chown -R 1001:1001 /mysql"
       user: root
       auto_remove: yes
       log_driver: syslog
@@ -254,6 +254,26 @@
     tags:
       - upgrade_only
       - mysql_permissions
+
+  - name: step the database up to mysql 5.7, if necessary
+    community.docker.docker_container:
+      name: app_db_57
+      image: "{{ registry }}/appliance_db:{{ appliance_version }}-{{ containers.release_version }}"
+      container_default_behavior: compatibility
+      command: "mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD"
+      user: root
+      auto_remove: yes
+      log_driver: syslog
+      log_options:
+        tag: ubersmith/app_db_57
+      volumes:
+        - "ubersmith_app_database:/var/lib/mysql"
+    when:
+      - "'DATABASE_HOST=app_db' in app_web_container_info.container.Config.Env"
+      - mysql_version == 5.6
+    tags:
+      - upgrade_only
+      - mysql_upgrade_57
 
   - name: run docker compose up -d
     ansible.builtin.command: docker compose -p ubersmith up -d
@@ -334,3 +354,20 @@
       - "Please use these values to configure the appliance entry in Ubersmith."
     tags:
       - password
+
+  # Store the configuration values specified during the deploy for use during
+  # future upgrades.
+  - name: set post upgrade values in ini file for future use
+    community.general.ini_file:
+      dest: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
+      section: ubersmith_installer
+      option: "{{ item.var }}"
+      value: "{{ item.val }}"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: "0644"
+    with_items:
+      - { var: 'appliance_installed_version', val: "{{ appliance_version }}" }
+      - { var: 'mysql_version', val: "{{ mysql_version }}"}
+    tags:
+      - upgrade

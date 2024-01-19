@@ -8,6 +8,8 @@
 
   appliance_version: 5.0.0
   
+  mysql_version: 8.0
+
   containers:
     release_version: r10
     backup_version: 2.4
