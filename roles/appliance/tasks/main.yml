@@ -12,9 +12,9 @@
   # In the event of a failed upgrade attempt, ensure the bare minimum of containers is running before proceeding
   # docker compose up -d web db php
   - name: check ubersmith containers before proceeding with upgrade
-    ansible.builtin.command: docker compose up -d app_web app_db app_cron
+    ansible.builtin.command: docker compose -p ubersmith up -d app_web app_db app_cron
     args:
-      chdir: "{{ ubersmith_home }}"
+      chdir: "{{ appliance_home }}"
     tags:
       - upgrade_only
 
