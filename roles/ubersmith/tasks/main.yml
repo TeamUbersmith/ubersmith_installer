@@ -9,7 +9,7 @@
     tags:
       - upgrade_only
 
-  # Backups are important, but especially with database version changes in 4.6.0
+  # Backups are important, but especially with database version changes in 5.0.0
   - name: remind admin to make a backup before proceeding with an upgrade
     ansible.builtin.pause:
       prompt: "Please ensure you have made a backup of your Ubersmith database before proceeding with the upgrade process. (CTRL+C to continue)"

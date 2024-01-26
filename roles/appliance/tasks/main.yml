@@ -1,4 +1,14 @@
 ---
+
+  # Backups are important, but especially with database version changes in 5.0.0
+  - name: remind admin to make a backup before proceeding with an upgrade
+    ansible.builtin.pause:
+      prompt: "Please ensure you have made a backup of your Ubersmith appliance database before proceeding with the upgrade process. (CTRL+C to continue)"
+    when:
+      - interactive
+    tags:
+      - upgrade_only
+
   # Store the configuration values specified during the deploy for use during
   # future upgrades.
   - name: set up ini_file for future use
@@ -285,6 +295,9 @@
     until: db_docker_container_info.container.State.Health.Status == "healthy"
     retries: 10
     delay: 30
+    when:
+      - "'DATABASE_HOST=app_db' in app_web_container_info.container.Config.Env"
+      - app_mysql_version == "5.6"
     tags:
       - upgrade_only
       - mysql_upgrade_57
