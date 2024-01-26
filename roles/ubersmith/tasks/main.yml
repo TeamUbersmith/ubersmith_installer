@@ -715,6 +715,7 @@
       mode: "0644"
     with_items:
       - { var: 'ubersmith_installed_version', val: "{{ ubersmith_version }}" }
+      - { var: 'lets_encrypt_certificate', val: "{{ lets_encrypt_certificate }}"}
     tags:
       - upgrade
 
