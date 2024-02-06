@@ -123,6 +123,10 @@ services:
   rwhois:
     image: {{ registry }}/xinetd:{{ ubersmith_version }}-{{ containers.release_version }}
     hostname: {{ container_domain }}
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     restart: unless-stopped
     ports:
       - "4321:4321"
