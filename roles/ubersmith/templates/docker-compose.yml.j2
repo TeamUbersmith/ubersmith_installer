@@ -74,6 +74,7 @@ services:
     restart: unless-stopped
     volumes:
       - "{{ ubersmith_home }}/logs/rsyslog/log:/dev/log"
+      - "logs:/var/www/ubersmith_root/logs"
       - "webroot:/var/www/ubersmith_root"
     depends_on:
       web:
@@ -91,6 +92,7 @@ services:
     hostname: {{ container_domain }}
     restart: unless-stopped
     volumes:
+      - "logs:/var/www/ubersmith_root/logs"
       - "webroot:/var/www/ubersmith_root"
     depends_on:
       - web
@@ -107,6 +109,7 @@ services:
     ports:
       - "25:25"
     volumes:
+      - "logs:/var/www/ubersmith_root/logs"
       - "webroot:/var/www/ubersmith_root"
     networks:
       default:

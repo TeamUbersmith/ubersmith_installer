@@ -34,7 +34,6 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - "{{ ubersmith_home }}/logs/ubersmith:/var/www/ubersmith_root/logs"
       - "{{ ubersmith_home }}/conf/ssl:/var/www/ubersmith_root/conf/ssl"
       - "{{ ubersmith_home }}/conf/httpd:/var/www/ubersmith_root/conf/httpd"
       - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
