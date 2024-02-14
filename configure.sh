@@ -1,22 +1,19 @@
 #!/usr/bin/env bash
 set -e
 
-export PYTHONUSERBASE="$HOME/.local"
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$HOME/.local/ubersmith_venv/bin:$PATH"
 
-echo "Checking for pip3..."
-if command -v pip3 >/dev/null 2>&1; then
-    echo "Installing contemporary version of pip3..."
-    pip3 install -q --user --upgrade pip
-    echo "Installing Ansible..."
-    $HOME/.local/bin/pip3 uninstall ansible -q -y
-    $HOME/.local/bin/pip3 uninstall ansible-base -q -y
-    $HOME/.local/bin/pip3 install "ansible-core>=2.11,<2.12" -q --upgrade --user
-else
-    echo "The pip3 utility is missing; please install pip3."
-    echo "https://docs.ubersmith.com/display/UbersmithDocumentation/Ubersmith+Installation+and+Upgrade+Utility"
-    exit 1
+# Requires python3-venv on Ubuntu
+if [ ! -d "$HOME/.local/ubersmith_venv" ]; then
+    echo "Creating Ubersmith Python virtual environment..."
+    python -m venv $HOME/.local/ubersmith_venv
 fi
+
+source $HOME/.local/ubersmith_venv/bin/activate
+
+echo "Installing Ansible..."
+pip3 install -q "ansible-core>=2.14,<2.15"
+
 echo "Installing Dependencies..."
 ansible-galaxy install -r requirements.yml
 

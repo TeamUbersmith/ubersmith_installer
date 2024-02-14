@@ -1,8 +1,27 @@
 ---
+
+  # Backups are important, but especially with database version changes in 5.0.0
+  - name: remind admin to make a backup before proceeding with an upgrade
+    ansible.builtin.pause:
+      prompt: "Please ensure you have made a backup of your Ubersmith appliance database before proceeding with the upgrade process. (CTRL+C to continue)"
+    when:
+      - interactive
+    tags:
+      - upgrade_only
+
+  # In the event of a failed upgrade attempt, ensure the bare minimum of containers is running before proceeding
+  # docker compose up -d web db php
+  - name: check ubersmith containers before proceeding with upgrade
+    ansible.builtin.command: docker compose -p ubersmith up -d app_web app_db app_cron
+    args:
+      chdir: "{{ appliance_home }}"
+    tags:
+      - upgrade_only
+
   # Store the configuration values specified during the deploy for use during
   # future upgrades.
   - name: set up ini_file for future use
-    ini_file:
+    community.general.ini_file:
       dest: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
       section: ubersmith_installer
       option: "{{ item.var }}"
@@ -17,7 +36,7 @@
   # Create the directory structure required for Ubersmith to store configuration data
   # and other related files
   - name: create appliance configuration directories
-    file:
+    ansible.builtin.file:
       path: "{{ item }}"
       state: directory
       owner: "{{ ansible_user_id }}"
@@ -38,7 +57,7 @@
       - upgrade
 
   - name: create rsyslog configuration
-    copy:
+    ansible.builtin.copy:
       dest: /etc/rsyslog.d/30-ubersmith.conf
       src: 30-ubersmith.conf
       owner: root
@@ -55,7 +74,7 @@
 
   # Add logrotate directives to keep Ubersmith logs compressed and rotated.
   - name: create log rotation configuration
-    copy:
+    ansible.builtin.copy:
       dest: /etc/logrotate.d/ubersmith-logs
       src: ubersmith-logs
     ignore_errors: true
@@ -82,7 +101,7 @@
 
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
-    shell: readlink -f /etc/localtime
+    ansible.builtin.shell: readlink -f /etc/localtime
     register: timezone_file
     tags:
       - compose_override_template
@@ -93,7 +112,7 @@
   # Create the main Docker Compose file, which defines Ubersmith services as containers
   # and includes their configurations. This file may change with every release.
   - name: create docker compose file
-    template:
+    ansible.builtin.template:
       src: docker-compose.yml.j2
       dest: "{{ appliance_home }}/docker-compose.yml"
       owner: "{{ ansible_user_id }}"
@@ -107,7 +126,7 @@
   # Create the override Docker Compose file. This file contains site specific changes and
   # will not be modified by future upgrades.
   - name: create docker compose override file
-    template:
+    ansible.builtin.template:
       src: docker-compose.override.yml.j2
       dest: "{{ appliance_home }}/docker-compose.override.yml"
       owner: "{{ ansible_user_id }}"
@@ -119,7 +138,7 @@
 
   # For existing installs, update to Docker Compose v3
   - name: update docker compose override file
-    replace:
+    ansible.builtin.replace:
       path: "{{ appliance_home }}/docker-compose.override.yml"
       replace: "version: '3'"
       regexp: "version: '2'"
@@ -130,7 +149,7 @@
 
   # Update older override files to use the virtual host configuration file
   - name: ensure http virtual host configuration line exists
-    lineinfile:
+    ansible.builtin.lineinfile:
       path: "{{ appliance_home }}/docker-compose.override.yml"
       line: '      - "{{ appliance_home }}/conf/httpd/sites-enabled:/etc/apache2/sites-enabled"'
       insertafter: '      - "{{ appliance_home }}/conf/ssl/{{ app_virtual_host }}.key:/var/www/appliance_root/conf/ssl/appliance.key"'
@@ -140,7 +159,7 @@
 
   # Copy over helper scripts 
   - name: copy backup script
-    copy:
+    ansible.builtin.copy:
       src: backup_rrds.sh
       dest: "{{ appliance_home }}"
       owner: "{{ ansible_user_id }}"
@@ -148,7 +167,7 @@
       mode: 0700
 
   - name: copy appliance_restart
-    copy:
+    ansible.builtin.copy:
       src: appliance_restart.sh
       dest: "{{ appliance_home }}"
       owner: "{{ ansible_user_id }}"
@@ -159,7 +178,7 @@
       - upgrade
   
   - name: copy appliance_start
-    copy:
+    ansible.builtin.copy:
       src: appliance_start.sh
       dest: "{{ appliance_home }}"
       owner: "{{ ansible_user_id }}"
@@ -170,7 +189,7 @@
       - upgrade
 
   - name: copy appliance_upgrade
-    copy:
+    ansible.builtin.copy:
       src: appliance_upgrade.sh
       dest: "{{ appliance_home }}"
       owner: "{{ ansible_user_id }}"
@@ -180,11 +199,23 @@
     tags:
       - upgrade
 
+  # Check to see if the installation is using a remote database
+  - name: check for remote database
+    community.docker.docker_container_info:
+      name: ubersmith-app_web-1
+    register: app_web_container_info
+    tags:
+      - upgrade_only
+      - database_location
+      - mysql_upgrade_57
+      - mysql_upgrade
+      - mysql_permissions
+
   # Create a self signed certificate for temporary use to secure HTTP and SMTP traffic.
   # These files should be replaced with a certificate and key provided by an authorized CA.
   # The 'web' and 'mail' containers need to be restarted if these files are modified.
   - name: create self signed certificates
-    command: "openssl req -new -x509 -days 365 -sha256 -newkey rsa:2048 -nodes -keyout {{ app_virtual_host }}.key -out {{ app_virtual_host }}.pem -subj '/O=Ubersmith/OU=Hosting/CN={{ app_virtual_host }}'"
+    ansible.builtin.command: "openssl req -new -x509 -days 365 -sha256 -newkey rsa:2048 -nodes -keyout {{ app_virtual_host }}.key -out {{ app_virtual_host }}.pem -subj '/O=Ubersmith/OU=Hosting/CN={{ app_virtual_host }}'"
     args:
       chdir: "{{ appliance_home }}/conf/ssl"
       creates: "{{ appliance_home }}/conf/ssl/{{ app_virtual_host }}.pem"
@@ -194,7 +225,7 @@
       
   # Retrieve Ubersmith images from the repository.  
   - name: run docker compose pull
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith pull"
+    ansible.builtin.command: "docker compose -p ubersmith pull"
     args:
       chdir: "{{ appliance_home }}"
     tags:
@@ -203,7 +234,7 @@
 
   # Only when upgrading, stop and remove existing Ubersmith containers.
   - name: stop existing containers
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith rm -sf"
+    ansible.builtin.command: "docker compose -p ubersmith rm -sf"
     args:
       chdir:  "{{ appliance_home }}"
     tags:
@@ -212,22 +243,99 @@
   # Only when upgrading, get the list of docker volumes, so the webroot
   # can be replaced by the new version of Ubersmith.
   - name: get existing docker volumes
-    shell: "docker volume ls -q"
+    ansible.builtin.shell: "docker volume ls -q"
     register: volume_output
     tags:
       - upgrade_only
 
   # Remove the appliance webroot so the codebase can be replaced.
   - name: remove ubersmith appliance webroot volume if present
-    command: docker volume rm ubersmith_app_webroot
+    ansible.builtin.command: docker volume rm ubersmith_app_webroot
     args:
       chdir:  "{{ appliance_home }}"
     when: volume_output.stdout.find('ubersmith_app_webroot') != -1
     tags:
       - upgrade_only
 
+  # Ensure permissions on database files are correct
+  - name: make sure UID/GID 1001 owns the database files
+    community.docker.docker_container:
+      name: busybox
+      image: "busybox"
+      container_default_behavior: compatibility
+      command: "chown -R 1001:1001 /mysql"
+      user: root
+      auto_remove: yes
+      log_driver: syslog
+      log_options:
+        tag: ubersmith/busybox
+      volumes:
+        - "ubersmith_app_database:/mysql"
+    when:
+      - "'DATABASE_HOST=app_db' in app_web_container_info.container.Config.Env"
+    tags:
+      - upgrade_only
+      - mysql_permissions
+      - mysql_upgrade_57
+
+  - name: step the database up to mysql 5.7, if necessary
+    community.docker.docker_container:
+      name: ubersmith-app_db_57
+      image: "{{ registry }}/ps57:{{ appliance_version }}-{{ containers.release_version }}"
+      command: "mysqld --skip-grant-tables"
+      container_default_behavior: compatibility
+      log_driver: syslog
+      log_options:
+        tag: ubersmith/app_db_57
+      volumes:
+        - "ubersmith_app_database:/var/lib/mysql"
+    when:
+      - "'DATABASE_HOST=app_db' in app_web_container_info.container.Config.Env"
+      - app_mysql_version == "5.6"
+    tags:
+      - upgrade_only
+      - mysql_upgrade_57
+
+  # The database can take a little bit to start, so wait
+  - name: wait for mysql 5.7 container to come online
+    community.docker.docker_container_info:
+      name: ubersmith-app_db_57
+    register: db_docker_container_info
+    until: db_docker_container_info.container.State.Health.Status == "healthy"
+    retries: 10
+    delay: 30
+    when:
+      - "'DATABASE_HOST=app_db' in app_web_container_info.container.Config.Env"
+      - app_mysql_version == "5.6"
+    tags:
+      - upgrade_only
+      - mysql_upgrade_57
+
+  - name: run mysql_upgrade for mysql 5.7
+    community.docker.docker_container_exec:
+      container: ubersmith-app_db_57
+      command: /bin/sh -c 'mysql_upgrade -u root --skip-password'
+    register: command_result
+    failed_when: 
+     - command_result.rc != 0
+     - command_result.rc != 2
+    when:
+      - "'DATABASE_HOST=app_db' in app_web_container_info.container.Config.Env"
+      - app_mysql_version == "5.6"
+    tags:
+      - upgrade_only
+      - mysql_upgrade_57
+
+  - name: remove mysql 5.7 container
+    community.docker.docker_container:
+      name: ubersmith-app_db_57
+      state: absent
+    tags:
+      - upgrade_only
+      - mysql_upgrade_57
+
   - name: run docker compose up -d
-    command: docker-compose -p ubersmith up -d
+    ansible.builtin.command: docker compose -p ubersmith up -d
     args:
       chdir: "{{ appliance_home }}"
     tags:
@@ -243,9 +351,9 @@
     retries: 10
     delay: 30
     with_items:
-      - ubersmith_app_web_1
-      - ubersmith_app_db_1
-      - ubersmith_app_cron_1
+      - ubersmith-app_web-1
+      - ubersmith-app_db-1
+      - ubersmith-app_cron-1
 
   # Configure appliance user password
   - name: configure uberapp user password
@@ -264,7 +372,7 @@
 
   # Only when upgrading, run the upgrade script.
   - name: run upgrade.php
-    command: "{{ ansible_user_dir }}/.local/bin/docker-compose -p ubersmith exec -T app_web php /var/www/appliance_root/www/upgrade.php"
+    ansible.builtin.command: "docker compose -p ubersmith exec -T app_web php /var/www/appliance_root/www/upgrade.php"
     args:
       chdir:  "{{ appliance_home }}"
     environment:
@@ -290,3 +398,20 @@
       - "Please use these values to configure the appliance entry in Ubersmith."
     tags:
       - password
+
+  # Store the configuration values specified during the deploy for use during
+  # future upgrades.
+  - name: set post upgrade values in ini file for future use
+    community.general.ini_file:
+      dest: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
+      section: ubersmith_installer
+      option: "{{ item.var }}"
+      value: "{{ item.val }}"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: "0644"
+    with_items:
+      - { var: 'appliance_installed_version', val: "{{ appliance_version }}" }
+      - { var: 'app_mysql_version', val: "8.0"}
+    tags:
+      - upgrade

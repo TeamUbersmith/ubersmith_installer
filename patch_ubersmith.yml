@@ -103,25 +103,22 @@
       #     msg: "{{ patch_files.files }}"
 
       - name: restart the ubersmith web container
-        community.docker.docker_compose:
-          project_src: "{{ ubersmith_home }}"
-          project_name: ubersmith
-          restarted: yes
-          services:
-            - web
+        command: docker compose restart web
+        args:
+          chdir: "{{ ubersmith_home }}"
         tags:
           - restart
 
       # Change ownership on patch files to ubersmith:ubersmith
       - name: give ubersmith user ownership over patch files
         community.docker.docker_container_exec:
-          container: ubersmith_web_1
+          container: ubersmith-web-1
           command: /bin/bash -c "cd /var/www/ubersmith_root/app/patches; chown -R ubersmith:ubersmith *"
 
       # Copy patch files into place, creating a backup
       - name: copy patch files into place
         community.docker.docker_container_exec:
-          container: ubersmith_web_1
+          container: ubersmith-web-1
           command: /bin/bash -c "cd /var/www/ubersmith_root/app/patches/{{ patch_id.user_input }}/; cp -a --suffix .bak --backup . ../../www/"
 
       - name: write patch data to .patched file

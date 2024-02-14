@@ -3,7 +3,7 @@
 # Requests a certificate renewal and gracefully restarts Apache and Postfix
 
 cd {{ ubersmith_home }}
-{{ ansible_user_dir }}/.local/bin/docker-compose up certbot 
+docker compose up certbot 
 sleep 120
-{{ ansible_user_dir }}/.local/bin/docker-compose exec web /usr/local/apache2/bin/apachectl graceful
-{{ ansible_user_dir }}/.local/bin/docker-compose exec mail /usr/sbin/postfix reload
+docker compose exec web /usr/local/apache2/bin/apachectl graceful
+docker compose exec mail /usr/sbin/postfix reload

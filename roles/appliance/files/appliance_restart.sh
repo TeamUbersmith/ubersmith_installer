@@ -2,4 +2,4 @@
 #
 # Issues a restart to all Ubersmith containers.
 
-docker-compose -p ubersmith restart
+docker compose -p ubersmith restart app_cron app_db app_web
