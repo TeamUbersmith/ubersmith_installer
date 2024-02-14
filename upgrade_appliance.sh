@@ -6,11 +6,11 @@ set -e
 
 export PATH="$HOME/.local/bin:$HOME/.local/ubersmith_venv/bin:$PATH"
 
+rm -rf $HOME/.local/ubersmith_venv
+
 # Requires python3-venv on Ubuntu
-if [ ! -d "$HOME/.local/ubersmith_venv" ]; then
-    echo "Creating Ubersmith Python virtual environment..."
-    python -m venv $HOME/.local/ubersmith_venv
-fi
+echo "Creating Ubersmith Python virtual environment..."
+python -m venv $HOME/.local/ubersmith_venv
 
 source $HOME/.local/ubersmith_venv/bin/activate
 
