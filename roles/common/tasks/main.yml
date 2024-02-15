@@ -12,11 +12,11 @@
     tags:
       - os 
 
-  - name: Verify OS Distribution is Debian, CentOS, or Ubuntu
+  - name: Verify OS Distribution is Debian, CentOS, Rocky, or Ubuntu
     assert:  
       that:
         - "ansible_distribution in supported_os"
-      msg: "Ensure Host is running Debian, CentOS, or Ubuntu."
+      msg: "Ensure Host is running Debian, CentOS, Rocky, or Ubuntu."
     tags:
       - os
 
@@ -36,7 +36,7 @@
         - "ansible_distribution_version|int >= supported_centos_ver"
         - "{{ ansible_kernel is version_compare('3.10.0-693', '>=' ) }}"
       msg: "Ensure Host is running supported CentOS and kernel newer than 3.10.0-693"
-    when: ansible_distribution == 'CentOS'
+    when: (ansible_distribution == 'CentOS') or (ansible_distribution == 'Rocky')
     tags:
       - os
 
