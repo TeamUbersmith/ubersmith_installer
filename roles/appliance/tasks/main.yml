@@ -355,6 +355,22 @@
       - ubersmith-app_db-1
       - ubersmith-app_cron-1
 
+  # Store the configuration values specified during the deploy for use during
+  # future upgrades.
+  - name: database upgrade successful, set value in ini file for future use
+    community.general.ini_file:
+      dest: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
+      section: ubersmith_installer
+      option: "{{ item.var }}"
+      value: "{{ item.val }}"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: "0644"
+    with_items:
+      - { var: 'app_mysql_version', val: "8.0"}
+    tags:
+      - upgrade
+
   # Configure appliance user password
   - name: configure uberapp user password
     community.mysql.mysql_query:
@@ -412,6 +428,5 @@
       mode: "0644"
     with_items:
       - { var: 'appliance_installed_version', val: "{{ appliance_version }}" }
-      - { var: 'app_mysql_version', val: "8.0"}
     tags:
       - upgrade
