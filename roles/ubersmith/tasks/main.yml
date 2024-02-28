@@ -477,6 +477,8 @@
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0700
+    tags:
+      - upgrade
 
   # Older versions scale redis to 1, we need it scaled to 3
   - name: ensure redis line exists
