@@ -5,7 +5,7 @@ and some OS level dependencies to be installed.
 
 # Documentation
 
-Full documentation for the installer can be found [here](https://docs.ubersmith.com/article/ubersmith-installation-and-upgrade-utility-231.html).
+Full documentation for the installer can be found [here](https://docs.ubersmith.com/article.php?id=231).
 
 # Caveats
 
