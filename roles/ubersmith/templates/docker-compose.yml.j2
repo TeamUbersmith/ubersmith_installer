@@ -210,9 +210,12 @@ services:
   certbot:
     image: certbot/certbot:{{ containers.certbot_version }}
     # image: certbot/dns-nsone:{{ containers.certbot_version }}
+    # image: certbot/dns-cloudflare:{{ containers.certbot_version }}
     command: "renew -vvv -n --webroot --webroot-path /var/www/ubersmith_root/app/www"
     # command: "certonly -n --standalone -d {{ virtual_hosts }} --agree-tos -m {{ notify_email }}"
+    # command: "certonly --webroot -w /var/www/ubersmith_root/app/www -d {{ virtual_hosts }} --agree-tos -m {{ notify_email }}"
     # command: "certonly -d {{ virtual_hosts }} --agree-tos -m {{ notify_email }} --dns-nsone --dns-nsone-credentials /tmp/.nsone.ini"
+    # command: "renew -vvv -n --agree-tos -m {{ notify_email }} --dns-cloudflare --dns-cloudflare-credentials /cf_token.ini --dns-cloudflare-propagation-seconds 60"
     volumes:
       - "{{ ubersmith_home }}/conf/certbot/etc:/etc/letsencrypt"
       - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
