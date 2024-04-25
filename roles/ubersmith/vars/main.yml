@@ -22,13 +22,13 @@
   mysql_root_password: "{{ lookup('password', ansible_user_dir + '/.ubersmith_' + main_virtual_host + '_root_db_pass chars=ascii_letters,digits') }}"
   mysql_ubersmith_password: "{{ lookup('password', ansible_user_dir + '/.ubersmith_' + main_virtual_host + '_ubersmith_db_pass') }}"
 
-  ubersmith_version: 5.0.0
+  ubersmith_version: 5.0.1
   ubersmith_installed_version: 4.0.0
   
   mysql_version: 8.0
 
   containers:
-    release_version: r13
+    release_version: r2
     web_container_repo: "ubersmith"
     pmm_version: 2
     haproxy_version: 1.7-alpine
