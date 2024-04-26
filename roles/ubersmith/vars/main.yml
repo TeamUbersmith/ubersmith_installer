@@ -28,7 +28,7 @@
   mysql_version: 8.0
 
   containers:
-    release_version: r2
+    release_version: r3
     web_container_repo: "ubersmith"
     pmm_version: 2
     haproxy_version: 1.7-alpine
