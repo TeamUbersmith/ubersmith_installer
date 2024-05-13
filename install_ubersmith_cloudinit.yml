@@ -11,7 +11,7 @@
 
     vars:
       ubersmith_home: "/usr/local/ubersmith"
-      virtual_host: "{{ cloudinit_facts.FIXME}}"
+      virtual_host: "{{ inventory_hostname }}"
       lets_encrypt_certificate: "yes"
       admin_email: "{{ cloudinit_facts.FIXME}}"
       interactive: false
