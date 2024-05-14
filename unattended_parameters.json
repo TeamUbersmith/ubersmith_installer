@@ -1,7 +1,7 @@
 {
     "ubersmith_home": "/usr/local/ubersmith",
-    "virtual_host": "{{ inventory_hostname }}",
+    "virtual_host": "{{ ansible_fqdn }}",
     "lets_encrypt_certificate": "yes",
     "interactive": false,
-    "admin_email": "root@{{ inventory_hostname }}"
+    "admin_email": "root@{{ ansible_fqdn }}"
 }
