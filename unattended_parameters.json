@@ -1,0 +1,7 @@
+{
+    "ubersmith_home": "/usr/local/ubersmith",
+    "virtual_host": "{{ inventory_hostname }}",
+    "lets_encrypt_certificate": "yes",
+    "interactive": false,
+    "admin_email": "root@{{ inventory_hostname }}"
+}
