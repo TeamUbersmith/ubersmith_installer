@@ -227,6 +227,26 @@ services:
       options:
         tag: ubersmith/certbot
 {% endif %}
+  falco:
+    image: falcosecurity/falco-no-driver:latest
+    cap_drop:
+     - all 
+    cap_add:
+     - sys_admin
+     - sys_resource
+     - sys_ptrace
+    command: falco -o engine.kind=ebpf
+    security_opt: 
+     - apparmor:unconfined
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/falco
+    volumes:
+     - /var/run/docker.sock:/host/var/run/docker.sock
+     - /root/.falco:/root/.falco
+     - /proc:/host/proc:ro
+     - /etc:/host/etc
 volumes:
   database: {}
   logs: {}
