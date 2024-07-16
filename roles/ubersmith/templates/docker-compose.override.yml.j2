@@ -61,6 +61,10 @@ services:
       # - "{{ ubersmith_home }}/conf/mail/aliases:/etc/aliases"
 {% endif %}
       - "{{ ubersmith_home }}/conf/ssl:/var/www/ubersmith_root/conf/ssl"
+      # - "/usr/local/ubersmith/conf/mail/cacert.pem:/etc/postfix/cacert.pem"
+      # - "/usr/local/ubersmith/conf/mail/main.cf:/etc/postfix/main.cf"
+      # - "/usr/local/ubersmith/conf/mail/sasl_passwd:/etc/postfix/sasl_passwd"
+      # - "/usr/local/ubersmith/conf/mail/sasl_passwd.db:/etc/postfix/sasl_passwd.db"
     environment:
       - "POSTCONF_SMTPD_TLS_CERT_FILE=/etc/ssl/certs/{{ container_domain }}.pem"
       - "POSTCONF_SMTPD_TLS_KEY_FILE=/etc/ssl/private/{{ container_domain }}.key" 
