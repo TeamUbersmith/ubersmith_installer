@@ -20,6 +20,11 @@ services:
 {% endif %}
       - "{{ ubersmith_home }}/conf/mysql:/etc/mysql/conf.d"
   php:
+    # deploy:
+    # resources:
+    #   limits:
+    #     cpus: '0.50'
+    #     memory: 512M
     volumes:
       - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
       - "{{ ubersmith_home }}/app/patches:/var/www/ubersmith_root/app/patches"
