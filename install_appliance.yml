@@ -4,6 +4,9 @@
     any_errors_fatal: true
 
     vars_prompt:
+      - name: "ubersmith_major_version"
+        prompt: "Choose which version of Ubersmith to install (4 or 5)"
+        default: "5"
       - name: "appliance_home"
         prompt: "Choose an installation directory for Ubersmith's Appliance'"
         default: "/usr/local/ubersmith"
