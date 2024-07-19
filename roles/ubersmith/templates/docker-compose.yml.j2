@@ -194,7 +194,7 @@ services:
        - "{{ ubersmith_home }}/conf/ssl/{{ container_domain }}.pem:/etc/nginx/ssl/server.crt"
        - "{{ ubersmith_home }}/conf/ssl/{{ container_domain }}.key:/etc/nginx/ssl/server.key"
   haproxy:
-    image: haproxy:{{ containers.haproxy_version }}
+    image: haproxy:{{ ubersmith_release[ubersmith_major_version].containers.haproxy_version }}
     volumes:
        - "{{ ubersmith_home }}/conf/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro"
     ports:
@@ -207,9 +207,9 @@ services:
         tag: ubersmith/haproxy
 {% endif %}
   certbot:
-    image: certbot/certbot:{{ containers.certbot_version }}
-    # image: certbot/dns-nsone:{{ containers.certbot_version }}
-    # image: certbot/dns-cloudflare:{{ containers.certbot_version }}
+    image: certbot/certbot:{{ ubersmith_release[ubersmith_major_version].containers.certbot_version }}
+    # image: certbot/dns-nsone:{{ ubersmith_release[ubersmith_major_version].containers.certbot_version }}
+    # image: certbot/dns-cloudflare:{{ ubersmith_release[ubersmith_major_version].containers.certbot_version }}
     command: "renew -vvv -n --webroot --webroot-path /var/www/ubersmith_root/app/www"
     # command: "certonly -n --standalone -d {{ virtual_hosts }} --agree-tos -m {{ notify_email }}"
     # command: "certonly --webroot -w /var/www/ubersmith_root/app/www -d {{ virtual_hosts }} --agree-tos -m {{ notify_email }}"
