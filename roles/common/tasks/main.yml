@@ -4,7 +4,7 @@
     ansible.builtin.assert:
       that:
         - ubersmith_major_version == "4" or ubersmith_major_version == "5"
-      fail_msg: "The Ubersmith Version requested is not '4' or '5'. It is set to {{ major_version }}."
+      fail_msg: "The Ubersmith Version requested is not '4' or '5'. It is set to {{ ubersmith_major_version }}."
 
   - name: Output OS and Version
     debug:
