@@ -10,7 +10,7 @@ rm -rf $HOME/.local/ubersmith_venv
 
 # Requires python3-venv on Ubuntu
 echo "Creating Ubersmith Python virtual environment..."
-python -m venv $HOME/.local/ubersmith_venv
+python3-m venv $HOME/.local/ubersmith_venv
 
 source $HOME/.local/ubersmith_venv/bin/activate
 
