@@ -163,7 +163,7 @@ services:
     environment:
       REDIS_HOSTS: default:ubersmith-redis-data-1:6379:3
   backup:
-    image: {{ registry }}/xtrabackup8:{{ ubersmith_version }}-{{ containers_release_version }}
+    image: {{ registry }}/xtrabackup{{ ubersmith_release[ubersmith_major_version].backup_version }}:{{ ubersmith_version }}-{{ containers_release_version }}
     hostname: backups.{{ container_domain }}
     # entrypoint: /mysqldump.sh
     environment:

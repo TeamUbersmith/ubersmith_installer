@@ -57,7 +57,7 @@ services:
     depends_on:
       - app_web
   app_backup:
-    image: {{ registry }}/xtrabackup8:{{ appliance_version }}-{{ containers_release_version }}
+    image: {{ registry }}/xtrabackup{{ appliance_release[ubersmith_major_version].backup_version }}:{{ appliance_version }}-{{ containers_release_version }}
     hostname: backups.appliance.{{ app_virtual_host }}
     # entrypoint: /mysqldump.sh
     environment:
