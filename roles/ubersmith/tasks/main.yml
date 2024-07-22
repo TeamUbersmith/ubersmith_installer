@@ -178,7 +178,7 @@
   # required if this file is modified.
   - name: create percona server configuration overrides
     ansible.builtin.template:
-      src: ubersmith.cnf.j2
+      src: "ubersmith.cnf.{{ ubersmith_major_version }}.j2"
       dest: "{{ ubersmith_home }}/conf/mysql/ubersmith.cnf"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
