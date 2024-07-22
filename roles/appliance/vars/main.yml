@@ -22,7 +22,7 @@
         backup_version: 2.4
         appweb_container_repo: "appliance"
 
-  appliance_version: "{{ appliance_release[appliance_major_version].appliance_release_version }}"
-  containers_release_version: "{{ appliance_release[appliance_major_version].containers_release_version }}"
+  appliance_version: "{{ appliance_release[ubersmith_major_version].appliance_release_version }}"
+  containers_release_version: "{{ appliance_release[ubersmith_major_version].containers_release_version }}"
 
   registry: ghcr.io/teamubersmith
