@@ -47,7 +47,7 @@
 
   ubersmith_installed_version: 4.0.0
   ubersmith_version: "{{ ubersmith_release[ubersmith_major_version].ubersmith_release_version }}"
-  containers_release_version: "{{ ubersmith_release[ubersmith_major_version].containers_release_version }}"
+  containers_release_version: "{{ ubersmith_release[ubersmith_major_version].containers.release_version }}"
   pmm_version: 2
 
   registry: ghcr.io/teamubersmith
