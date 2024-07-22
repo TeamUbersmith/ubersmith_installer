@@ -18,7 +18,7 @@ services:
         tag: ubersmith/app_db
 {% endif %}
   app_web:
-    image: {{ registry }}/{{ {{ appliance_release[ubersmith_major_version].containers.appweb_container_repo }}:{{ appliance_version }}-{{ containers_release_version }}
+    image: {{ registry }}/{{ appliance_release[ubersmith_major_version].containers.appweb_container_repo }}:{{ appliance_version }}-{{ containers_release_version }}
     hostname: appliance.{{ app_virtual_host }}
     restart: unless-stopped
     ports:
