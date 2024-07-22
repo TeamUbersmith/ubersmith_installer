@@ -19,11 +19,10 @@
       appliance_release_version: 5.0.0
       containers:
         release_version: r13
-        appweb_container_repo: "ubersmith"
-        haproxy_version: 1.7-alpine
-        certbot_version: latest
+        backup_version: 2.4
+        appweb_container_repo: "appliance"
 
   appliance_version: "{{ appliance_release[appliance_major_version].appliance_release_version }}"
-  containers_release_version: "{{ appliance_release[appliance_major_version].containers.release_version }}"
+  containers_release_version: "{{ appliance_release[appliance_major_version].containers_release_version }}"
 
   registry: ghcr.io/teamubersmith
