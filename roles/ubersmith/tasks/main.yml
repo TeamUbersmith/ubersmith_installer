@@ -288,7 +288,7 @@
   - name: run certbot via a container
     community.docker.docker_container:
       name: certbot
-      image: "certbot/certbot:{{ containers.certbot_version }}"
+      image: "certbot/certbot:{{ certbot_version }}"
       container_default_behavior: compatibility
       command: "certonly -n -d {{ item }} --standalone --agree-tos -m {{ notify_email }}"
       user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
@@ -320,7 +320,7 @@
   - name: manually run deploy hooks
     community.docker.docker_container:
       name: certbot
-      image: "certbot/certbot:{{ containers.certbot_version }}"
+      image: "certbot/certbot:{{ certbot_version }}"
       container_default_behavior: compatibility
       entrypoint: /etc/letsencrypt/renewal-hooks/deploy/ubersmith-deploy.sh
       user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"

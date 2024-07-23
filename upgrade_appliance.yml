@@ -23,6 +23,9 @@
       appliance_home: "{{ lookup('ini', 'appliance_home section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
       app_virtual_host: "{{ lookup('ini', 'app_virtual_host section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
       app_mysql_version: "{{ lookup('ini', 'app_mysql_version section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini default=5.6') }}"
+      appliance_installed_version: "{{ lookup('ini', 'appliance_installed_version section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
+      ubersmith_major_version: "{{ appliance_installed_version.split('.')[0] }}"
+
       interactive: true
 
     roles:

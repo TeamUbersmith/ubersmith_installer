@@ -32,7 +32,6 @@
         release_version: r4
         web_container_repo: "ubersmith"
         haproxy_version: 1.7-alpine
-        certbot_version: latest
     "5":
       mysql_version: 80
       php_version: 82
@@ -42,12 +41,12 @@
         release_version: r1
         web_container_repo: "ubersmith"
         haproxy_version: 1.7-alpine
-        certbot_version: latest
         
 
   ubersmith_installed_version: 4.0.0
   ubersmith_version: "{{ ubersmith_release[ubersmith_major_version].ubersmith_release_version }}"
   containers_release_version: "{{ ubersmith_release[ubersmith_major_version].containers.release_version }}"
   pmm_version: 2
+  certbot_version: latest
 
   registry: ghcr.io/teamubersmith
