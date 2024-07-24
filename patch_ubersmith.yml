@@ -8,7 +8,7 @@
       ubersmith_version: "{{ lookup('ini', 'ubersmith_installed_version section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
       all_patches: "{{ lookup('url', 'https://api.github.com/repos/TeamUbersmith/ubersmith-patches/releases', headers={'Accept':'application/vnd.github.v3+json'})}}"
       ubersmith_home: "{{ lookup('ini', 'ubersmith_home section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
-
+      ubersmith_major_version: "{{ ubersmith_version.split('.')[0] }}"
     tasks:
 
       - name: remove .patched file
@@ -50,13 +50,13 @@
         ansible.builtin.set_fact:
           available_patches: "{{ all_patches | to_json | from_json | community.general.json_query(patch_name_query) }}"
         vars:
-          patch_name_query: "[?contains(name,'{{ ubersmith_version }}')].[id, name, html_url, assets[].browser_download_url | [0]]"
+          patch_name_query: "[?contains(name,'{{ ubersmith_installed_version }}')].[id, name, html_url, assets[].browser_download_url | [0]]"
 
       - name: prompt for patch id
         ansible.builtin.pause:
           prompt: |-
 
-              === Available Patches for Ubersmith {{ ubersmith_version}} ===
+              === Available Patches for Ubersmith {{ ubersmith_installed_version }} ===
               {% for _patch in available_patches %}
               Name: {{ _patch[1] }}
               URL : {{ _patch[2] }}
