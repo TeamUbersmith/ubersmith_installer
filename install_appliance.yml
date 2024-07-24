@@ -5,7 +5,7 @@
 
     vars_prompt:
       - name: "ubersmith_major_version"
-        prompt: "Choose which version of Ubersmith to install (4 or 5)"
+        prompt: "Choose which version of Ubersmith's Appliance to install (4 or 5)"
         default: "5"
         private: no
       - name: "appliance_home"
