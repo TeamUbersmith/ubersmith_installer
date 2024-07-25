@@ -116,6 +116,7 @@ services:
           - ubersmith.mail
     depends_on:
       - web
+      - clamav
 {% if ansible_os_family != 'Darwin' %}
     logging:
       driver: syslog
@@ -229,6 +230,7 @@ services:
 {% endif %}
   falco:
     image: falcosecurity/falco-no-driver:latest
+    hostname: falco.{{ container_domain }}
     cap_drop:
      - all 
     cap_add:
@@ -247,7 +249,19 @@ services:
      - /root/.falco:/root/.falco
      - /proc:/host/proc:ro
      - /etc:/host/etc
+  clamav:
+    image: clamav/clamav:1.3_base
+    hostname: clamav.{{ container_domain }}
+    ports:
+      - "3310"
+    volumes:
+      - "clamav_signatures:/var/lib/clamav"
+    logging:
+      driver: syslog
+      options:
+        tag: ubersmith/clamav
 volumes:
+  clamav_signatures: {}
   database: {}
   logs: {}
   redis: {}
