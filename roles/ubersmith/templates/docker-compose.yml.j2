@@ -231,24 +231,22 @@ services:
   falco:
     image: falcosecurity/falco-no-driver:latest
     hostname: falco.{{ container_domain }}
-    cap_drop:
-     - all 
-    cap_add:
-     - sys_admin
-     - sys_resource
-     - sys_ptrace
-    command: falco -o engine.kind=ebpf
-    security_opt: 
+    privileged: true
+    security_opt:
      - apparmor:unconfined
     logging:
       driver: syslog
       options:
         tag: ubersmith/falco
+    tty: true
     volumes:
      - /var/run/docker.sock:/host/var/run/docker.sock
-     - /root/.falco:/root/.falco
      - /proc:/host/proc:ro
      - /etc:/host/etc
+     - "{{ ubersmith_home }}/conf/falco/falco_rules.local.yaml:/etc/falco/falco_rules.local.yaml"
+    depends_on:
+      web:
+        condition: service_started
   clamav:
     image: clamav/clamav:1.3_base
     hostname: clamav.{{ container_domain }}

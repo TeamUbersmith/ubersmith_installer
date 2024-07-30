@@ -110,6 +110,7 @@
        - "{{ ubersmith_home }}/conf/certbot/etc/renewal-hooks/deploy"
        - "{{ ubersmith_home }}/conf/certbot/log"
        - "{{ ubersmith_home }}/conf/sso"
+       - "{{ ubersmith_home }}/conf/falco"
        - "{{ ubersmith_home }}/app/custom"
        - "{{ ubersmith_home }}/app/custom/locale"
        - "{{ ubersmith_home }}/app/custom/plugins"
