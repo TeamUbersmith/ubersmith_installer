@@ -481,6 +481,17 @@
     tags:
       - upgrade
 
+  # Copy the falco rules file which allows Ubersmith to provide FIM services
+  - name: copy falco rules
+    ansible.builtin.copy:
+      src: falco_rules.local.yaml
+      dest: "{{ ubersmith_home }}/conf/falco/falco_rules.local.yaml"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: 0644
+    tags:
+      - upgrade
+
   # Older versions scale redis to 1, we need it scaled to 3
   - name: ensure redis line exists
     ansible.builtin.lineinfile:

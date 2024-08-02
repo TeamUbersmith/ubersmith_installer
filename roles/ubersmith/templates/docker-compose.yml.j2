@@ -230,6 +230,7 @@ services:
 {% endif %}
   falco:
     image: falcosecurity/falco-no-driver:latest
+    restart: unless-stopped
     hostname: falco.{{ container_domain }}
     privileged: true
     security_opt:
@@ -249,6 +250,7 @@ services:
         condition: service_started
   clamav:
     image: clamav/clamav:1.3_base
+    restart: unless-stopped
     hostname: clamav.{{ container_domain }}
     ports:
       - "3310"
