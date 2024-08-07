@@ -10,8 +10,7 @@
       virtual_hosts: "{{ virtual_host.split(',') }}"
       notify_email: "{{ admin_email }}"
       interactive: true
-      containers:
-        certbot_version: latest
+      certbot_version: latest
     
     tasks:
 
