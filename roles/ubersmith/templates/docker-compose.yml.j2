@@ -252,8 +252,6 @@ services:
     image: clamav/clamav:1.3_base
     restart: unless-stopped
     hostname: clamav.{{ container_domain }}
-    ports:
-      - "3310"
     volumes:
       - "clamav_signatures:/var/lib/clamav"
     logging:
