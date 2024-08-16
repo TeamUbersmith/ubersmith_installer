@@ -55,6 +55,7 @@ services:
       QUEUE_HOST: tcp://ubersmith-redis-data-1:6379?database=4
       APPLIANCE_TIMEOUT: 30
       ALIPAY_ENABLE: 1
+      OPENSSL_CIPHERS: {{ mozilla_ciphers.configurations.intermediate.ciphers.openssl | join(':') }}
     volumes:
       - "logs:/var/www/ubersmith_root/logs"
       - "webroot:/var/www/ubersmith_root"
