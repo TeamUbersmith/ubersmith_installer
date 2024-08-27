@@ -732,6 +732,27 @@
       - upgrade
       - maintenance_disable
 
+  # Back up MySQL keyring
+  - name: make a backup of the mysql keyring
+    community.docker.docker_container:
+      name: busybox
+      image: "busybox"
+      container_default_behavior: compatibility
+      command: "tar cvf /backup/component_keyring_file.{{ ansible_date_time.epoch }}.tar /keyring"
+      user: root
+      auto_remove: yes
+      log_driver: syslog
+      log_options:
+        tag: ubersmith/busybox
+      volumes:
+        - "ubersmith_database_keyring:/keyring"
+        - "{{ ubersmith_root }}/backup:/backup"
+    when:
+      - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"
+    tags:
+      - mysql_config
+      - mysql_keyring_backup
+
   # Store the configuration values specified during the deploy for use during
   # future upgrades.
   - name: set post upgrade values in ini file for future use
