@@ -527,6 +527,8 @@
     tags:
       - upgrade_only
       - database_location
+      - mysql_keyring_backup
+
 
   - name: display web container info
     ansible.builtin.debug:
