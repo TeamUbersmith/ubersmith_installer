@@ -188,6 +188,22 @@
       - mysql_config
       - upgrade
 
+  # The MySQL component configuration files is created on the local filesystem to
+  # enable at-rest encryption.
+  - name: create mysql component configuration
+    ansible.builtin.copy:
+      src: "{{ item }}"
+      dest: "{{ ubersmith_home }}/conf/mysql-components/{{ item }}"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: "0644"
+    with_items:
+      - component_keyring_file.cnf
+      - mysqld.my
+    tags:
+      - mysql_config
+      - upgrade
+
   # The PHP override configuration file is created on the local filesystem to facilitate
   # editing without having to enter the container. A restart of the 'php' container is
   # required if this file is modified.
