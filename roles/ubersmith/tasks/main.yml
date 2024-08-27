@@ -740,7 +740,7 @@
       name: busybox
       image: "busybox"
       container_default_behavior: compatibility
-      command: "tar pcf --mode='u+rw,go=' /backup/component_keyring_file.{{ ansible_date_time.epoch }}.tar /keyring"
+      command: "tar --mode='u+rw,go=' -pcf /backup/component_keyring_file.{{ ansible_date_time.epoch }}.tar /keyring"
       user: root
       auto_remove: yes
       log_driver: syslog
