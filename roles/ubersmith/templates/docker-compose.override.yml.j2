@@ -11,10 +11,9 @@ services:
     cap_add:
       - SYS_NICE
     environment:
-      MYSQL_USER: "{{ admin_email.split('@')[1] }}-login"
+      MYSQL_USER: "{{ mysql_user }}"
       MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
       MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
-      MYSQL_OPTION: "?key=client-key.pem&cert=client-cert.pem"
     volumes:
 {% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
@@ -50,6 +49,7 @@ services:
     environment:
       MYSQL_USER: "{{ mysql_user }}"
       MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
+      MYSQL_OPTION: "?key=client-key.pem&cert=client-cert.pem"
 {% if ansible_os_family != 'Darwin' %}
       TIMEZONE: {{ timezone_file.stat.lnk_source | replace ("/usr/share/zoneinfo/", "") | replace("Etc/", "") | replace("UCT", "UTC") }}
 {% endif %}
