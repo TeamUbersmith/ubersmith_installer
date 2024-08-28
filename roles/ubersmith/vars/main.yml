@@ -19,6 +19,7 @@
   ubersmith_root: /var/www/ubersmith_root
   virtual_hosts: "{{ virtual_host.split(',') }}"
   main_virtual_host: "{{ virtual_hosts[0] }}"
+  mysql_user: "{{ admin_email.split('@')[1] }}-login"
   mysql_root_password: "{{ lookup('password', ansible_user_dir + '/.ubersmith_' + main_virtual_host + '_root_db_pass chars=ascii_letters,digits') }}"
   mysql_ubersmith_password: "{{ lookup('password', ansible_user_dir + '/.ubersmith_' + main_virtual_host + '_ubersmith_db_pass') }}"
   # FIXME: Implement a rescue block in case this website is down
