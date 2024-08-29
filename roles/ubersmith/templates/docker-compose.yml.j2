@@ -1,7 +1,7 @@
 services:
   solr:
     image: {{ registry }}/solr:{{ ubersmith_version }}-{{ containers_release_version }}
-    hostname: "solr.${ CONTAINER_DOMAIN }"
+    hostname: "solr.${CONTAINER_DOMAIN}"
     restart: unless-stopped
     ulimits:
       nofile:
@@ -17,15 +17,15 @@ services:
 {% endif %}
   db:
     image: {{ registry }}/ps{{ ubersmith_release[ubersmith_major_version].mysql_version }}:{{ ubersmith_version }}-{{ containers_release_version }}
-    hostname: "database.${ CONTAINER_DOMAIN }"
+    hostname: "database.${CONTAINER_DOMAIN}"
     restart: unless-stopped
     ports:
       - "127.0.0.1:3306:3306"
     environment:
       MYSQL_USER: ubersmith
       MYSQL_DATABASE: ubersmith
-      MYSQL_ROOT_PASSWORD: "${ MYSQL_ROOT_PASSWORD }"
-      MYSQL_PASSWORD: "${ MYSQL_PASSWORD }"
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
     volumes:
       - "database:/var/lib/mysql"
       - "/etc/mysql/conf.d"
@@ -38,17 +38,17 @@ services:
 {% endif %}
   web:
     image: {{ registry }}/{{ ubersmith_release[ubersmith_major_version].containers.web_container_repo }}:{{ ubersmith_version }}-{{ containers_release_version }}
-    hostname: "${ CONTAINER_DOMAIN }"
+    hostname: "${CONTAINER_DOMAIN}"
     restart: unless-stopped
     environment:
       MYSQL_USER: ubersmith
       MYSQL_DATABASE: ubersmith
-      MYSQL_PASSWORD: "${ MYSQL_PASSWORD }"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
       DATABASE_HOST: "db"
-      UBER_HOSTNAME: "${ CONTAINER_DOMAIN }"
+      UBER_HOSTNAME: "${CONTAINER_DOMAIN}"
       LOCK_BACKEND: redis
       LOCK_SERVERS: "ubersmith-redis-1:6379:1,ubersmith-redis-2:6379:1,ubersmith-redis-3:6379:1"
-      MAINTENANCE: "${ MAINTENANCE }"
+      MAINTENANCE: "${MAINTENANCE}"
       HTTPS_FORCE: 1
       REASON_LOG: 0
       STORAGE_BACKEND: redis
@@ -73,7 +73,7 @@ services:
 {% endif %}
   php:
     image: {{ registry }}/php{{ ubersmith_release[ubersmith_major_version].php_version }}:{{ ubersmith_version }}-{{ containers_release_version }}
-    hostname: "${ CONTAINER_DOMAIN }"
+    hostname: "${CONTAINER_DOMAIN}"
     restart: unless-stopped
     volumes:
       - "{{ ubersmith_home }}/logs/rsyslog/log:/dev/log"
@@ -92,7 +92,7 @@ services:
 {% endif %}
   cron:
     image: {{ registry }}/cron:{{ ubersmith_version }}-{{ containers_release_version }}
-    hostname: "${ CONTAINER_DOMAIN }"
+    hostname: "${CONTAINER_DOMAIN}"
     restart: unless-stopped
     volumes:
       - "logs:/var/www/ubersmith_root/logs"
@@ -107,7 +107,7 @@ services:
 {% endif %}
   mail:
     image: {{ registry }}/mail:{{ ubersmith_version }}-{{ containers_release_version }}
-    hostname: "${ CONTAINER_DOMAIN }"
+    hostname: "${CONTAINER_DOMAIN}"
     restart: unless-stopped
     ports:
       - "25:25"
@@ -129,7 +129,7 @@ services:
 {% endif %}
   rwhois:
     image: {{ registry }}/xinetd:{{ ubersmith_version }}-{{ containers_release_version }}
-    hostname: "${ CONTAINER_DOMAIN }"
+    hostname: "${CONTAINER_DOMAIN}"
     ulimits:
       nofile:
         soft: 65536
@@ -164,16 +164,16 @@ services:
   redis-commander:
     image: rediscommander/redis-commander:latest
     restart: "no"
-    hostname: "rediscommander.${ CONTAINER_DOMAIN }"
+    hostname: "rediscommander.${CONTAINER_DOMAIN}"
     environment:
       REDIS_HOSTS: default:ubersmith-redis-data-1:6379:3
   backup:
     image: {{ registry }}/xtrabackup{{ ubersmith_release[ubersmith_major_version].backup_version }}:{{ ubersmith_version }}-{{ containers_release_version }}
-    hostname: "backups.${ CONTAINER_DOMAIN }"
+    hostname: "backups.${CONTAINER_DOMAIN}"
     # entrypoint: /mysqldump.sh
     environment:
       DATABASE_HOST: db
-      MYSQL_ROOT_PASSWORD: "${ MYSQL_ROOT_PASSWORD }"
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
     volumes:
       - "{{ ubersmith_home }}/backup:/backup"
       - "database:/var/lib/mysql"
@@ -181,7 +181,7 @@ services:
       - db
   rsyslog:
     image: {{ registry }}/rsyslog:{{ ubersmith_version }}-{{ containers_release_version }}
-    hostname: "rsyslog.${ CONTAINER_DOMAIN }"
+    hostname: "rsyslog.${CONTAINER_DOMAIN}"
     volumes:
       - "{{ ubersmith_home }}/logs/rsyslog/:/var/run/rsyslog/dev/"
 {% if ansible_os_family != 'Darwin' %}
@@ -192,13 +192,13 @@ services:
 {% endif %}
   pmm:
     image: percona/pmm-server:{{ pmm_version }}
-    hostname: "pmm.${ CONTAINER_DOMAIN }"
+    hostname: "pmm.${CONTAINER_DOMAIN}"
     ports:
       - "8443:443"
     volumes:
        - pmm-data:/srv
-       - "{{ ubersmith_home }}/conf/ssl/${ CONTAINER_DOMAIN }.pem:/etc/nginx/ssl/server.crt"
-       - "{{ ubersmith_home }}/conf/ssl/${ CONTAINER_DOMAIN }.key:/etc/nginx/ssl/server.key"
+       - "{{ ubersmith_home }}/conf/ssl/${CONTAINER_DOMAIN}.pem:/etc/nginx/ssl/server.crt"
+       - "{{ ubersmith_home }}/conf/ssl/${CONTAINER_DOMAIN}.key:/etc/nginx/ssl/server.key"
   haproxy:
     image: haproxy:{{ ubersmith_release[ubersmith_major_version].containers.haproxy_version }}
     volumes:
@@ -236,7 +236,7 @@ services:
   falco:
     image: falcosecurity/falco-no-driver:latest
     restart: unless-stopped
-    hostname: "falco.${ CONTAINER_DOMAIN }"
+    hostname: "falco.${CONTAINER_DOMAIN}"
     privileged: true
     security_opt:
      - apparmor:unconfined
@@ -256,7 +256,7 @@ services:
   clamav:
     image: clamav/clamav:1.3_base
     restart: unless-stopped
-    hostname: "clamav.${ CONTAINER_DOMAIN }"
+    hostname: "clamav.${CONTAINER_DOMAIN}"
     volumes:
       - "clamav_signatures:/var/lib/clamav"
     logging:
