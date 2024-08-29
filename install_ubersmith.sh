@@ -18,7 +18,7 @@ source $HOME/.local/ubersmith_venv/bin/activate
 
 echo "Installing Ansible and dependencies..."
 pip3 install -q "ansible-core>=2.13,<2.15"
-# pip3 install -q mysqlclient
+pip3 install -q PyMySQL
 ansible-galaxy install -r requirements.yml
 ansible-config init --disabled > ansible.cfg
 
