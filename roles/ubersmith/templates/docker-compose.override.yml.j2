@@ -11,7 +11,7 @@ services:
     cap_add:
       - SYS_NICE
     environment:
-      MYSQL_USER: "{{ mysql_user }}"
+      MYSQL_USER: "{{ mysql_username }}"
       MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
       MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
     volumes:
@@ -47,7 +47,7 @@ services:
       - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
 {% endif %}
     environment:
-      MYSQL_USER: "{{ mysql_user }}"
+      MYSQL_USER: "{{ mysql_username }}"
       MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
       MYSQL_OPTION: "key=/var/lib/mysql-cert/client.key&cert=/var/lib/mysql-cert/client.pem&ca=/var/lib/mysql-cert/ca.pem&ssl=true"
 {% if ansible_os_family != 'Darwin' %}

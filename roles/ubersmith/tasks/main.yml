@@ -685,7 +685,7 @@
       login_host: 127.0.0.1
       login_user: root
       login_password: "{{ mysql_root_password }}"
-      name: "{{ mysql_user }}"
+      name: "{{ mysql_username }}"
       password: "{{ mysql_ubersmith_password }}"
       priv: 'ubersmith.*:ALL'
       tls_requires:
@@ -771,6 +771,7 @@
     with_items:
       - { var: 'ubersmith_installed_version', val: "{{ ubersmith_version }}" }
       - { var: 'lets_encrypt_certificate', val: "{{ lets_encrypt_certificate }}"}
+      - { var: 'mysql_username', val: "{{ mysql_username }}"}
     tags:
       - upgrade
 
