@@ -670,7 +670,16 @@
       - upgrade_only
       - mysql_upgrade
  
-  - name: Create new database user with unique name and certificate auth
+  - name: generate mysql certificate authority and accompanying keys/certificates
+    community.docker.docker_container_exec:
+      container: ubersmith-db-1
+      command: /bin/bash -c "/mysql_pki.sh"
+    when:
+      - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"
+    tags:
+      - upgrade
+
+  - name: create new database user with unique name and certificate auth
     community.mysql.mysql_user:
       login_host: 127.0.0.1
       login_user: root
