@@ -687,6 +687,7 @@
     tags:
       - mysql_user
       - mysql_upgrade
+      - upgrade
 
   # Copy redis data dumped from the redis locking container to the redis data container's volume
   - name: copy dump.rdb if redis volume does not exist
