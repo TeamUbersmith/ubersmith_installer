@@ -11,8 +11,6 @@ services:
     cap_add:
       - SYS_NICE
     environment:
-      MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
-      MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
       MYSQL_OPTION: ""
     volumes:
 {% if ansible_os_family != 'Darwin' %}
@@ -47,7 +45,6 @@ services:
       - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
 {% endif %}
     environment:
-      MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
 {% if ansible_os_family != 'Darwin' %}
       TIMEZONE: {{ timezone_file.stat.lnk_source | replace ("/usr/share/zoneinfo/", "") | replace("Etc/", "") | replace("UCT", "UTC") }}
 {% endif %}
@@ -71,8 +68,8 @@ services:
       # - "/usr/local/ubersmith/conf/mail/sasl_passwd:/etc/postfix/sasl_passwd"
       # - "/usr/local/ubersmith/conf/mail/sasl_passwd.db:/etc/postfix/sasl_passwd.db"
     environment:
-      - "POSTCONF_SMTPD_TLS_CERT_FILE=/etc/ssl/certs/{{ container_domain }}.pem"
-      - "POSTCONF_SMTPD_TLS_KEY_FILE=/etc/ssl/private/{{ container_domain }}.key" 
+      - "POSTCONF_SMTPD_TLS_CERT_FILE=/etc/ssl/certs/${ CONTAINER_DOMAIN }.pem"
+      - "POSTCONF_SMTPD_TLS_KEY_FILE=/etc/ssl/private/${ CONTAINER_DOMAIN }.key" 
       - POSTCONF_SMTP_TLS_SECURITY_LEVEL=may
       - ANTIVIRUS=0
       # - POSTCONF_DEFAULT_TRANSPORT="DO_NOT_ROUTE"
@@ -82,9 +79,6 @@ services:
       - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
 {% endif %}
       - "{{ ubersmith_home }}/conf/rwhois:/etc/xinetd.d"
-  backup:
-    environment:
-      MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
   redis-commander:
     ports:
       - "8081"
