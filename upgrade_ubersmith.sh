@@ -22,4 +22,4 @@ pip3 install -q PyMySQL
 ansible-galaxy install -r requirements.yml
 
 echo "Upgrading Ubersmith..."
-ansible-playbook -i ./hosts -c local -t upgrade,upgrade_only upgrade_ubersmith.yml
+ansible-playbook -i ./hosts -c local -t upgrade,upgrade_only -e 'ansible_python_interpreter=$HOME/.local/ubersmith_venv/bin/python3' upgrade_ubersmith.yml

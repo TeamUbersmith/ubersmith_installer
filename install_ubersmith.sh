@@ -23,4 +23,4 @@ ansible-galaxy install -r requirements.yml
 ansible-config init --disabled > ansible.cfg
 
 echo "Installing Ubersmith..."
-ansible-playbook -i ./hosts -c local --skip-tags upgrade_only install_ubersmith.yml
+ansible-playbook -i ./hosts -c local --skip-tags upgrade_only -e 'ansible_python_interpreter=$HOME/.local/ubersmith_venv/bin/python3' install_ubersmith.yml
