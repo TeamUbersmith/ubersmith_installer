@@ -17,6 +17,10 @@ local-infile                   = 0
 # sql_mode = "STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"
 sql_mode = "NO_ENGINE_SUBSTITUTION"
 
+ssl-ca = /var/lib/mysql-cert/ca.pem
+ssl-cert = /var/lib/mysql-cert/server.pem
+ssl-key = /var/lib/mysql-cert/server.key
+
 # Uncomment and restart MySQL to use PMM
 
 # slow_query_log=ON

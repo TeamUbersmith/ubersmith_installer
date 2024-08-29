@@ -1,5 +1,0 @@
-[mysqld]
-
-ssl-ca=/var/lib/mysql-cert/ca.pem
-ssl-cert=/var/lib/mysql-cert/server.pem
-ssl-key=/var/lib/mysql-cert/server.key
