@@ -37,13 +37,39 @@
     tags:
       - upgrade_only
 
-  - name: Ensure that we can connect to the database container
-    community.mysql.mysql_info:
-      login_user: root
-      login_password: "{{ mysql_root_password }}"
-      filter: version
+  # Check to see if the installation is using a remote database
+  - name: check for remote database
+    community.docker.docker_container_info:
+      name: ubersmith-web-1
+    register: web_container_info
     tags:
       - upgrade_only
+      - database_location
+
+  - name: When upgrading with a local database container, verify connectivity as root
+    tags:
+      - upgrade_only
+    block:
+
+    - name: Get database version using root credentials
+      community.mysql.mysql_info:
+        login_host: 127.0.0.1
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        filter: version
+      when:
+        - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"      
+    
+    rescue:
+
+      - name: Pause to request MySQL root password
+        ansible.builtin.pause:
+          prompt: "Please enter the MySQL root password for the Ubersmith database container"
+          echo: no
+          register: result
+      - name: Set new fact with MySQL root password
+        set_fact:
+          mysql_root_password: "{{ result.user_input }}"
 
   # Store the configuration values specified during the deploy for use during
   # future upgrades.
@@ -511,15 +537,6 @@
       - upgrade_only
       - upgrade_prep
 
-  # Check to see if the installation is using a remote database
-  - name: check for remote database
-    community.docker.docker_container_info:
-      name: ubersmith-web-1
-    register: web_container_info
-    tags:
-      - upgrade_only
-      - database_location
-
   - name: display web container info
     ansible.builtin.debug:
       var: web_container_info
@@ -665,6 +682,8 @@
         subject: '/C=US/ST=New York/L=Troy/O=Ubersmith/OU=MySQL/CN=db_client'
         issuer: '/C=US/ST=New York/L=Troy/O=Ubersmith/OU=MySQL/CN=db_ca'
       state: present
+    when:
+      - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"
     tags:
       - mysql_user
       - mysql_upgrade
