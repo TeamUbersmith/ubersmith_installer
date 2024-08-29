@@ -354,6 +354,8 @@
       - ubersmith-app_web-1
       - ubersmith-app_db-1
       - ubersmith-app_cron-1
+    tags:
+      - upgrade
 
   # Store the configuration values specified during the deploy for use during
   # future upgrades.
@@ -384,7 +386,7 @@
         - "{{ uberapp_user_password }}"
         - ubersmith
     tags:
-      - password
+      - password 
 
   # Only when upgrading, run the upgrade script.
   - name: run upgrade.php

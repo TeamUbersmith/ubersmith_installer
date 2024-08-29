@@ -37,6 +37,14 @@
     tags:
       - upgrade_only
 
+  - name: Ensure that we can connect to the database container
+    community.mysql.mysql_info:
+      login_user: root
+      login_password: "{{ mysql_root_password }}"
+      filter: version
+    tags:
+      - upgrade_only
+
   # Store the configuration values specified during the deploy for use during
   # future upgrades.
   - name: set up ini file for future use
@@ -641,7 +649,25 @@
     when:
       - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"   
     tags:
+      - docker_container_info
       - upgrade_only
+      - mysql_upgrade
+ 
+  - name: Create new database user with unique name and certificate auth
+    community.mysql.mysql_user:
+      login_host: 127.0.0.1
+      login_user: root
+      login_password: "{{ mysql_root_password }}"
+      name: "{{ mysql_user }}"
+      password: "{{ mysql_ubersmith_password }}"
+      priv: 'ubersmith.*:ALL'
+      tls_requires:
+        subject: '/C=US/ST=New York/L=Troy/O=Ubersmith/OU=MySQL/CN=db_client'
+        issuer: '/C=US/ST=New York/L=Troy/O=Ubersmith/OU=MySQL/CN=db_ca'
+      state: present
+    tags:
+      - mysql_user
+      - mysql_upgrade
 
   # Copy redis data dumped from the redis locking container to the redis data container's volume
   - name: copy dump.rdb if redis volume does not exist
@@ -662,21 +688,6 @@
     ignore_errors: true
     tags:
       - upgrade_only
-
-  # Depending on system performance, the database container can take a long time to restart
-  - name: check database container status
-    community.docker.docker_container_info:
-      name: ubersmith-db-1
-    register: db_docker_container_info
-    until: db_docker_container_info.container.State.Health.Status == "healthy"
-    retries: 6
-    delay: 10
-    when:
-      - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"
-    tags:
-      - docker_container_info
-      - upgrade_only
-      - mysql_upgrade
  
   # For upgrades, run the updatedb.php script which performs the upgrade process.
   - name: run updatedb.php
