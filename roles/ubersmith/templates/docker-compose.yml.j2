@@ -96,6 +96,7 @@ services:
     volumes:
       - "logs:/var/www/ubersmith_root/logs"
       - "webroot:/var/www/ubersmith_root"
+      - "database_cert:/var/lib/mysql-cert"
     depends_on:
       - web
 {% if ansible_os_family != 'Darwin' %}
@@ -113,6 +114,7 @@ services:
     volumes:
       - "logs:/var/www/ubersmith_root/logs"
       - "webroot:/var/www/ubersmith_root"
+      - "database_cert:/var/lib/mysql-cert"
     networks:
       default:
         aliases:
@@ -138,6 +140,7 @@ services:
       - "4321:4321"
     volumes:
       - "webroot:/var/www/ubersmith_root"
+      - "database_cert:/var/lib/mysql-cert"
     depends_on:
       - web
 {% if ansible_os_family != 'Darwin' %}
