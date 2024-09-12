@@ -1,0 +1,41 @@
+# Ubersmith Specific MySQL Settings
+[mysqld]
+thread_cache_size  = 16
+max_allowed_packet = 64M
+log-error-verbosity = 1
+default_authentication_plugin = mysql_native_password
+binlog_expire_logs_seconds = 604800
+
+# 30% of Available Memory at install time 
+innodb_buffer_pool_size        = {{ (ansible_memfree_mb * 0.3)|round|int }}M
+innodb_flush_method            = O_DIRECT
+innodb_flush_log_at_trx_commit = 2
+innodb_redo_log_capacity       = 128M
+innodb_fast_shutdown           = 0
+local-infile                   = 0
+
+# sql_mode = "STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"
+sql_mode = "NO_ENGINE_SUBSTITUTION"
+
+# Uncomment and restart MySQL to use PMM
+
+# slow_query_log=ON
+# long_query_time=0
+# log_slow_rate_limit=100
+# log_slow_rate_type=query
+# log_slow_admin_statements=ON
+# log_slow_slave_statements=ON
+# slow_query_log_always_write_time=1
+# slow_query_log_use_global_control=all
+# innodb_monitor_enable=all
+# userstat=1
+
+# Use these settings for fast restore only; disable afterwards!
+# https://www.percona.com/blog/2018/02/22/restore-mysql-logical-backup-maximum-speed/
+# innodb_log_file_size=1G
+# skip-log-bin
+# innodb_flush_log_at_trx_commit=0
+# innodb_io_capacity=700
+# innodb_io_capacity_max=1500
+# max_allowed_packet=1G
+# innodb_doublewrite=0

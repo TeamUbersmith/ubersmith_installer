@@ -1,5 +1,11 @@
 ---
 
+  - name: Verify that Ubersmith Version is either "4" or "5"
+    ansible.builtin.assert:
+      that:
+        - ubersmith_major_version == "4" or ubersmith_major_version == "5"
+      fail_msg: "The Ubersmith Version requested is not '4' or '5'. It is set to {{ ubersmith_major_version }}."
+
   - name: Output OS and Version
     debug:
       msg: "This host is running {{ ansible_distribution }} {{ ansible_distribution_version }}."
@@ -12,19 +18,19 @@
     tags:
       - os 
 
-  - name: Verify OS Distribution is Debian, CentOS, or Ubuntu
+  - name: Verify OS Distribution is Debian, CentOS, Rocky, or Ubuntu
     assert:  
       that:
         - "ansible_distribution in supported_os"
-      msg: "Ensure Host is running Debian, CentOS, or Ubuntu."
+      msg: "Ensure Host is running Debian, CentOS, Rocky, or Ubuntu."
     tags:
       - os
 
   - name: Verify Ubuntu OS Distribution Version and Kernel
     assert:  
       that:
-        - "{{ ansible_distribution_version is version_compare(supported_ubuntu_ver, '>=') }}"
-        - "{{ ansible_kernel is version_compare('4.4.0', '>=' ) }}"
+        - ansible_distribution_version is version_compare(supported_ubuntu_ver, '>=')
+        - ansible_kernel is version_compare('4.4.0', '>=' )
       msg: "Ensure Host is running supported Ubuntu LTS with 4.4.0+ kernel"
     when: ansible_distribution == 'Ubuntu'
     tags:
@@ -33,10 +39,10 @@
   - name: Verify CentOS OS Distribution Version and Kernel
     assert:  
       that:
-        - "ansible_distribution_version|int >= supported_centos_ver"
-        - "{{ ansible_kernel is version_compare('3.10.0-693', '>=' ) }}"
+        - ansible_distribution_version|int >= supported_centos_ver
+        - ansible_kernel is version_compare('3.10.0-693', '>=')
       msg: "Ensure Host is running supported CentOS and kernel newer than 3.10.0-693"
-    when: ansible_distribution == 'CentOS'
+    when: (ansible_distribution == 'CentOS') or (ansible_distribution == 'Rocky')
     tags:
       - os
 

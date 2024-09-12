@@ -110,6 +110,7 @@
        - "{{ ubersmith_home }}/conf/certbot/etc/renewal-hooks/deploy"
        - "{{ ubersmith_home }}/conf/certbot/log"
        - "{{ ubersmith_home }}/conf/sso"
+       - "{{ ubersmith_home }}/conf/falco"
        - "{{ ubersmith_home }}/app/custom"
        - "{{ ubersmith_home }}/app/custom/locale"
        - "{{ ubersmith_home }}/app/custom/plugins"
@@ -178,7 +179,7 @@
   # required if this file is modified.
   - name: create percona server configuration overrides
     ansible.builtin.template:
-      src: ubersmith.cnf.j2
+      src: "ubersmith.cnf.{{ ubersmith_major_version }}.j2"
       dest: "{{ ubersmith_home }}/conf/mysql/ubersmith.cnf"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
@@ -288,7 +289,7 @@
   - name: run certbot via a container
     community.docker.docker_container:
       name: certbot
-      image: "certbot/certbot:{{ containers.certbot_version }}"
+      image: "certbot/certbot:{{ certbot_version }}"
       container_default_behavior: compatibility
       command: "certonly -n -d {{ item }} --standalone --agree-tos -m {{ notify_email }}"
       user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
@@ -320,7 +321,7 @@
   - name: manually run deploy hooks
     community.docker.docker_container:
       name: certbot
-      image: "certbot/certbot:{{ containers.certbot_version }}"
+      image: "certbot/certbot:{{ certbot_version }}"
       container_default_behavior: compatibility
       entrypoint: /etc/letsencrypt/renewal-hooks/deploy/ubersmith-deploy.sh
       user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
@@ -477,6 +478,17 @@
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: 0700
+    tags:
+      - upgrade
+
+  # Copy the falco rules file which allows Ubersmith to provide FIM services
+  - name: copy falco rules
+    ansible.builtin.copy:
+      src: falco_rules.local.yaml
+      dest: "{{ ubersmith_home }}/conf/falco/falco_rules.local.yaml"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: 0644
     tags:
       - upgrade
 

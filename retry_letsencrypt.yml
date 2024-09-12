@@ -10,8 +10,7 @@
       virtual_hosts: "{{ virtual_host.split(',') }}"
       notify_email: "{{ admin_email }}"
       interactive: true
-      containers:
-        certbot_version: latest
+      certbot_version: latest
     
     tasks:
 
@@ -46,7 +45,7 @@
       - name: run certbot via a container
         community.docker.docker_container:
           name: certbot
-          image: "certbot/certbot:{{ containers.certbot_version }}"
+          image: "certbot/certbot:{{ certbot_version }}"
           container_default_behavior: compatibility
           command: "certonly -vvv -n -d {{ item }} --webroot --webroot-path /var/www/ubersmith_root/app/www --agree-tos -m {{ notify_email }}"
           user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
@@ -65,7 +64,7 @@
       - name: run deploy hooks
         community.docker.docker_container:
           name: certbot
-          image: "certbot/certbot:{{ containers.certbot_version }}"
+          image: "certbot/certbot:{{ certbot_version }}"
           container_default_behavior: compatibility
           entrypoint: /etc/letsencrypt/renewal-hooks/deploy/ubersmith-deploy.sh
           env:

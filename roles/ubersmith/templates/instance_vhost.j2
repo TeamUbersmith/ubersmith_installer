@@ -54,12 +54,13 @@
   Header always set Strict-Transport-Security "max-age=63072000"
   Header always set X-Content-Type-Options "nosniff"
   Header add Content-Security-Policy "frame-ancestors 'self';"
+  # Header add Content-Security-Policy-Report-Only: default-src 'none'; form-action 'none'; frame-ancestors 'none'; report-uri /csp.php
 
   SSLCertificateFile {{ ubersmith_root }}/conf/ssl/{{ item }}.pem
   SSLCertificateKeyFile {{ ubersmith_root }}/conf/ssl/{{ item }}.key
   # SSLCACertificateFile {{ ubersmith_root }}/conf/ssl/cabundle.pem
   SSLProtocol             all -SSLv3 -TLSv1 -TLSv1.1
-  SSLCipherSuite          ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
+  SSLCipherSuite          {{ mozilla_ciphers.configurations.intermediate.ciphers.openssl | join(':') }}
   SSLHonorCipherOrder     off
   SSLSessionTickets       off
 
