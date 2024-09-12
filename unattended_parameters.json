@@ -1,5 +1,6 @@
 {
     "ubersmith_home": "/usr/local/ubersmith",
+    "ubersmith_major_version": "5",
     "virtual_host": "{{ ansible_fqdn }}",
     "lets_encrypt_certificate": "yes",
     "interactive": false,
