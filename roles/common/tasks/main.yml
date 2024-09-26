@@ -6,6 +6,13 @@
         - ubersmith_major_version == "4" or ubersmith_major_version == "5"
       fail_msg: "The Ubersmith Version requested is not '4' or '5'. It is set to {{ ubersmith_major_version }}."
 
+  - name: Output Current Timezone
+    ansible.builtin.pause:
+      prompt: "This host's timezone is configured as {{ ansible_date_time.tz }}. If this is not correct, please exit the installer and reconfigure the host's timezone. (CTRL+C to continue)"
+    tags:
+      - tz
+      - os
+
   - name: Output OS and Version
     debug:
       msg: "This host is running {{ ansible_distribution }} {{ ansible_distribution_version }}."
