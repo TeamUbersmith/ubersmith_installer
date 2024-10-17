@@ -11,11 +11,9 @@ fi
 
 source $HOME/.local/ubersmith_venv/bin/activate
 
-echo "Installing Ansible..."
-pip3 install -q "ansible-core>=2.14,<2.15"
-
 echo "Installing Dependencies..."
-ansible-galaxy install -r requirements.yml
+pip3 install -q -r pip_requirements.txt
+ansible-galaxy install -r requirements_ansible.yml
 
 echo "Configuring the Ubersmith installer for an existing installation..."
-ansible-playbook -i ./hosts -c local configure.yml
+ansible-playbook -i ./hosts -e ansible_python_interpreter=$(which python3) -c local configure.yml

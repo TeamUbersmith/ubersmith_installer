@@ -14,14 +14,12 @@ python3 -m venv $HOME/.local/ubersmith_venv
 
 source $HOME/.local/ubersmith_venv/bin/activate
 
-echo "Installing Ansible..."
-pip3 install -q "ansible-core>=2.13,<2.15"
-
 echo "Installing Dependencies..."
-ansible-galaxy install -r requirements.yml
+pip3 install -q -r pip_requirements.txt
+ansible-galaxy install -r requirements_ansible.yml
 
 echo "Configuring a new brand..."
-ansible-playbook -i ./hosts -c local -t new_brand add_new_brand.yml
+ansible-playbook -i ./hosts -e ansible_python_interpreter=$(which python3) -c local -t new_brand add_new_brand.yml
 
 echo "Retrying Let's Encrypt certificate request..."
-ansible-playbook -i ./hosts -c local retry_letsencrypt.yml
+ansible-playbook -i ./hosts -e ansible_python_interpreter=$(which python3) -c local retry_letsencrypt.yml

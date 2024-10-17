@@ -9,4 +9,4 @@ export PATH="$HOME/.local/bin:$HOME/.local/ubersmith_venv/bin:$PATH"
 source $HOME/.local/ubersmith_venv/bin/activate
 
 echo "Retrying Let's Encrypt certificate request..."
-ansible-playbook -i ./hosts -c local retry_letsencrypt.yml
+ansible-playbook -i ./hosts -e ansible_python_interpreter=$(which python3) -c local retry_letsencrypt.yml

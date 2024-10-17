@@ -12,4 +12,4 @@ echo "Installing jmespath..."
 pip3 install -q "jmespath"
 
 echo "Patching Ubersmith..."
-ansible-playbook -i ./hosts -c local -t remove_patches,restart patch_ubersmith.yml
+ansible-playbook -i ./hosts -e ansible_python_interpreter=$(which python3) -c local -t remove_patches,restart patch_ubersmith.yml
