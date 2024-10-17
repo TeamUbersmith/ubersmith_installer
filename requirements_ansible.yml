@@ -1,5 +1,5 @@
 ---
-# $ ansible-galaxy install -r requirements.yml
+# $ ansible-galaxy install -r requirements_ansible.yml
 
 collections:
 - community.crypto
