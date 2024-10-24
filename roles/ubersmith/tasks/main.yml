@@ -173,6 +173,8 @@
     with_items: "{{ virtual_hosts }}"
     tags:
       - new_brand
+      - vhost
+      - upgrade
 
   # The Percona Server configuration file is created on the local filesystem to facilitate
   # editing without having to enter the container. A restart of the 'db' container is
