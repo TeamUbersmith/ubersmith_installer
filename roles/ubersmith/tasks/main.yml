@@ -10,12 +10,20 @@
       - upgrade_only
 
   # Backups are important, but especially with database version changes in 5.0.0
-  - name: remind admin to make a backup before proceeding with an upgrade
+  - name: print administrator reminders
     ansible.builtin.pause:
-      prompt: "Please ensure you have made a backup of your Ubersmith database before proceeding with the upgrade process. (CTRL+C to continue)"
+      prompt: |-
+        Before upgrading, please read the release notes at 
+        https://ubersmith.com/release-notes/
+        
+        Please ensure you have made a backup of your Ubersmith database 
+        before proceeding with the upgrade process. 
+        
+        (CTRL+C to continue)
     when:
       - interactive
     tags:
+      - release_notes_prompt
       - upgrade_only
   
   # See if {{ ubersmith_home }}/.patched exists, abort if it does.
