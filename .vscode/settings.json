@@ -1,0 +1,6 @@
+{
+    "sonarlint.connectedMode.project": {
+        "connectionId": "https://sonarqube.nyc1.do.ubersmith.com",
+        "projectKey": "TeamUbersmith_ubersmith_installer_63408640-e112-41ff-9ecf-bf140dfd0326"
+    }
+}
