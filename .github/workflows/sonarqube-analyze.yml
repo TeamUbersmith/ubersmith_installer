@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     name: Analyze
-    runs-on: [ self-hosted, x64, ioncube ]
+    runs-on: ubuntu-latest
     
     steps:
       - uses: actions/checkout@v4
