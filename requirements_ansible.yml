@@ -3,6 +3,7 @@
 
 collections:
 - community.crypto
-- community.docker
-- community.general
+- name: community.docker
+  version: "3.13.1"
+- name: community.general
 - community.mysql
