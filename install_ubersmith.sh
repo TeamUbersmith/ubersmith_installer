@@ -19,4 +19,4 @@ pip3 install -q -r requirements_pip.txt
 ansible-galaxy install -r requirements_ansible.yml
 
 echo "Installing Ubersmith..."
-ansible-playbook -i ./hosts -c local --skip-tags upgrade_only install_ubersmith.yml
+ansible-playbook -i ./hosts -e ansible_python_interpreter=$(which python3) -c local --skip-tags upgrade_only install_ubersmith.yml
