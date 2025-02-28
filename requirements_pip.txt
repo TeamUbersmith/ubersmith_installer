@@ -1,4 +1,4 @@
-ansible-core >=2.13,<2.15
+ansible-core >=2.18,<2.19
 requests == 2.31.0 
 docker >= 7.1.0
 PyMySQL

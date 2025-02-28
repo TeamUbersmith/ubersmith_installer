@@ -209,7 +209,7 @@ services:
         tag: ubersmith/haproxy
 {% endif %}
   certbot:
-    image: certbot/certbot:{{ certbot_version }}
+    image: ghcr.io/teamubersmith/certbot:{{ certbot_version }}
     # image: certbot/dns-nsone:{{ certbot_version }}
     # image: certbot/dns-cloudflare:{{ certbot_version }}
     command: "renew -vvv -n --webroot --webroot-path /var/www/ubersmith_root/app/www"
