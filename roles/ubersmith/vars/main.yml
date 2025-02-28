@@ -49,6 +49,6 @@
   ubersmith_version: "{{ ubersmith_release[ubersmith_major_version].ubersmith_release_version }}"
   containers_release_version: "{{ ubersmith_release[ubersmith_major_version].containers.release_version }}"
   pmm_version: 2
-  certbot_version: 3.2.0
+  certbot_version: v3.2.0
 
   registry: ghcr.io/teamubersmith
