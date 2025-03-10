@@ -418,6 +418,19 @@
       - compose_template
       - upgrade
 
+  # Create the Docker Compose env file, which defines variables used in the compose file
+  - name: create docker compose env file
+    ansible.builtin.template:
+      src: dot_env.j2
+      dest: "{{ ubersmith_home }}/.env"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: 0600
+      backup: yes
+    tags:
+      - dot_env
+      - upgrade
+
   # Create the override Docker Compose file. This file contains site specific changes and
   # will not be modified by future upgrades.
   - name: create docker compose override file
