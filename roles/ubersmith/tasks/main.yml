@@ -105,6 +105,7 @@
        - "{{ ubersmith_home }}/logs/ubersmith"
        - "{{ ubersmith_home }}/conf/mail"
        - "{{ ubersmith_home }}/conf/mysql"
+       - "{{ ubersmith_home }}/conf/mysql-components"
        - "{{ ubersmith_home }}/conf/ssl"
        - "{{ ubersmith_home }}/conf/httpd"
        - "{{ ubersmith_home }}/conf/httpd/sites-enabled"
