@@ -26,6 +26,7 @@ services:
       MYSQL_DATABASE: ubersmith
     volumes:
       - "database:/var/lib/mysql"
+      - "database_keyring:/var/lib/mysql-keyring"
       - "/etc/mysql/conf.d"
       - "{{ ubersmith_home }}/conf/mysql:/etc/ubersmith.conf.d"
 {% if ansible_os_family != 'Darwin' %}
@@ -262,6 +263,7 @@ services:
 volumes:
   clamav_signatures: {}
   database: {}
+  database_keyring: {}
   logs: {}
   redis: {}
   search: {}

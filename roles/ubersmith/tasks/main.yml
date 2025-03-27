@@ -197,6 +197,22 @@
       - mysql_config
       - upgrade
 
+  # The MySQL component configuration files is created on the local filesystem to
+  # enable at-rest encryption.
+  - name: create mysql component configuration
+    ansible.builtin.copy:
+      src: "{{ item }}"
+      dest: "{{ ubersmith_home }}/conf/mysql-components/{{ item }}"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: "0644"
+    with_items:
+      - component_keyring_file.cnf
+      - mysqld.my
+    tags:
+      - mysql_config
+      - upgrade
+
   # The PHP override configuration file is created on the local filesystem to facilitate
   # editing without having to enter the container. A restart of the 'php' container is
   # required if this file is modified.
@@ -533,6 +549,8 @@
     tags:
       - upgrade_only
       - database_location
+      - mysql_keyring_backup
+
 
   - name: display web container info
     ansible.builtin.debug:
@@ -737,6 +755,27 @@
     tags:
       - upgrade
       - maintenance_disable
+
+  # Back up MySQL keyring
+  - name: make a backup of the mysql keyring
+    community.docker.docker_container:
+      name: busybox
+      image: "busybox"
+      container_default_behavior: compatibility
+      command: "tar cvf /backup/component_keyring_file.{{ ansible_date_time.epoch }}.tar /keyring; chmod 0600 /backup/*.tar"
+      user: root
+      auto_remove: yes
+      log_driver: syslog
+      log_options:
+        tag: ubersmith/busybox
+      volumes:
+        - "ubersmith_database_keyring:/keyring"
+        - "{{ ubersmith_home }}/backup:/backup"
+    when:
+      - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"
+    tags:
+      - mysql_config
+      - mysql_keyring_backup
 
   # Store the configuration values specified during the deploy for use during
   # future upgrades.
