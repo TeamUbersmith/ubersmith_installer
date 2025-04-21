@@ -18,10 +18,6 @@ services:
 {% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
 {% endif %}
-      - "{{ ubersmith_home }}/conf/mysql:/etc/mysql/conf.d"
-      - "{{ ubersmith_home }}/conf/mysql-components/mysqld.my:/usr/sbin/mysqld.my"
-      - "{{ ubersmith_home }}/conf/mysql-components/component_keyring_file.cnf:/usr/lib64/mysql/plugin/component_keyring_file.cnf"
-
   php:
     # deploy:
     # resources:
