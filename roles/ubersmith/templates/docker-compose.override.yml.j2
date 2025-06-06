@@ -55,6 +55,11 @@ services:
     #  USAGE_DATABASE_HOST: remote_db
     #  USAGE_DATABASE_USERNAME: usage_guy
     #  USAGE_DATABASE_PASSWORD: usage_password
+    #  REDIS_SENTINEL_ENABLE: 0
+    #  REDIS_SENTINEL_MASTER: mymaster
+    #  REDIS_USER: your_redis_user
+    #  REDIS_AUTH: your_redis_password
+    #  REDIS_SENTINEL_HOSTS: 10.0.0.1,10.0.0.2,10.0.0.3
   mail:
     volumes:
       - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
