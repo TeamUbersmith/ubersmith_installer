@@ -16,10 +16,10 @@
         appweb_container_repo: "appliance"
     "5":
       mysql_version: 80
-      appliance_release_version: 5.0.3
+      appliance_release_version: 5.1.0
       backup_version: 8
       containers:
-        release_version: r2
+        release_version: r9
         appweb_container_repo: "appliance"
 
   appliance_version: "{{ appliance_release[ubersmith_major_version].appliance_release_version }}"
