@@ -55,6 +55,7 @@ services:
       SESSION_HOST: tcp://ubersmith-redis-data-1:6379?database=0
       PLUGIN_LOG_HOST: tcp://ubersmith-redis-data-1:6379?database=3
       QUEUE_HOST: tcp://ubersmith-redis-data-1:6379?database=4
+      REDIS_SENTINEL_ENABLE: 0
       APPLIANCE_TIMEOUT: 30
       ALIPAY_ENABLE: 1
       OPENSSL_CIPHERS: {{ mozilla_ciphers.configurations.intermediate.ciphers.openssl | join(':') }}
