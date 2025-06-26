@@ -10,7 +10,7 @@
       - upgrade_only
 
   # Check if required containers are available; if not stop the install/upgrade
-  - name: verify ubersmith container image availability
+  - name: pull required images; this may take a few moments 
     community.docker.docker_image:
         name: "{{ item }}"
         source: pull
