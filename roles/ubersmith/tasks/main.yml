@@ -28,6 +28,8 @@
       - "ghcr.io/teamubersmith/certbot:{{ certbot_version }}"
       - "falcosecurity/falco-no-driver:latest"
       - "clamav/clamav:1.3_base"
+    tags:
+      - upgrade
 
   # Backups are important, but especially with database version changes in 5.0.0
   - name: print administrator reminders
