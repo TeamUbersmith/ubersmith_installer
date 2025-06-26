@@ -9,6 +9,16 @@
     tags:
       - upgrade_only
 
+  # Check if required containers are available; if not stop the install/upgrade
+  - name: verify ubersmith container image availability
+    community.docker.docker_image:
+        name: "{{ item }}"
+        source: pull
+    with_items:
+    - "{{ registry }}/appliance_db_ps{{ appliance_release[ubersmith_major_version].mysql_version }}:{{ appliance_version }}-{{ containers_release_version }}"
+    - "{{ registry }}/{{ appliance_release[ubersmith_major_version].containers.appweb_container_repo }}:{{ appliance_version }}-{{ containers_release_version }}"
+    - "{{ registry }}/appliance_cron:{{ appliance_version }}-{{ containers_release_version }}"
+
   # In the event of a failed upgrade attempt, ensure the bare minimum of containers is running before proceeding
   # docker compose up -d web db php
   - name: check ubersmith containers before proceeding with upgrade

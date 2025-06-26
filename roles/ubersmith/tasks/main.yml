@@ -9,6 +9,26 @@
     tags:
       - upgrade_only
 
+  # Check if required containers are available; if not stop the install/upgrade
+  - name: verify ubersmith container image availability
+    community.docker.docker_image:
+        name: "{{ item }}"
+        source: pull
+    with_items:
+      - "{{ registry }}/solr:{{ ubersmith_version }}-{{ containers_release_version }}"
+      - "{{ registry }}/ps{{ ubersmith_release[ubersmith_major_version].mysql_version }}:{{ ubersmith_version }}-{{ containers_release_version }}"
+      - "{{ registry }}/{{ ubersmith_release[ubersmith_major_version].containers.web_container_repo }}:{{ ubersmith_version }}-{{ containers_release_version }}"
+      - "{{ registry }}/php{{ ubersmith_release[ubersmith_major_version].php_version }}:{{ ubersmith_version }}-{{ containers_release_version }}"
+      - "{{ registry }}/cron:{{ ubersmith_version }}-{{ containers_release_version }}"
+      - "{{ registry }}/mail:{{ ubersmith_version }}-{{ containers_release_version }}"
+      - "{{ registry }}/xinetd:{{ ubersmith_version }}-{{ containers_release_version }}"
+      - "{{ registry }}/redis7:{{ ubersmith_version }}-{{ containers_release_version }}"
+      - "busybox:latest"
+      - "{{ registry }}/rsyslog:{{ ubersmith_version }}-{{ containers_release_version }}"
+      - "ghcr.io/teamubersmith/certbot:{{ certbot_version }}"
+      - "falcosecurity/falco-no-driver:latest"
+      - "clamav/clamav:1.3_base"
+
   # Backups are important, but especially with database version changes in 5.0.0
   - name: print administrator reminders
     ansible.builtin.pause:
