@@ -164,7 +164,7 @@ services:
   redis-backup:
     image: busybox:latest
     command: >
-    sh -c "tar -czf /backup/ubersmith_redis_backup.tar.gz -C /data ."
+      sh -c "tar -czf /backup/ubersmith_redis_backup.tar.gz -C /data ."
     volumes:
       - redis:/data:ro
       - "{{ ubersmith_home }}/backup:/backup"
