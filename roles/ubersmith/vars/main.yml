@@ -39,9 +39,9 @@
       mysql_version: 80
       php_version: 84
       backup_version: 8
-      ubersmith_release_version: 5.1.0
+      ubersmith_release_version: 5.1.1
       containers:
-        release_version: r9
+        release_version: r1
         web_container_repo: "ubersmith"
         haproxy_version: 1.7-alpine
         
