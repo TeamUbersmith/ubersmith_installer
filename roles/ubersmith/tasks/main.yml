@@ -157,24 +157,6 @@
       - httpd_config
       - upgrade
 
-  # Add configuration directives to rsyslog for handling incoming logs from Ubersmith
-  # Docker containers.
-  - name: create rsyslog configuration
-    ansible.builtin.copy:
-      dest: /etc/rsyslog.d/30-ubersmith.conf
-      src: 30-ubersmith.conf
-      owner: root
-      group: root
-      mode: "0644"
-    ignore_errors: true
-    notify:
-      - restart rsyslog
-    tags:
-      - upgrade
-    when: 
-      - ansible_os_family != "Darwin"
-      - ansible_os_family != "Windows"
-
   # Add logrotate directives to keep Ubersmith logs compressed and rotated.
   - name: create log rotation configuration
     ansible.builtin.copy:
@@ -656,7 +638,7 @@
       command: "chown -R 1001:1001 /mysql"
       user: root
       auto_remove: yes
-      log_driver: syslog
+      log_driver: journald
       log_options:
         tag: ubersmith/busybox
       volumes:
@@ -788,7 +770,7 @@
       command: "tar cvf /backup/component_keyring_file.{{ ansible_date_time.epoch }}.tar /keyring; chmod 0600 /backup/*.tar"
       user: root
       auto_remove: yes
-      log_driver: syslog
+      log_driver: journald
       log_options:
         tag: ubersmith/busybox
       volumes:

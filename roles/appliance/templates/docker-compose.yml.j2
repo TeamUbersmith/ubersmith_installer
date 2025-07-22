@@ -13,7 +13,7 @@ services:
       - "app_database:/var/lib/mysql"
 {% if ansible_os_family != 'Darwin' %}
     logging:
-      driver: syslog
+      driver: journald
       options:
         tag: ubersmith/app_db
 {% endif %}
@@ -35,7 +35,7 @@ services:
       - "app_logs:/var/www/appliance_root/logs"
 {% if ansible_os_family != 'Darwin' %}
     logging:
-      driver: syslog
+      driver: journald
       options:
         tag: ubersmith/app_web
 {% endif %}
@@ -50,7 +50,7 @@ services:
       - "rrds:/var/www/appliance_root/rrds"
 {% if ansible_os_family != 'Darwin' %}
     logging:
-      driver: syslog
+      driver: journald
       options:
         tag: ubersmith/app_cron
 {% endif %}

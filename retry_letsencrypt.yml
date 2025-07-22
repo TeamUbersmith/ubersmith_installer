@@ -50,7 +50,7 @@
           command: "certonly -vvv -n -d {{ item }} --webroot --webroot-path /var/www/ubersmith_root/app/www --agree-tos -m {{ notify_email }}"
           user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
           auto_remove: yes
-          log_driver: syslog
+          log_driver: journald
           log_options:
             tag: ubersmith/certbot
           volumes:
@@ -71,7 +71,7 @@
             RENEWED_DOMAINS: "{{ item }}"
           user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
           auto_remove: yes
-          log_driver: syslog
+          log_driver: journald
           log_options:
             tag: ubersmith/certbot
           volumes:

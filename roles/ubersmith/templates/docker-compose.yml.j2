@@ -11,7 +11,7 @@ services:
       - "search:/opt/solr"
 {% if ansible_os_family != 'Darwin' %}
     logging:
-      driver: syslog
+      driver: journald
       options:
         tag: ubersmith/solr
 {% endif %}
@@ -32,7 +32,7 @@ services:
       - "{{ ubersmith_home }}/conf/mysql-components/component_keyring_file.cnf:/usr/lib64/mysql/plugin/component_keyring_file.cnf"
 {% if ansible_os_family != 'Darwin' %}
     logging:
-      driver: syslog
+      driver: journald
       options:
         tag: ubersmith/db
 {% endif %}
@@ -67,7 +67,7 @@ services:
       - redis-data
 {% if ansible_os_family != 'Darwin' %}
     logging:
-      driver: syslog
+      driver: journald
       options:
         tag: ubersmith/web
 {% endif %}
@@ -86,7 +86,7 @@ services:
         condition: service_healthy
 {% if ansible_os_family != 'Darwin' %}
     logging:
-      driver: syslog
+      driver: journald
       options:
         tag: ubersmith/php
 {% endif %}
@@ -101,7 +101,7 @@ services:
       - web
 {% if ansible_os_family != 'Darwin' %}
     logging:
-      driver: syslog
+      driver: journald
       options:
         tag: ubersmith/cron
 {% endif %}
@@ -123,7 +123,7 @@ services:
       - clamav
 {% if ansible_os_family != 'Darwin' %}
     logging:
-      driver: syslog
+      driver: journald
       options:
         tag: ubersmith/mail
 {% endif %}
@@ -143,7 +143,7 @@ services:
       - web
 {% if ansible_os_family != 'Darwin' %}
     logging:
-      driver: syslog
+      driver: journald
       options:
         tag: ubersmith/rwhois
 {% endif %}
@@ -155,7 +155,7 @@ services:
     restart: unless-stopped
 {% if ansible_os_family != 'Darwin' %}
     logging:
-      driver: syslog
+      driver: journald
       options:
         tag: ubersmith/redis-data
 {% endif %}
@@ -192,7 +192,7 @@ services:
       - "{{ ubersmith_home }}/logs/rsyslog/:/var/run/rsyslog/dev/"
 {% if ansible_os_family != 'Darwin' %}
     logging:
-      driver: syslog
+      driver: journald
       options:
         tag: ubersmith/ubersmith
 {% endif %}
@@ -214,7 +214,7 @@ services:
       - "3307"
 {% if ansible_os_family != 'Darwin' %}
     logging:
-      driver: syslog
+      driver: journald
       options:
         tag: ubersmith/haproxy
 {% endif %}
@@ -235,7 +235,7 @@ services:
       - "webroot:/var/www/ubersmith_root"
 {% if ansible_os_family != 'Darwin' %}
     logging:
-      driver: syslog
+      driver: journald
       options:
         tag: ubersmith/certbot
 {% endif %}
@@ -247,7 +247,7 @@ services:
     security_opt:
      - apparmor:unconfined
     logging:
-      driver: syslog
+      driver: journald
       options:
         tag: ubersmith/falco
     tty: true
@@ -266,7 +266,7 @@ services:
     volumes:
       - "clamav_signatures:/var/lib/clamav"
     logging:
-      driver: syslog
+      driver: journald
       options:
         tag: ubersmith/clamav
 volumes:
