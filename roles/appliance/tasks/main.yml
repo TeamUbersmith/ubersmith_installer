@@ -16,6 +16,7 @@
         source: pull
     with_items:
     - "{{ registry }}/appliance_db_ps{{ appliance_release[ubersmith_major_version].mysql_version }}:{{ appliance_version }}-{{ containers_release_version }}"
+    - "{{ registry }}/appliance_db_ps57:{{ appliance_version }}-{{ containers_release_version }}"
     - "{{ registry }}/{{ appliance_release[ubersmith_major_version].containers.appweb_container_repo }}:{{ appliance_version }}-{{ containers_release_version }}"
     - "{{ registry }}/appliance_cron:{{ appliance_version }}-{{ containers_release_version }}"
     tags:
