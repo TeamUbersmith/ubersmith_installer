@@ -15,11 +15,11 @@ python3 -m venv $HOME/.local/ubersmith_venv
 source $HOME/.local/ubersmith_venv/bin/activate
 
 echo "Installing Dependencies..."
-pip3 install -q -r requirements_pip.txt
+pip3 install --disable-pip-version-check -q -r requirements_pip.txt
 ansible-galaxy install -r requirements_ansible.yml
 
 echo "Installing jmespath..."
-pip3 install -q "jmespath"
+pip3 install --disable-pip-version-check -q "jmespath"
 
 echo "Patching Ubersmith..."
 ansible-playbook -i ./hosts -e ansible_python_interpreter=$(which python3) -c local -t remove_patches,restart patch_ubersmith.yml

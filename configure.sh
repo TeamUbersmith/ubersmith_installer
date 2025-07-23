@@ -12,7 +12,7 @@ fi
 source $HOME/.local/ubersmith_venv/bin/activate
 
 echo "Installing Dependencies..."
-pip3 install -q -r requirements_pip.txt
+pip3 install --disable-pip-version-check -q -r requirements_pip.txt
 ansible-galaxy install -r requirements_ansible.yml
 
 echo "Configuring the Ubersmith installer for an existing installation..."
