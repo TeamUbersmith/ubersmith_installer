@@ -405,8 +405,6 @@
     ansible.builtin.command: "docker compose -p ubersmith exec -T app_web php /var/www/appliance_root/www/upgrade.php"
     args:
       chdir:  "{{ appliance_home }}"
-    environment:
-      COMPOSE_INTERACTIVE_NO_CLI: 1
     tags:
       - upgrade_only
 
