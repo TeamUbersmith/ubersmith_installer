@@ -157,6 +157,21 @@
       - httpd_config
       - upgrade
 
+  - name: set systemd journal retention policy
+    ansible.builtin.lineinfile:
+      path: "/etc/systemd/journald.conf"
+      regexp: "^#MaxRetentionSec="
+      line: "MaxRetentionSec=1year"
+    tags:
+      - upgrade
+
+  - name: Restart service cron on centos, in all cases, also issue daemon-reload to pick up config changes
+    ansible.builtin.systemd_service:
+      state: restarted
+      name: systemd-journald
+    tags:
+      - upgrade
+
   # Add logrotate directives to keep Ubersmith logs compressed and rotated.
   - name: create log rotation configuration
     ansible.builtin.copy:
