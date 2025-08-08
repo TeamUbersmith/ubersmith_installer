@@ -216,6 +216,7 @@
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: "0644"
+      backup: yes
     tags:
       - mysql_config
       - upgrade
