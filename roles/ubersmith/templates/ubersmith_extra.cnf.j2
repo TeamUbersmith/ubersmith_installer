@@ -1,0 +1,5 @@
+# Ubersmith Specific MySQL Settings
+[mysqld]
+
+# 30% of Available Memory at install time 
+innodb_buffer_pool_size        = {{ (ansible_memfree_mb * 0.3)|round|int }}M

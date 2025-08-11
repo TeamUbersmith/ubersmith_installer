@@ -6,8 +6,6 @@ log-error-verbosity = 1
 default_authentication_plugin = mysql_native_password
 binlog_expire_logs_seconds = 604800
 
-# 30% of Available Memory at install time 
-innodb_buffer_pool_size        = {{ (ansible_memfree_mb * 0.3)|round|int }}M
 innodb_flush_method            = O_DIRECT
 innodb_flush_log_at_trx_commit = 2
 innodb_redo_log_capacity       = 128M
