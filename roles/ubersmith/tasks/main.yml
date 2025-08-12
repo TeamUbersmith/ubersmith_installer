@@ -60,7 +60,7 @@
 
   - name: fail if ubersmith has been patched
     ansible.builtin.fail:
-      msg: "Ubersmith appears to be patched. Review the patch configuration and remove the file .patched from {{ ubersmith_home }} to proceed."
+      msg: "Ubersmith appears to be patched. Review the patch configuration and remove the file .patched from {{ ubersmith_home }} to proceed. If you have questions about the patch or are unsure how to proceed, please contact support@ubersmith.com."
     when: 
       - patched.stat.exists
       - interactive
@@ -157,38 +157,20 @@
       - httpd_config
       - upgrade
 
-  # Add configuration directives to rsyslog for handling incoming logs from Ubersmith
-  # Docker containers.
-  - name: create rsyslog configuration
-    ansible.builtin.copy:
-      dest: /etc/rsyslog.d/30-ubersmith.conf
-      src: 30-ubersmith.conf
-      owner: root
-      group: root
-      mode: "0644"
-    ignore_errors: true
-    notify:
-      - restart rsyslog
+  - name: set systemd journal retention policy
+    ansible.builtin.lineinfile:
+      path: "/etc/systemd/journald.conf"
+      regexp: "^#MaxRetentionSec="
+      line: "MaxRetentionSec=1year"
     tags:
       - upgrade
-    when: 
-      - ansible_os_family != "Darwin"
-      - ansible_os_family != "Windows"
 
-  # Add logrotate directives to keep Ubersmith logs compressed and rotated.
-  - name: create log rotation configuration
-    ansible.builtin.copy:
-      dest: /etc/logrotate.d/ubersmith-logs
-      src: ubersmith-logs
-      owner: root
-      group: root
-      mode: "0644"
-    ignore_errors: true
+  - name: Restart service cron on centos, in all cases, also issue daemon-reload to pick up config changes
+    ansible.builtin.systemd_service:
+      state: restarted
+      name: systemd-journald
     tags:
       - upgrade
-    when: 
-      - ansible_os_family != "Darwin"
-      - ansible_os_family != "Windows"
 
   # The Apache Virtual Host entry is created on the local filesystem to facilitate
   # editing without having to enter the container. A restart of the 'web' container is
@@ -668,7 +650,7 @@
       command: "chown -R 1001:1001 /mysql"
       user: root
       auto_remove: yes
-      log_driver: syslog
+      log_driver: journald
       log_options:
         tag: ubersmith/busybox
       volumes:
@@ -800,7 +782,7 @@
       command: "tar cvf /backup/component_keyring_file.{{ ansible_date_time.epoch }}.tar /keyring; chmod 0600 /backup/*.tar"
       user: root
       auto_remove: yes
-      log_driver: syslog
+      log_driver: journald
       log_options:
         tag: ubersmith/busybox
       volumes:
