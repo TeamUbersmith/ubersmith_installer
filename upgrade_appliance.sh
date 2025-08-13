@@ -21,7 +21,6 @@ fi
 if python3 -c 'import sys; exit(0 if sys.version_info >= (3, 11) else 1)'; then
     VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:3])))')
     # echo "OK: Python version $VERSION is 3.11 or newer."
-    exit 0
 else
     VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:3])))' 2>/dev/null || echo "unknown")
     echo "Error: Python version ($VERSION) is older than 3.11. Please upgrade your Python installation."
