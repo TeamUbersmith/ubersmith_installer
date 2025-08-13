@@ -201,9 +201,8 @@
       backup: yes
     tags:
       - mysql_config
-      - upgrade
 
-  - name: create percona server innodb pool size configuration overrides
+  - name: create percona server extra configuration overrides
     ansible.builtin.template:
       src: "ubersmith_extra.cnf.j2"
       dest: "{{ ubersmith_home }}/conf/mysql/ubersmith_extra.cnf"
@@ -213,6 +212,7 @@
       backup: yes
     tags:
       - mysql_config
+      - upgrade
 
   # The MySQL component configuration files is created on the local filesystem to
   # enable at-rest encryption.
