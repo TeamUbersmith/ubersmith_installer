@@ -21,6 +21,13 @@
     tags:
       - upgrade
 
+  - name: set app_mysql_version to 5.6 if not set
+    ansible.builtin.set_fact:
+      app_mysql_version: "5.6"
+    when: app_mysql_version is not defined
+    tags:
+      - upgrade_only
+
   # In the event of a failed upgrade attempt, ensure the bare minimum of containers is running before proceeding
   # docker compose up -d web db php
   - name: check ubersmith containers before proceeding with upgrade
@@ -309,6 +316,22 @@
     tags:
       - upgrade_only
       - mysql_upgrade_57
+
+  # Store the configuration values specified during the deploy for use during
+  # future upgrades.
+  - name: database upgrade successful, set value in ini file for future use
+    community.general.ini_file:
+      dest: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
+      section: ubersmith_installer
+      option: "{{ item.var }}"
+      value: "{{ item.val }}"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: "0644"
+    with_items:
+      - { var: 'app_mysql_version', val: "5.7"}
+    tags:
+      - upgrade
 
   - name: remove mysql 5.7 container
     community.docker.docker_container:
