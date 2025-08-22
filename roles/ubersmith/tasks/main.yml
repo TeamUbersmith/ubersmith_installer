@@ -48,7 +48,7 @@
       - release_notes_prompt
       - upgrade_only
   
-  # See if {{ ubersmith_home }}/.patched exists, abort if it does.
+  # When upgrading, remove all patches
   - name: determine if the installation has been patched
     ansible.builtin.stat:
       path: "{{ ubersmith_home }}/.patched"
@@ -58,13 +58,37 @@
     tags:
       - upgrade_only
 
-  - name: fail if ubersmith has been patched
-    ansible.builtin.fail:
-      msg: "Ubersmith appears to be patched. Review the patch configuration and remove the file .patched from {{ ubersmith_home }} to proceed. If you have questions about the patch or are unsure how to proceed, please contact support@ubersmith.com."
+  - name: move .patched file using the move module
+    community.general.move:
+      src: "{{ ubersmith_home }}/.patched"
+      dest: "{{ ubersmith_home }}/.patched-pre-{{ ubersmith_version }}"
     when: 
       - patched.stat.exists
       - interactive
     tags:
+      - remove_patches
+      - upgrade_only
+
+  - name: remove .patched file
+    ansible.builtin.file:
+      path: "{{ ubersmith_home }}/.patched"
+      state: absent
+    when: 
+      - patched.stat.exists
+      - interactive
+    tags:
+      - remove_patches
+      - upgrade_only
+
+  - name: remove patches directory
+    ansible.builtin.file:
+      path: "{{ ubersmith_home }}/app/patches"
+      state: absent
+    when: 
+      - patched.stat.exists
+      - interactive
+    tags:
+      - remove_patches
       - upgrade_only
 
   # Store the configuration values specified during the deploy for use during
