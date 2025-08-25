@@ -6,19 +6,19 @@
   IncludeOptional {{ ubersmith_root }}/conf/httpd/*.{{ item }}.conf
   SetEnvIf Request_URI "^/(images|css|js|locale|admin/minidash.php)" dontlog
   SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
-  LogFormat "%h %l %{UberUser}n %{UberElapsed}n %{UberSessionWait}n %{UberSessionLock}n %{UberQueryTime}n %{UberQueryTime2}n %t \"%r\" %>s %b" ubersmith
+  LogFormat "%h %l %{UberUser}n %{UberElapsed}n %{UberSessionWait}n %{UberSessionLock}n %{UberQueryTime}n %{UberQueryTime2}n %t \"%r\" %>s %b \"X-Ubersmith-Api-Token: %{X-Ubersmith-Api-Token}o\"" ubersmith
   ErrorLog /dev/stderr
-  CustomLog /dev/stdout combined env=!dontlog
+  CustomLog /dev/stdout ubersmith env=!dontlog
   Options +FollowSymLinks
   DirectoryIndex index.php
   LimitRequestBody 53000000
 
   SetEnvIf Content-Type "(.*)" HTTP_CONTENT_TYPE=$1
-  
+
   <IfModule mod_rewrite.c>
     RedirectMatch 404 ^/app/.*$
     RewriteEngine On
-    
+
     RewriteCond %{REQUEST_URI} \.js\.php$
     RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f
     RewriteRule ^(.*)$ fcgi://{{ fcgi_host }}:9000%{DOCUMENT_ROOT}/js/js.includer.php?_u=$1 [L,QSA,P]
@@ -33,7 +33,7 @@
     SetEnv MOD_REWRITE true
 
   </IfModule>
-  
+
 </VirtualHost>
 
 <VirtualHost *:443>
@@ -44,10 +44,10 @@
   IncludeOptional {{ ubersmith_root }}/conf/httpd/*.{{ item }}.ssl.conf
   SetEnvIf Request_URI "^/(images|css|js|locale|admin/minidash.php)" dontlog
   SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
-  LogFormat "%h %l %{UberUser}n %{UberElapsed}n %{UberSessionWait}n %{UberSessionLock}n %{UberQueryTime}n %{UberQueryTime2}n %t \"%r\" %>s %b" ubersmith
+  LogFormat "%h %l %{UberUser}n %{UberElapsed}n %{UberSessionWait}n %{UberSessionLock}n %{UberQueryTime}n %{UberQueryTime2}n %t \"%r\" %>s %b \"X-Ubersmith-Api-Token: %{X-Ubersmith-Api-Token}o\"" ubersmith
   ErrorLog /dev/stderr
-  CustomLog /dev/stdout combined env=!dontlog
- 
+  CustomLog /dev/stdout ubersmith env=!dontlog
+
   # enable HTTP/2, if available
   Protocols h2 http/1.1
 
@@ -65,11 +65,11 @@
   SSLSessionTickets       off
 
   SSLEngine On
-    
+
   Options +FollowSymLinks
   DirectoryIndex index.php
   LimitRequestBody 53000000
-  
+
   SetEnvIf Content-Type "(.*)" HTTP_CONTENT_TYPE=$1
 
   <IfModule mod_proxy_fcgi.c>
@@ -96,12 +96,12 @@
     SetEnv MOD_REWRITE true
 
   </IfModule>
-  
+
 </VirtualHost>
 
 <Directory {{ ubersmith_root }}/app/www >
 	AllowOverride None
-	
+
 	<LimitExcept POST GET>
 		Require all denied
 	</LimitExcept>
