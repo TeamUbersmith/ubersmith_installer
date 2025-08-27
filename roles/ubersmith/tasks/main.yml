@@ -59,9 +59,7 @@
       - upgrade_only
 
   - name: move .patched file using the move module
-    community.general.move:
-      src: "{{ ubersmith_home }}/.patched"
-      dest: "{{ ubersmith_home }}/.patched-pre-{{ ubersmith_version }}"
+    ansible.builtin.command: mv "{{ ubersmith_home }}/.patched" "{{ ubersmith_home }}/.patched-pre-{{ ubersmith_version }}"
     when: 
       - patched.stat.exists
       - interactive
