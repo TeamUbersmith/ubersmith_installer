@@ -57,7 +57,7 @@
     assert:  
       that:
         - "ansible_distribution_version|int >= supported_debian_ver"
-        - "{{ ansible_kernel is version_compare('4.0', '>=' ) }}"
+        - "ansible_kernel is version_compare('4.0', '>=' )"
       msg: "Ensure Host is running supported Debian"
     when: ansible_distribution == 'Debian'
     tags:
