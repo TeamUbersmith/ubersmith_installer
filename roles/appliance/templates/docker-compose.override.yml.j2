@@ -16,7 +16,7 @@ services:
       MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
       MYSQL_PASSWORD: "{{ mysql_appliance_password }}"
     volumes:
-      - "{{ appliance_home }}/conf/mysql:/etc/mysql/conf.d"
+      - "{{ appliance_home }}/conf/mysql:/etc/ubersmith.conf.d"
 {% if ansible_os_family != 'Darwin' %}
       - "{{ timezone_file.stdout }}:/etc/localtime"
 {% endif %}
