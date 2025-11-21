@@ -83,6 +83,20 @@
     tags:
       - upgrade
 
+  # The Percona Server configuration file is created on the local filesystem to facilitate
+  # editing without having to enter the container. A restart of the 'app_db' container is
+  # required if this file is modified.
+  - name: create percona server configuration overrides
+    ansible.builtin.template:
+      src: "ubersmith.cnf.{{ ubersmith_major_version }}.j2"
+      dest: "{{ appliance_home }}/conf/mysql/ubersmith.cnf"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ ansible_user_gid }}"
+      mode: "0644"
+      backup: yes
+    tags:
+      - mysql_config
+
   # Get the system's timezone data for use in Docker Compose files
   - name: readlink /etc/localtime and register timezone_file
     ansible.builtin.shell: readlink -f /etc/localtime
