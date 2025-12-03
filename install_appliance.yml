@@ -1,25 +1,25 @@
 ---
+- name: Install Appliance
+  hosts: local
+  any_errors_fatal: true
 
-  - hosts: local
-    any_errors_fatal: true
+  vars_prompt:
+    - name: "ubersmith_major_version"
+      prompt: "Choose which version of Ubersmith's Appliance to install (4 or 5)"
+      default: "5"
+      private: false
+    - name: "appliance_home"
+      prompt: "Choose an installation directory for Ubersmith's Appliance"
+      default: "/usr/local/ubersmith"
+      private: false
+    - name: "app_virtual_host"
+      prompt: "Enter the domain name associated with your Ubersmith installation"
+      default: "example.com"
+      private: false
 
-    vars_prompt:
-      - name: "ubersmith_major_version"
-        prompt: "Choose which version of Ubersmith's Appliance to install (4 or 5)"
-        default: "5"
-        private: no
-      - name: "appliance_home"
-        prompt: "Choose an installation directory for Ubersmith's Appliance"
-        default: "/usr/local/ubersmith"
-        private: no
-      - name: "app_virtual_host"
-        prompt: "Enter the domain name associated with your Ubersmith installation"
-        default: "example.com"
-        private: no
+  vars:
+    interactive: true
 
-    vars:
-      interactive: true
-
-    roles:
-      - common
-      - appliance
+  roles:
+    - common
+    - appliance

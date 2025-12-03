@@ -20,7 +20,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-            name: Ubersmith Installer ${{ github.ref_name }}
-            files: ../ubersmith-installer-${{ github.ref_name }}.tar.gz
+          name: Ubersmith Installer ${{ github.ref_name }}
+          files: ../ubersmith-installer-${{ github.ref_name }}.tar.gz
       - name: Checksums
         uses: wangzuo/action-release-checksums@v1.0.1

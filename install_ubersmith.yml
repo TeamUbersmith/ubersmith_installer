@@ -1,35 +1,35 @@
 ---
+- name: Install Ubersmith
+  hosts: local
+  any_errors_fatal: true
 
-  - hosts: local
-    any_errors_fatal: true
+  vars_prompt:
+    - name: "ubersmith_major_version"
+      prompt: "Choose which version of Ubersmith to install (4 or 5)"
+      default: "5"
+      private: false
+    - name: "ubersmith_home"
+      prompt: "Choose an installation directory for Ubersmith"
+      default: "/usr/local/ubersmith"
+      private: false
+    - name: "lets_encrypt_certificate"
+      prompt: "Should the installer request a security certificate from Let's Encrypt?"
+      default: "yes"
+      private: false
+    - name: "virtual_host"
+      prompt: "Enter the hostname(s) where you will be hosting Ubersmith; for multiple hostnames use a comma delimited list"
+      default: "ubersmith.example.com"
+      private: false
+    - name: "admin_email"
+      prompt: "Enter the email address of the Ubersmith administrator"
+      default: "admin@example.org"
+      private: false
 
-    vars_prompt:
-      - name: "ubersmith_major_version"
-        prompt: "Choose which version of Ubersmith to install (4 or 5)"
-        default: "5"
-        private: no
-      - name: "ubersmith_home"
-        prompt: "Choose an installation directory for Ubersmith"
-        default: "/usr/local/ubersmith"
-        private: no
-      - name: "lets_encrypt_certificate"
-        prompt: "Should the installer request a security certificate from Let's Encrypt?"
-        default: "yes"
-        private: no
-      - name: "virtual_host"
-        prompt: "Enter the hostname(s) where you will be hosting Ubersmith; for multiple hostnames use a comma delimited list"
-        default: "ubersmith.example.com"
-        private: no
-      - name: "admin_email"
-        prompt: "Enter the email address of the Ubersmith administrator"
-        default: "admin@example.org"
-        private: no
+  vars:
+    interactive: true
+    certificate_domains: "{{ virtual_host }}"
+    notify_email: "{{ admin_email }}"
 
-    vars:
-      interactive: true
-      certificate_domains: "{{ virtual_host }}"
-      notify_email: "{{ admin_email }}"
-
-    roles:
-      - common
-      - ubersmith
+  roles:
+    - common
+    - ubersmith

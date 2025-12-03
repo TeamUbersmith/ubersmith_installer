@@ -33,7 +33,7 @@
       # Store the configuration values specified during the deploy for use during
       # future upgrades.
       - name: set up ini_file for future use
-        ini_file:
+        community.general.ini_file:
           dest: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
           section: ubersmith_installer
           option: "{{ item.var }}"
