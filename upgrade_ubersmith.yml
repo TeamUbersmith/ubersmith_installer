@@ -22,23 +22,23 @@
   vars:
     ubersmith_home: >-
       {{ lookup('ini', 'ubersmith_home section=ubersmith_installer
-      file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
+        file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
     virtual_host: >-
       {{ lookup('ini', 'virtual_host section=ubersmith_installer
-      file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
+        file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
     admin_email: >-
       {{ lookup('ini', 'admin_email section=ubersmith_installer
-      file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
+        file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
     notify_email: >-
       {{ lookup('ini', 'admin_email section=ubersmith_installer
-      file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
+        file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
     ubersmith_installed_version: >-
       {{ lookup('ini', 'ubersmith_installed_version section=ubersmith_installer
-      file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
+        file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
     ubersmith_major_version: "5"
     lets_encrypt_certificate: >-
       {{ lookup('ini', 'lets_encrypt_certificate section=ubersmith_installer
-      file={{ ansible_user_dir }}/.ubersmith_installer.ini default=yes') }}
+        file={{ ansible_user_dir }}/.ubersmith_installer.ini default=yes') }}
     interactive: true
 
   roles:

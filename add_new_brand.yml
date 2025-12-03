@@ -14,21 +14,21 @@
   vars:
     existing_virtual_host: >-
       {{ lookup('ini', 'virtual_host section=ubersmith_installer
-      file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
+        file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
     virtual_host: "{{ existing_virtual_host }},{{ new_virtual_host }}"
     certificate_domains: "{{ virtual_host }}"
     ubersmith_home: >-
       {{ lookup('ini', 'ubersmith_home section=ubersmith_installer
-      file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
+        file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
     admin_email: >-
       {{ lookup('ini', 'admin_email section=ubersmith_installer
-      file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
+        file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
     notify_email: >-
       {{ lookup('ini', 'admin_email section=ubersmith_installer
-      file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
+        file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
     ubersmith_installed_version: >-
       {{ lookup('ini', 'ubersmith_installed_version section=ubersmith_installer
-      file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
+        file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
     interactive: true
 
   roles:
