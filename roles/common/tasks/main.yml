@@ -26,7 +26,7 @@
       - os 
 
   - name: Verify OS Distribution is Debian, CentOS, Rocky, or Ubuntu
-    assert:  
+    ansible.builtin.assert:
       that:
         - "ansible_distribution in supported_os"
       msg: "Ensure Host is running Debian, CentOS, Rocky, or Ubuntu."
@@ -34,17 +34,17 @@
       - os
 
   - name: Verify Ubuntu OS Distribution Version and Kernel
-    assert:  
+    ansible.builtin.assert:
       that:
         - ansible_distribution_version is version_compare(supported_ubuntu_ver, '>=')
-        - ansible_kernel is version_compare('4.4.0', '>=' )
+        - ansible_kernel is version_compare('4.4.0', '>=')
       msg: "Ensure Host is running supported Ubuntu LTS with 4.4.0+ kernel"
     when: ansible_distribution == 'Ubuntu'
     tags:
       - os
 
   - name: Verify CentOS OS Distribution Version and Kernel
-    assert:  
+    ansible.builtin.assert:
       that:
         - ansible_distribution_version|int >= supported_centos_ver
         - ansible_kernel is version_compare('3.10.0-693', '>=')
@@ -54,10 +54,10 @@
       - os
 
   - name: Verify Debian OS Distribution Version and Kernel
-    assert:  
+    ansible.builtin.assert:
       that:
         - "ansible_distribution_version|int >= supported_debian_ver"
-        - "ansible_kernel is version_compare('4.0', '>=' )"
+        - "ansible_kernel is version_compare('4.0', '>=')"
       msg: "Ensure Host is running supported Debian"
     when: ansible_distribution == 'Debian'
     tags:
@@ -71,9 +71,9 @@
     register: docker_result
     tags:
       - upgrade
-  
+
   - name: display docker_host_info info
-    debug:
+    ansible.builtin.debug:
       var: docker_result
     when:
       - debug is defined
@@ -93,20 +93,21 @@
   # Check the version reported by the running version of Docker.
   - name: verify docker version
     ansible.builtin.fail:
-      msg:  "The Docker version installed is not supported. Please upgrade Docker (https://docs.docker.com/engine/installation/)."
+      msg: "The Docker version installed is not supported. Please upgrade Docker (https://docs.docker.com/engine/installation/)."
     when: docker_result.host_info.ServerVersion is version(docker_ok_version, '<')
     tags:
       - upgrade
 
   # Enable the Docker service in the event the installer / sysadmin did not.
   - name: ensure the docker service is enabled
-    service:
+    ansible.builtin.service:
       name: docker
-      enabled: yes
+      enabled: true
     register: docker_enabled
     failed_when:
       - docker_enabled.enabled is defined
       - not docker_enabled.enabled
-    when: 
+    when:
       - ansible_os_family != "Darwin"
       - ansible_os_family != "Windows"
+

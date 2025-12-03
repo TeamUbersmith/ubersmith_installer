@@ -1,28 +1,27 @@
 ---
+appliance_root: /var/www/appliance_root
+mysql_root_password: "{{ lookup('password', ansible_user_dir + '/.appliance_' + app_virtual_host + '_root_db_pass chars=ascii_letters,digits') }}"
+mysql_appliance_password: "{{ lookup('password', ansible_user_dir + '/.appliance_' + app_virtual_host + '_appliance_db_pass') }}"
+mysql_appliance_user_password: "{{ lookup('password', ansible_user_dir + '/.appliance_' + app_virtual_host + '_appliance_user_pass') }}"
+uberapp_user_password: "{{ lookup('password', ansible_user_dir + '/.appliance_' + app_virtual_host + '_appliance_xmlrpc_pass') }}"
 
-  appliance_root: /var/www/appliance_root
-  mysql_root_password: "{{ lookup('password', ansible_user_dir + '/.appliance_' + app_virtual_host + '_root_db_pass chars=ascii_letters,digits') }}"
-  mysql_appliance_password: "{{ lookup('password', ansible_user_dir + '/.appliance_' + app_virtual_host + '_appliance_db_pass') }}"
-  mysql_appliance_user_password: "{{ lookup('password', ansible_user_dir + '/.appliance_' + app_virtual_host + '_appliance_user_pass') }}"
-  uberapp_user_password: "{{ lookup('password', ansible_user_dir + '/.appliance_' + app_virtual_host + '_appliance_xmlrpc_pass') }}"
+appliance_release:
+  "4":
+    mysql_version: 57
+    appliance_release_version: 4.6.3
+    backup_version: 2
+    containers:
+      release_version: r4
+      appweb_container_repo: "appliance"
+  "5":
+    mysql_version: 80
+    appliance_release_version: 5.1.1
+    backup_version: 8
+    containers:
+      release_version: r1
+      appweb_container_repo: "appliance"
 
-  appliance_release:
-    "4": 
-      mysql_version: 57
-      appliance_release_version: 4.6.3
-      backup_version: 2
-      containers:
-        release_version: r4
-        appweb_container_repo: "appliance"
-    "5":
-      mysql_version: 80
-      appliance_release_version: 5.1.1
-      backup_version: 8
-      containers:
-        release_version: r1
-        appweb_container_repo: "appliance"
+appliance_version: "{{ appliance_release[ubersmith_major_version].appliance_release_version }}"
+containers_release_version: "{{ appliance_release[ubersmith_major_version].containers.release_version }}"
 
-  appliance_version: "{{ appliance_release[ubersmith_major_version].appliance_release_version }}"
-  containers_release_version: "{{ appliance_release[ubersmith_major_version].containers.release_version }}"
-
-  registry: ghcr.io/teamubersmith
+registry: ghcr.io/teamubersmith

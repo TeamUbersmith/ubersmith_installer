@@ -1,19 +1,19 @@
 ---
+# In the event of a failed upgrade attempt, ensure the bare minimum of containers is running before proceeding
+# docker compose up -d web db php
+- name: check ubersmith containers before proceeding with upgrade
+  ansible.builtin.command: docker compose up -d web db php
+  args:
+    chdir: "{{ ubersmith_home }}"
+  changed_when: false
+  tags:
+    - upgrade_only
 
-  # In the event of a failed upgrade attempt, ensure the bare minimum of containers is running before proceeding
-  # docker compose up -d web db php
-  - name: check ubersmith containers before proceeding with upgrade
-    ansible.builtin.command: docker compose up -d web db php
-    args:
-      chdir: "{{ ubersmith_home }}"
-    tags:
-      - upgrade_only
-
-  # Check if required containers are available; if not stop the install/upgrade
-  - name: pull required images; this may take a few moments 
-    community.docker.docker_image:
-        name: "{{ item }}"
-        source: pull
+# Check if required containers are available; if not stop the install/upgrade
+- name: pull required images; this may take a few moments
+  community.docker.docker_image:
+    name: "{{ item }}"
+    source: pull
     with_items:
       - "{{ registry }}/solr:{{ ubersmith_version }}-{{ containers_release_version }}"
       - "{{ registry }}/ps{{ ubersmith_release[ubersmith_major_version].mysql_version }}:{{ ubersmith_version }}-{{ containers_release_version }}"
@@ -31,47 +31,48 @@
     tags:
       - upgrade
 
-  # Backups are important, but especially with database version changes in 5.0.0
-  - name: print administrator reminders
-    ansible.builtin.pause:
-      prompt: |-
-        Before upgrading, please read the release notes at 
-        https://ubersmith.com/release-notes/
-        
-        Please ensure you have made a backup of your Ubersmith database 
-        before proceeding with the upgrade process. 
-        
-        (CTRL+C to continue)
-    when:
-      - interactive
-    tags:
-      - release_notes_prompt
-      - upgrade_only
-  
-  # When upgrading, remove all patches
-  - name: determine if the installation has been patched
-    ansible.builtin.stat:
-      path: "{{ ubersmith_home }}/.patched"
-    register: patched
-    when:
-      - interactive
-    tags:
-      - upgrade_only
+# Backups are important, but especially with database version changes in 5.0.0
+- name: print administrator reminders
+  ansible.builtin.pause:
+    prompt: |-
+      Before upgrading, please read the release notes at
+      https://ubersmith.com/release-notes/
 
-  - name: move .patched file using the move module
-    ansible.builtin.command: mv "{{ ubersmith_home }}/.patched" "{{ ubersmith_home }}/.patched-pre-{{ ubersmith_version }}"
-    when: 
-      - patched.stat.exists
-      - interactive
-    tags:
-      - remove_patches
-      - upgrade_only
+      Please ensure you have made a backup of your Ubersmith database
+      before proceeding with the upgrade process.
+
+      (CTRL+C to continue)
+  when:
+    - interactive
+  tags:
+    - release_notes_prompt
+    - upgrade_only
+
+# When upgrading, remove all patches
+- name: determine if the installation has been patched
+  ansible.builtin.stat:
+    path: "{{ ubersmith_home }}/.patched"
+  register: patched
+  when:
+    - interactive
+  tags:
+    - upgrade_only
+
+- name: move .patched file using the move module
+  ansible.builtin.command: mv "{{ ubersmith_home }}/.patched" "{{ ubersmith_home }}/.patched-pre-{{ ubersmith_version }}"
+  when:
+    - patched.stat.exists
+    - interactive
+  changed_when: true
+  tags:
+    - remove_patches
+    - upgrade_only
 
   - name: remove .patched file
     ansible.builtin.file:
       path: "{{ ubersmith_home }}/.patched"
       state: absent
-    when: 
+    when:
       - patched.stat.exists
       - interactive
     tags:
@@ -82,7 +83,7 @@
     ansible.builtin.file:
       path: "{{ ubersmith_home }}/app/patches"
       state: absent
-    when: 
+    when:
       - patched.stat.exists
       - interactive
     tags:
@@ -107,31 +108,34 @@
     tags:
       - new_brand
 
-  # Stop and disable MTAs; Ubersmith provides its own mail service
-  # If this fails, it's okay, but the Ubersmith mail container won't start
-  # if an MTA is still running and/or 25/tcp is in use.
-  - name: stop and disable mail transfer agents
-    ansible.builtin.service:
-      name: "{{ item }}"
-      enabled: no
-      state: stopped
-    with_items:
-      - postfix
-      - sendmail
-      - exim4
-    ignore_errors: true
-    when: 
-      - ansible_os_family != "Darwin"
+# Stop and disable MTAs; Ubersmith provides its own mail service
+# If this fails, it's okay, but the Ubersmith mail container won't start
+# if an MTA is still running and/or 25/tcp is in use.
+- name: stop and disable mail transfer agents
+  ansible.builtin.service:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+  with_items:
+    - postfix
+    - sendmail
+    - exim4
+  failed_when: false
+  when:
+    - ansible_os_family != "Darwin"
       - ansible_os_family != "Windows"
     tags:
       - disable_mtas
 
-  # Updates to docker-compose remove the project_container_index syntax
-  - name: alert admin to necessary license updates
-    ansible.builtin.pause:
-      prompt: "When upgrading from versions prior to Ubersmith 4.3.0, a change is being made to the naming convention for the database host. Please contact support@ubersmith.com to ensure your license record is updated (CTRL+C to continue)"
-    when:
-      - interactive
+# Updates to docker-compose remove the project_container_index syntax
+- name: alert admin to necessary license updates
+  ansible.builtin.pause:
+    prompt: >-
+      When upgrading from versions prior to Ubersmith 4.3.0, a change is being made to the
+      naming convention for the database host. Please contact support@ubersmith.com to ensure
+      your license record is updated (CTRL+C to continue)
+  when:
+    - interactive
       - ubersmith_installed_version is version_compare('4.3.0', '>' )
     tags:
       - upgrade_only
@@ -144,7 +148,7 @@
       state: directory
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
-      mode: 0775
+      mode: "0775"
     with_items:
        - "{{ ubersmith_home }}/logs/ubersmith"
        - "{{ ubersmith_home }}/conf/mail"
@@ -204,7 +208,7 @@
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: "0640"
-      backup: yes
+      backup: true
     with_items: "{{ virtual_hosts }}"
     tags:
       - new_brand
@@ -220,7 +224,7 @@
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: "0644"
-      backup: yes
+      backup: true
     tags:
       - mysql_config
 
@@ -231,7 +235,7 @@
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
       mode: "0644"
-      backup: yes
+      backup: true
     tags:
       - mysql_config
       - upgrade
@@ -285,7 +289,7 @@
       dest: "{{ ubersmith_home }}/conf/certbot/etc/renewal-hooks/deploy/ubersmith-deploy.sh"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
-      mode: 0755
+      mode: "0755"
     tags:
       - certbot
       - certbot_deploy_hook
@@ -298,7 +302,7 @@
       dest: "{{ ubersmith_home }}/conf/certbot/etc/renewal-hooks/deploy/postfix-deploy.sh"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
-      mode: 0755
+      mode: "0755"
     tags:
       - certbot
       - certbot_deploy_hook
@@ -345,8 +349,8 @@
       port: 80
       state: drained
     when:
-     - lets_encrypt_certificate is defined
-     - lets_encrypt_certificate == 'yes'
+  - lets_encrypt_certificate is defined
+  - lets_encrypt_certificate == 'yes'
     tags:
       - certbot
 
@@ -359,15 +363,15 @@
       user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
       ports:
         - "80:80"
-      auto_remove: yes
+      auto_remove: true
       volumes:
         - "{{ ubersmith_home }}/conf/certbot/etc:/etc/letsencrypt"
         - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
         - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
     with_items: "{{ virtual_hosts }}"
     when:
-     - lets_encrypt_certificate is defined
-     - lets_encrypt_certificate == 'yes'
+  - lets_encrypt_certificate is defined
+  - lets_encrypt_certificate == 'yes'
     tags:
       - certbot
 
@@ -377,8 +381,8 @@
       port: 80
       state: drained
     when:
-     - lets_encrypt_certificate is defined
-     - lets_encrypt_certificate == 'yes'
+  - lets_encrypt_certificate is defined
+  - lets_encrypt_certificate == 'yes'
     tags:
       - certbot
 
@@ -389,7 +393,7 @@
       container_default_behavior: compatibility
       entrypoint: /etc/letsencrypt/renewal-hooks/deploy/ubersmith-deploy.sh
       user: "{{ ansible_user_uid }}:{{ ansible_user_gid }}"
-      auto_remove: yes
+      auto_remove: true
       env:
         RENEWED_DOMAINS: "{{ item }}"
       volumes:
@@ -399,8 +403,8 @@
         - "{{ ubersmith_home }}/conf/ssl:/opt/certbot/deploy"
     with_items: "{{ virtual_hosts }}"
     when:
-     - lets_encrypt_certificate is defined
-     - lets_encrypt_certificate == 'yes'
+  - lets_encrypt_certificate is defined
+  - lets_encrypt_certificate == 'yes'
     tags:
       - certbot
       - certbot_renewal
@@ -411,8 +415,8 @@
       port: 80
       state: drained
     when:
-     - lets_encrypt_certificate is defined
-     - lets_encrypt_certificate == 'yes'
+  - lets_encrypt_certificate is defined
+  - lets_encrypt_certificate == 'yes'
     tags:
       - certbot
 
@@ -423,8 +427,8 @@
       dest: "{{ ubersmith_home }}/ubersmith_certbot_renew.sh"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
-      mode: 0700
-      backup: yes
+      mode: "0700"
+      backup: true
     tags:
       - le_renewal
       - certbot
@@ -438,8 +442,8 @@
       job: "{{ ubersmith_home }}/ubersmith_certbot_renew.sh"
       special_time: daily
     when:
-     - lets_encrypt_certificate is defined
-     - lets_encrypt_certificate == 'yes'
+  - lets_encrypt_certificate is defined
+  - lets_encrypt_certificate == 'yes'
     tags:
       - le_renewal
       - certbot
@@ -453,7 +457,7 @@
     tags:
       - compose_override_template
       - upgrade
-    when: 
+    when:
       - ansible_os_family != "Darwin"
       - ansible_os_family != "Windows"
 
@@ -465,8 +469,8 @@
       dest: "{{ ubersmith_home }}/docker-compose.yml"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
-      mode: 0600
-      backup: yes
+      mode: "0600"
+      backup: true
     vars:
       container_domain: "{{ main_virtual_host }}"
     tags:
@@ -480,8 +484,8 @@
       dest: "{{ ubersmith_home }}/.env"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
-      mode: 0600
-      backup: yes
+      mode: "0600"
+      backup: true
     tags:
       - dot_env
       - upgrade
@@ -494,20 +498,20 @@
       dest: "{{ ubersmith_home }}/docker-compose.override.yml"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
-      mode: 0600
-      backup: yes
+      mode: "0600"
+      backup: true
     vars:
       container_domain: "{{ main_virtual_host }}"
     tags:
       - compose_override_template
-  
+
   # For existing installs, update to Docker Compose v3
   - name: update docker compose override file
     ansible.builtin.replace:
       path: "{{ ubersmith_home }}/docker-compose.override.yml"
       replace: "version: '3'"
       regexp: "version: '2'"
-      backup: yes
+      backup: true
     tags:
       - upgrade_only
       - update_compose_override_template
@@ -518,8 +522,8 @@
       path: "{{ ubersmith_home }}/docker-compose.override.yml"
       replace: "/etc/php/{{ php_version }}"
       regexp: "/etc/php/{{ item }}"
-      backup: yes
-    with_items: 
+      backup: true
+    with_items:
       - "{{ old_php_versions }}"
     tags:
       - upgrade_only
@@ -531,7 +535,7 @@
       path: "{{ ubersmith_home }}/docker-compose.override.yml"
       replace: "/usr/local/apache2/conf/sites-enabled"
       regexp: "/etc/apache2/sites-enabled"
-      backup: yes
+      backup: true
     tags:
       - upgrade_only
       - update_compose_override_template
@@ -543,7 +547,7 @@
       dest: "{{ ubersmith_home }}"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
-      mode: 0700
+      mode: "0700"
     tags:
       - upgrade
 
@@ -554,7 +558,7 @@
       dest: "{{ ubersmith_home }}"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
-      mode: 0700
+      mode: "0700"
     tags:
       - upgrade
 
@@ -565,7 +569,7 @@
       dest: "{{ ubersmith_home }}/conf/falco/falco_rules.local.yaml"
       owner: "{{ ansible_user_id }}"
       group: "{{ ansible_user_gid }}"
-      mode: 0644
+      mode: "0644"
     tags:
       - upgrade
 
@@ -615,13 +619,13 @@
     tags:
       - upgrade_only
 
-  # Only when upgrading, make sure redis data is committed before we copy it.  
+  # Only when upgrading, make sure redis data is committed before we copy it.
   - name: trigger save of redis data if redis volume does not already exist
     community.docker.docker_container_exec:
       container: ubersmith-redis-1
       command: /bin/bash -c "/usr/local/bin/redis-cli SAVE"
     when: not redis_volume_output.exists
-    ignore_errors: true
+    failed_when: false
     tags:
       - upgrade_only
 
@@ -629,9 +633,10 @@
   - name: make a copy of dump.rdb if redis volume does not already exist
     ansible.builtin.command: docker cp ubersmith-redis-1:/data/dump.rdb .
     args:
-      chdir:  "{{ ubersmith_home }}"
+      chdir: "{{ ubersmith_home }}"
+      changed_when: false
     when: not redis_volume_output.exists
-    ignore_errors: true
+    failed_when: false
     tags:
       - upgrade_only
 
@@ -641,6 +646,7 @@
     ansible.builtin.command: docker compose rm -s -f web cron db php solr mail rsyslog rwhois redis redis-data certbot
     args:
       chdir: "{{ ubersmith_home }}"
+      changed_when: false
     tags:
       - upgrade_only
 
@@ -651,18 +657,20 @@
     when: webroot_volume_output.exists
     tags:
       - upgrade_only
-  
-  # This is an unfortunate side effect of moving to Docker Compose v3, and the fact that
-  # Ubersmith does not manage timezones within software (yet)
-  - name: give the administrator a chance to update docker-compose.override.yml
-    ansible.builtin.pause:
-      prompt: "Make sure docker-compose.override.yml has been updated to include a ports directive for web, and timezone volume entries for all containers (CTRL+C to continue)"
+
+# This is an unfortunate side effect of moving to Docker Compose v3, and the fact that
+# Ubersmith does not manage timezones within software (yet)
+- name: give the administrator a chance to update docker-compose.override.yml
+  ansible.builtin.pause:
+    prompt: >-
+      Make sure docker-compose.override.yml has been updated to include a ports directive
+      for web, and timezone volume entries for all containers (CTRL+C to continue)
     when:
       - interactive
       - ubersmith_installed_version is version_compare('4.6.0', '>' )
     tags:
       - upgrade_only
-  
+
   # Ensure permissions on database files are correct
   - name: make sure UID/GID 1001 owns the database files
     community.docker.docker_container:
@@ -671,7 +679,7 @@
       container_default_behavior: compatibility
       command: "chown -R 1001:1001 /mysql"
       user: root
-      auto_remove: yes
+      auto_remove: true
       log_driver: journald
       log_options:
         tag: ubersmith/busybox
@@ -685,10 +693,12 @@
 
   # Retrieve Ubersmith images from the repository and start containers
   # docker compose up -d --quiet-pull --no-color web cron db php solr mail rwhois redis redis-data
+    changed_when: false
   - name: update and start ubersmith containers
     ansible.builtin.command: docker compose up -d --quiet-pull --no-color web cron db php solr mail rsyslog rwhois redis-data
     args:
       chdir: "{{ ubersmith_home }}"
+      changed_when: false
     environment:
       MAINTENANCE: "1"
     tags:
@@ -700,8 +710,9 @@
     ansible.builtin.command: docker compose up -d --scale redis=3 redis
     args:
       chdir: "{{ ubersmith_home }}"
+      changed_when: false
     tags:
-      - upgrade      
+      - upgrade
 
   # Solr can take a little bit to start, so wait before proceeding with the upgrade.
   - name: wait for containers to come online
@@ -718,7 +729,7 @@
       - ubersmith-php-1
       - ubersmith-solr-1
     when:
-      - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"   
+      - "'DATABASE_HOST=db' in web_container_info.container.Config.Env"
     tags:
       - upgrade_only
 
@@ -726,9 +737,10 @@
   - name: copy dump.rdb if redis volume does not exist
     ansible.builtin.command: docker cp dump.rdb ubersmith-redis-data-1:/data/dump.rdb
     args:
-      chdir:  "{{ ubersmith_home }}"
+      chdir: "{{ ubersmith_home }}"
+      changed_when: false
     when: not redis_volume_output.exists
-    ignore_errors: true
+    failed_when: false
     tags:
       - upgrade_only
 
@@ -738,7 +750,7 @@
       container: ubersmith-redis-data-1
       command: /bin/bash -c "chown redis:redis /data/dump.rdb"
     when: not redis_volume_output.exists
-    ignore_errors: true
+    failed_when: false
     tags:
       - upgrade_only
 
@@ -756,7 +768,7 @@
       - docker_container_info
       - upgrade_only
       - mysql_upgrade
- 
+
   # For upgrades, run the updatedb.php script which performs the upgrade process.
   - name: run updatedb.php
     community.docker.docker_container_exec:
@@ -768,7 +780,7 @@
 
   # Show the upgrade output, in the event of any issues.
   - name: display updatedb.php debug output
-    ansible.builtin.debug: 
+    ansible.builtin.debug:
       var: "{{ item }}"
     with_items:
       - updatedb_output.stderr
@@ -789,6 +801,7 @@
     ansible.builtin.command: docker compose up -d --no-color web
     args:
       chdir: "{{ ubersmith_home }}"
+      changed_when: false
     environment:
       MAINTENANCE: "0"
     tags:
@@ -803,7 +816,7 @@
       container_default_behavior: compatibility
       command: "tar cvf /backup/component_keyring_file.{{ ansible_date_time.epoch }}.tar /keyring; chmod 0600 /backup/*.tar"
       user: root
-      auto_remove: yes
+      auto_remove: true
       log_driver: journald
       log_options:
         tag: ubersmith/busybox

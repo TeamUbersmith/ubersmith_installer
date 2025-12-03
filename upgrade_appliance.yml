@@ -1,33 +1,41 @@
 ---
+- name: Upgrade Appliance
+  hosts: local
+  any_errors_fatal: true
 
-  - hosts: local
-    any_errors_fatal: true
+  pre_tasks:
 
-    pre_tasks:
+    - name: Check for .ubersmith_installer.ini
+      ansible.builtin.stat:
+        path: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
+      register: installer_config
+      tags:
+        - upgrade
 
-      - name: check for .ubersmith_installer.ini
-        stat:
-          path: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
-        register: installer_config
-        tags:
-          - upgrade
+    - name: Fail if installer configuration is not present
+      ansible.builtin.fail:
+        msg: "Ubersmith installer configuration file is not present, please run configure.sh"
+      when: not installer_config.stat.exists
+      tags:
+        - upgrade
 
-      - name: fail if installer configuration is not present  
-        fail:
-          msg: "Ubersmith installer configuration file is not present, please run configure.sh"
-        when: not installer_config.stat.exists
-        tags:
-          - upgrade
-        
-    vars:
-      appliance_home: "{{ lookup('ini', 'appliance_home section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
-      app_virtual_host: "{{ lookup('ini', 'app_virtual_host section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
-      app_mysql_version: "{{ lookup('ini', 'app_mysql_version section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini default=5.6') }}"
-      appliance_installed_version: "{{ lookup('ini', 'appliance_installed_version section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}"
-      ubersmith_major_version: "5"
+  vars:
+    appliance_home: >-
+      {{ lookup('ini', 'appliance_home section=ubersmith_installer
+        file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
+    app_virtual_host: >-
+      {{ lookup('ini', 'app_virtual_host section=ubersmith_installer
+        file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
+    app_mysql_version: >-
+      {{ lookup('ini', 'app_mysql_version section=ubersmith_installer
+        file={{ ansible_user_dir }}/.ubersmith_installer.ini default=5.6') }}
+    appliance_installed_version: >-
+      {{ lookup('ini', 'appliance_installed_version section=ubersmith_installer
+        file={{ ansible_user_dir }}/.ubersmith_installer.ini') }}
+    ubersmith_major_version: "5"
 
-      interactive: true
+    interactive: true
 
-    roles:
-      - common
-      - appliance
+  roles:
+    - common
+    - appliance

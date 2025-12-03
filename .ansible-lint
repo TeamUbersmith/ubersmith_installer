@@ -1,2 +1,4 @@
-skip_list:  # or 'skip_list' to silence them completely 
+skip_list:  # or 'skip_list' to silence them completely
   - '201'  # Trailing whitespace
+  - var-naming[no-role-prefix]  # Would require extensive refactoring
+  - name[casing] 
