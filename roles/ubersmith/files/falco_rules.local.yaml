@@ -1,12 +1,20 @@
 - macro: uber_dir
-  condition: (fd.directory in (/var/www/ubersmith_root, /var/lib/docker/volumes/ubersmith_webroot/_data, /usr/local/ubersmith))
+  condition: >
+    (fd.directory in (/var/www/ubersmith_root,
+    /var/lib/docker/volumes/ubersmith_webroot/_data, /usr/local/ubersmith))
 
 - rule: Write below Ubersmith directory
-  desc: > 
-    Trying to write to any file below Ubersmith directories. This is an effective rule for detecting unusual behavior associated with system 
-    changes, including compliance-related cases.
+  desc: >
+    Trying to write to any file below Ubersmith directories. This is an effective rule
+    for detecting unusual behavior associated with system changes, including
+    compliance-related cases.
   condition: >
-    open_write and evt.dir=< 
+    open_write and evt.dir=<
     and uber_dir
-  output: File below Ubersmith directory opened for writing (file=%fd.name pcmdline=%proc.pcmdline gparent=%proc.aname[2] evt_type=%evt.type user=%user.name user_uid=%user.uid user_loginuid=%user.loginuid process=%proc.name proc_exepath=%proc.exepath parent=%proc.pname command=%proc.cmdline terminal=%proc.tty %container.info)
+  output: >
+    File below Ubersmith directory opened for writing (file=%fd.name
+    pcmdline=%proc.pcmdline gparent=%proc.aname[2] evt_type=%evt.type user=%user.name
+    user_uid=%user.uid user_loginuid=%user.loginuid process=%proc.name
+    proc_exepath=%proc.exepath parent=%proc.pname command=%proc.cmdline
+    terminal=%proc.tty %container.info)
   priority: ERROR
