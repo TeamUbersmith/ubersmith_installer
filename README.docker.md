@@ -94,7 +94,7 @@ The application uses:
   - SSL certificates and Apache configuration
 
 #### php
-- **Image**: `php{version}:{ubersmith_version}-{release}`
+- **Image**: `php{php_version}:{ubersmith_version}-{containers_release_version}` (e.g., `php73:4.6.4-r4` or `php84:5.1.3-r2`)
 - **Purpose**: PHP-FPM process manager for executing PHP application code
 - **Key Features**:
   - Processes PHP requests from the web service
@@ -130,8 +130,8 @@ The application uses:
 ### Database Services
 
 #### db
-- **Image**: `ps{mysql_version}:{version}-{release}` (Percona Server)
-- **Purpose**: Primary relational database for application data
+- **Image**: `ps{mysql_version}:{ubersmith_version}-{containers_release_version}` (e.g., `ps57:4.6.4-r4` or `ps80:5.1.3-r2`)
+- **Purpose**: Primary relational database for application data (Percona Server)
 - **Ports**: 
   - `127.0.0.1:3306:3306` - MySQL protocol (localhost only)
 - **Versions Supported**:
@@ -311,7 +311,7 @@ The application uses:
 ### Utility Services
 
 #### backup
-- **Image**: `xtrabackup{backup_version}:{version}-{release}`
+- **Image**: `xtrabackup{backup_version}:{ubersmith_version}-{containers_release_version}` (e.g., `xtrabackup2:4.6.4-r4` or `xtrabackup8:5.1.3-r2`)
 - **Purpose**: MySQL database backup using Percona XtraBackup
 - **Versions**:
   - XtraBackup 2.x for MySQL 5.7
