@@ -24,7 +24,10 @@
   mysql_root_password: "{{ lookup('password', ansible_user_dir + '/.ubersmith_' + main_virtual_host + '_root_db_pass chars=ascii_letters,digits') }}"
   mysql_ubersmith_password: "{{ lookup('password', ansible_user_dir + '/.ubersmith_' + main_virtual_host + '_ubersmith_db_pass') }}"
   # FIXME: Implement a rescue block in case this website is down
-  mozilla_ciphers: "{{ lookup('ansible.builtin.url', 'https://ssl-config.mozilla.org/guidelines/latest.json', split_lines=False) | from_json }}"
+  # ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305"
+
+  mozilla_ciphers: "{{ (lookup('ansible.builtin.url', 'https://ssl-config.mozilla.org/guidelines/latest.json', split_lines=False) | from_json) | default({'ciphers': 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384'}) }}"
+
 
   ubersmith_release:
     "4":
