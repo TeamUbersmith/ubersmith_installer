@@ -5,7 +5,6 @@ This document provides a comprehensive overview of Ubersmith's Docker-based arch
 ## Table of Contents
 
 - [Overview](#overview)
-- [Architecture Diagram](#architecture-diagram)
 - [Services](#services)
   - [Core Application Services](#core-application-services)
   - [Database Services](#database-services)
@@ -15,9 +14,7 @@ This document provides a comprehensive overview of Ubersmith's Docker-based arch
   - [Utility Services](#utility-services)
 - [Networking](#networking)
 - [Volume Management](#volume-management)
-- [Environment Variables](#environment-variables)
 - [Dependencies and Prerequisites](#dependencies-and-prerequisites)
-- [Configuration Files](#configuration-files)
 
 ## Overview
 
