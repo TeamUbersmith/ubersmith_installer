@@ -43,7 +43,8 @@ echo "Installing Dependencies..."
 pip3 install --disable-pip-version-check -q -r requirements_pip.txt
 ansible-galaxy install -r requirements_ansible.yml
 
-echo "Upgrading Ubersmith..."
+echo "Starting screen and upgrading Ubersmith..."
 
-screen -dmS ubersmith_upgrade ansible-playbook -i ./hosts -e ansible_python_interpreter=$(which python3) -c local -t upgrade,upgrade_only upgrade_ubersmith.yml
+TIMESTAMP=$(date +%s)
+screen -L -Logfile "ubersmith_upgrade_${TIMESTAMP}.log" -dmS ubersmith_upgrade bash -c 'ansible-playbook -i ./hosts -e ansible_python_interpreter=$(which python3) -c local -t upgrade,upgrade_only upgrade_ubersmith.yml; exec bash'
 screen -r ubersmith_upgrade
