@@ -12,7 +12,13 @@ echo "Checking for Python 3.11 or newer..."
 
 # Check if python3 command exists
 if ! command -v python3 &> /dev/null; then
-    echo "Error: python3 is not installed or not in your PATH. Please check the Installation "
+    echo "Error: python3 is not installed or not in your PATH. Please install it and try again."
+    exit 1
+fi
+
+# Check if screen command exists
+if ! command -v screen &> /dev/null; then
+    echo "Error: GNU screen is not installed. Please install it and try again."
     exit 1
 fi
 
@@ -38,4 +44,6 @@ pip3 install --disable-pip-version-check -q -r requirements_pip.txt
 ansible-galaxy install -r requirements_ansible.yml
 
 echo "Upgrading Ubersmith..."
-ansible-playbook -i ./hosts -e ansible_python_interpreter=$(which python3) -c local -t upgrade,upgrade_only upgrade_ubersmith.yml
+
+screen -dmS ubersmith_upgrade ansible-playbook -i ./hosts -e ansible_python_interpreter=$(which python3) -c local -t upgrade,upgrade_only upgrade_ubersmith.yml
+screen -r ubersmith_upgrade

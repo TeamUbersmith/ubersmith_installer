@@ -236,6 +236,17 @@
       - mysql_config
       - upgrade
 
+  - name: ensure sql_mode is only set to NO_ENGINE_SUBSTITUTION for 5.x upgrades
+    ansible.builtin.lineinfile:
+      path: "{{ ubersmith_home }}/conf/mysql/ubersmith.cnf"
+      regexp: '^sql_mode\s*='
+      line: 'sql_mode = "NO_ENGINE_SUBSTITUTION"'
+      backup: yes
+    when: ubersmith_major_version | int == 5
+    tags:
+      - mysql_config
+      - upgrade
+
   # The MySQL component configuration files is created on the local filesystem to
   # enable at-rest encryption.
   - name: create mysql component configuration
@@ -500,13 +511,14 @@
       container_domain: "{{ main_virtual_host }}"
     tags:
       - compose_override_template
-  
-  # For existing installs, update to Docker Compose v3
-  - name: update docker compose override file
-    ansible.builtin.replace:
+
+  # For existing installs, remove any version line from docker-compose.override.yml
+  - name: remove version line from docker-compose.override.yml if present
+    ansible.builtin.lineinfile:
       path: "{{ ubersmith_home }}/docker-compose.override.yml"
-      replace: "version: '3'"
-      regexp: "version: '2'"
+      regexp: "^version: '([23])'"
+      state: absent
+      firstmatch: yes
       backup: yes
     tags:
       - upgrade_only
