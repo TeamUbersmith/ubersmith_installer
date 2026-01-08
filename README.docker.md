@@ -214,7 +214,7 @@ The application uses:
   - `web`
 
 #### clamav
-- **Image**: `clamav/clamav:1.3_base`
+- **Image**: `clamav/clamav:1.4_base`
 - **Purpose**: Antivirus engine for scanning emails and uploads
 - **Features**:
   - Automatic signature updates

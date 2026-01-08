@@ -260,7 +260,7 @@ services:
       web:
         condition: service_started
   clamav:
-    image: clamav/clamav:1.3_base
+    image: clamav/clamav:1.4_base
     restart: unless-stopped
     hostname: clamav.{{ container_domain }}
     volumes:

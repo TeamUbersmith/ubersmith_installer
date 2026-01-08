@@ -27,7 +27,7 @@
       - "{{ registry }}/rsyslog:{{ ubersmith_version }}-{{ containers_release_version }}"
       - "ghcr.io/teamubersmith/certbot:{{ certbot_version }}"
       - "falcosecurity/falco-no-driver:latest"
-      - "clamav/clamav:1.3_base"
+      - "clamav/clamav:1.4_base"
     tags:
       - upgrade
 
