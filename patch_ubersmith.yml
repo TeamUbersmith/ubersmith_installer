@@ -11,6 +11,11 @@
       ubersmith_major_version: "{{ ubersmith_version.split('.')[0] }}"
     tasks:
 
+      - name: fail if patches volume is not in docker compose file
+        ansible.builtin.fail:
+          msg: "Ubersmith is not currently configured to accept patches. Please contact support@ubersmith.com."
+        when: "'/var/www/ubersmith_root/app/patches' not in lookup('file', ubersmith_home + '/docker-compose.override.yml')"
+
       - name: remove .patched file
         ansible.builtin.file:
           path: "{{ ubersmith_home }}/.patched"
