@@ -10,8 +10,8 @@ innodb_flush_log_at_trx_commit = 2
 innodb_redo_log_capacity       = 128M
 innodb_fast_shutdown           = 0
 local-infile                   = 0
-# 60% of total system memory at install time 
-innodb_buffer_pool_size        = {{ (ansible_memtotal_mb * 0.6)|round|int }}M
+# 30% of total system memory at install time 
+innodb_buffer_pool_size        = {{ (ansible_memtotal_mb * 0.3)|round|int }}M
 
 # sql_mode = "STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"
 sql_mode = "NO_ENGINE_SUBSTITUTION"
