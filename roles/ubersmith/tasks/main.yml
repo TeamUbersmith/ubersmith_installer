@@ -223,6 +223,7 @@
       backup: yes
     tags:
       - mysql_config
+      - upgrade
 
   - name: create percona server extra configuration overrides
     ansible.builtin.template:
