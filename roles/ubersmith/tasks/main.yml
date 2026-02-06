@@ -661,18 +661,6 @@
     tags:
       - upgrade_only
 
-  # Update MySQL user authentication method if upgrading from prior to 5.2.0
-  - name: update mysql to use caching_sha2_password
-    ansible.builtin.command: >-
-      docker compose exec db sh -c 'mysql -u root -p$MYSQL_ROOT_PASSWORD -e "ALTER USER
-      '\''root'\''@'\''%'\'' IDENTIFIED WITH '\''caching_sha2_password'\'' BY
-      '\''$MYSQL_ROOT_PASSWORD'\'';"'
-    args:
-      chdir: "{{ ubersmith_home }}"
-    when: ubersmith_installed_version is version_compare('5.2.0', '<')
-    tags:
-      - upgrade_only
-
   # Only when upgrading, stop and remove default existing Ubersmith containers.
   # docker compose rm -s -f
   - name: stop existing containers
