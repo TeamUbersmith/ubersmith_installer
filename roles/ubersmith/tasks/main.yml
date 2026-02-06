@@ -221,6 +221,7 @@
       group: "{{ ansible_user_gid }}"
       mode: "0644"
       backup: yes
+    when: ubersmith_installed_version is version_compare('5.2.0', '<')
     tags:
       - mysql_config
       - upgrade
@@ -645,6 +646,30 @@
       chdir:  "{{ ubersmith_home }}"
     when: not redis_volume_output.exists
     ignore_errors: true
+    tags:
+      - upgrade_only
+
+  # Update MySQL user authentication method if upgrading from prior to 5.2.0
+  - name: update mysql to use caching_sha2_password
+    ansible.builtin.command: >-
+      docker compose exec db sh -c 'mysql -u root -p$MYSQL_ROOT_PASSWORD -e "ALTER USER
+      '\''ubersmith'\''@'\''%'\'' IDENTIFIED WITH '\''caching_sha2_password'\'' BY
+      '\''$MYSQL_PASSWORD'\'';"'
+    args:
+      chdir: "{{ ubersmith_home }}"
+    when: ubersmith_installed_version is version_compare('5.2.0', '<')
+    tags:
+      - upgrade_only
+
+  # Update MySQL user authentication method if upgrading from prior to 5.2.0
+  - name: update mysql to use caching_sha2_password
+    ansible.builtin.command: >-
+      docker compose exec db sh -c 'mysql -u root -p$MYSQL_ROOT_PASSWORD -e "ALTER USER
+      '\''root'\''@'\''%'\'' IDENTIFIED WITH '\''caching_sha2_password'\'' BY
+      '\''$MYSQL_ROOT_PASSWORD'\'';"'
+    args:
+      chdir: "{{ ubersmith_home }}"
+    when: ubersmith_installed_version is version_compare('5.2.0', '<')
     tags:
       - upgrade_only
 
