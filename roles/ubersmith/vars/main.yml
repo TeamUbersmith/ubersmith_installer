@@ -42,7 +42,7 @@
     "5":
       mysql_version: 84
       php_version: 84
-      backup_version: 8
+      backup_version: 84
       ubersmith_release_version: 5.2.0
       containers:
         release_version: r3
