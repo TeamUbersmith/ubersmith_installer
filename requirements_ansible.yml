@@ -2,7 +2,11 @@
 # $ ansible-galaxy install -r requirements_ansible.yml
 
 collections:
-- community.crypto
-- community.docker
-- community.general
-- community.mysql
+- name: community.crypto
+  version: 3.1.1
+- name: community.docker
+  version: 5.1.0
+- name: community.general
+  version: 12.5.0
+- name: community.mysql
+  version: 4.2.0
