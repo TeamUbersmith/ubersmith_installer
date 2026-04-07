@@ -863,5 +863,7 @@
   - name: docker image cleanup
     community.docker.docker_prune:
       images: true
+      images_filters:
+        dangling: true
     tags:
       - upgrade_only
