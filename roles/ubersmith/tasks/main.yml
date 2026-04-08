@@ -864,6 +864,6 @@
     community.docker.docker_prune:
       images: true
       images_filters:
-        dangling: true
+        until: 90d
     tags:
       - upgrade_only
