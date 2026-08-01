@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ubersmith-installer"
+version = "0.1.0"
+description = "Python CLI installer for Ubersmith (Docker/Docker Compose runtime)."
+readme = "README-python-cli.md"
+requires-python = ">=3.9"
+dependencies = [
+    "docker>=7.1.0",
+    "Jinja2>=3.1",
+    "click>=8.1",
+    "distro>=1.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+ubersmith-installer = "ubersmith_installer.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["ubersmith_installer*"]

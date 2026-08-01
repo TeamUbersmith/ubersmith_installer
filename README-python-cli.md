@@ -1,0 +1,3 @@
+# Ubersmith Installer (Python CLI) - Work in Progress
+
+This directory (`ubersmith_installer/`) contains an in-progress, ground-up rewrite of the Ubersmith installer as a Python command-line application, replacing the existing Ansible-based playbooks under `roles/`. Docker and Docker Compose remain the runtime for Ubersmith itself; only the installation and configuration tooling is being reimplemented. This is currently a Phase 0 scaffold and spike covering OS/Docker preflight checks, ini-file based state, and Jinja2 template rendering, and it is not yet functional as a complete installer. The existing Ansible installer under `roles/` remains the supported installation method until this rewrite reaches parity.

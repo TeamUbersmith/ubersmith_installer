@@ -1,0 +1,280 @@
+services:
+  solr:
+    image: {{ registry }}/solr:{{ ubersmith_version }}-{{ containers_release_version }}
+    hostname: solr.{{ container_domain }}
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - "search:/opt/solr"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: journald
+      options:
+        tag: ubersmith/solr
+{% endif %}
+  db:
+    image: {{ registry }}/ps{{ ubersmith_release[ubersmith_major_version].mysql_version }}:{{ ubersmith_version }}-{{ containers_release_version }}
+    hostname: database.{{ container_domain }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3306:3306"
+    environment:
+      MYSQL_USER: ubersmith
+      MYSQL_DATABASE: ubersmith
+    volumes:
+      - "database:/var/lib/mysql"
+      - "database_keyring:/var/lib/mysql-keyring"
+      - "{{ ubersmith_home }}/conf/mysql:/etc/ubersmith.conf.d"
+      - "{{ ubersmith_home }}/conf/mysql-components/mysqld.my:/usr/sbin/mysqld.my"
+      - "{{ ubersmith_home }}/conf/mysql-components/component_keyring_file.cnf:/usr/lib64/mysql/plugin/component_keyring_file.cnf"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: journald
+      options:
+        tag: ubersmith/db
+{% endif %}
+  web:
+    image: {{ registry }}/{{ ubersmith_release[ubersmith_major_version].containers.web_container_repo }}:{{ ubersmith_version }}-{{ containers_release_version }}
+    hostname: {{ container_domain }}
+    restart: unless-stopped
+    environment:
+      MYSQL_USER: ubersmith
+      MYSQL_DATABASE: ubersmith
+      DATABASE_HOST: "db"
+      UBER_HOSTNAME: {{ container_domain }}
+      LOCK_BACKEND: redis
+      LOCK_SERVERS: "ubersmith-redis-1:6379:1,ubersmith-redis-2:6379:1,ubersmith-redis-3:6379:1"
+      MAINTENANCE: "${MAINTENANCE}"
+      HTTPS_FORCE: 1
+      REASON_LOG: 0
+      STORAGE_BACKEND: redis
+      REDIS_HOST: tcp://ubersmith-redis-data-1:6379?database=2
+      SESSION_HOST: tcp://ubersmith-redis-data-1:6379?database=0
+      PLUGIN_LOG_HOST: tcp://ubersmith-redis-data-1:6379?database=3
+      QUEUE_HOST: tcp://ubersmith-redis-data-1:6379?database=4
+      REDIS_SENTINEL_ENABLE: 0
+      APPLIANCE_TIMEOUT: 30
+      ALIPAY_ENABLE: 1
+      OPENSSL_CIPHERS: {{ mozilla_ciphers.configurations.intermediate.ciphers.openssl | join(':') }}
+    volumes:
+      - "logs:/var/www/ubersmith_root/logs"
+      - "webroot:/var/www/ubersmith_root"
+      - "search:/opt/solr"
+    depends_on:
+      - redis-data
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: journald
+      options:
+        tag: ubersmith/web
+{% endif %}
+  php:
+    image: {{ registry }}/php{{ ubersmith_release[ubersmith_major_version].php_version }}:{{ ubersmith_version }}-{{ containers_release_version }}
+    hostname: {{ container_domain }}
+    restart: unless-stopped
+    volumes:
+      - "{{ ubersmith_home }}/logs/rsyslog/log:/dev/log"
+      - "logs:/var/www/ubersmith_root/logs"
+      - "webroot:/var/www/ubersmith_root"
+    depends_on:
+      web:
+        condition: service_started
+      rsyslog:
+        condition: service_healthy
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: journald
+      options:
+        tag: ubersmith/php
+{% endif %}
+  cron:
+    image: {{ registry }}/cron:{{ ubersmith_version }}-{{ containers_release_version }}
+    hostname: {{ container_domain }}
+    restart: unless-stopped
+    volumes:
+      - "logs:/var/www/ubersmith_root/logs"
+      - "webroot:/var/www/ubersmith_root"
+    depends_on:
+      - web
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: journald
+      options:
+        tag: ubersmith/cron
+{% endif %}
+  mail:
+    image: {{ registry }}/mail:{{ ubersmith_version }}-{{ containers_release_version }}
+    hostname: {{ container_domain }}
+    restart: unless-stopped
+    ports:
+      - "25:25"
+    volumes:
+      - "logs:/var/www/ubersmith_root/logs"
+      - "webroot:/var/www/ubersmith_root"
+    networks:
+      default:
+        aliases:
+          - ubersmith.mail
+    depends_on:
+      - web
+      - clamav
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: journald
+      options:
+        tag: ubersmith/mail
+{% endif %}
+  rwhois:
+    image: {{ registry }}/xinetd:{{ ubersmith_version }}-{{ containers_release_version }}
+    hostname: {{ container_domain }}
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    restart: unless-stopped
+    ports:
+      - "4321:4321"
+    volumes:
+      - "webroot:/var/www/ubersmith_root"
+    depends_on:
+      - web
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: journald
+      options:
+        tag: ubersmith/rwhois
+{% endif %}
+  redis:
+    image: {{ registry }}/redis7:{{ ubersmith_version }}-{{ containers_release_version }}
+    restart: unless-stopped
+  redis-data:
+    image: {{ registry }}/redis7:{{ ubersmith_version }}-{{ containers_release_version }}
+    restart: unless-stopped
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: journald
+      options:
+        tag: ubersmith/redis-data
+{% endif %}
+    volumes:
+      - redis:/data
+  redis-backup:
+    image: busybox:latest
+    command: >
+      sh -c "tar -czf /backup/ubersmith_redis_backup.tar.gz -C /data ."
+    volumes:
+      - redis:/data:ro
+      - "{{ ubersmith_home }}/backup:/backup"
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    restart: "no"
+    hostname: rediscommander.{{ container_domain }}
+    environment:
+      REDIS_HOSTS: default:ubersmith-redis-data-1:6379:3
+  backup:
+    image: {{ registry }}/xtrabackup{{ ubersmith_release[ubersmith_major_version].backup_version }}:{{ ubersmith_version }}-{{ containers_release_version }}
+    hostname: backups.{{ container_domain }}
+    # entrypoint: /mysqldump.sh
+    environment:
+      DATABASE_HOST: db
+    volumes:
+      - "{{ ubersmith_home }}/backup:/backup"
+      - "database:/var/lib/mysql"
+    depends_on:
+      - db
+  rsyslog:
+    image: {{ registry }}/rsyslog:{{ ubersmith_version }}-{{ containers_release_version }}
+    hostname: rsyslog.{{ container_domain }}
+    volumes:
+      - "{{ ubersmith_home }}/logs/rsyslog/:/var/run/rsyslog/dev/"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: journald
+      options:
+        tag: ubersmith/ubersmith
+{% endif %}
+  pmm:
+    image: percona/pmm-server:{{ pmm_version }}
+    hostname: pmm.{{ container_domain }}
+    ports:
+      - "8443:443"
+    volumes:
+       - pmm-data:/srv
+       - "{{ ubersmith_home }}/conf/ssl/{{ container_domain }}.pem:/etc/nginx/ssl/server.crt"
+       - "{{ ubersmith_home }}/conf/ssl/{{ container_domain }}.key:/etc/nginx/ssl/server.key"
+  haproxy:
+    image: haproxy:{{ ubersmith_release[ubersmith_major_version].containers.haproxy_version }}
+    volumes:
+       - "{{ ubersmith_home }}/conf/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro"
+    ports:
+      - "3306"
+      - "3307"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: journald
+      options:
+        tag: ubersmith/haproxy
+{% endif %}
+  certbot:
+    image: ghcr.io/teamubersmith/certbot:{{ certbot_version }}
+    # image: certbot/dns-nsone:{{ certbot_version }}
+    # image: certbot/dns-cloudflare:{{ certbot_version }}
+    command: "renew -vvv -n --webroot --webroot-path /var/www/ubersmith_root/app/www"
+    # command: "certonly -n --standalone -d {{ virtual_hosts }} --agree-tos -m {{ notify_email }}"
+    # command: "certonly --webroot -w /var/www/ubersmith_root/app/www -d {{ virtual_hosts }} --agree-tos -m {{ notify_email }}"
+    # command: "certonly -d {{ virtual_hosts }} --agree-tos -m {{ notify_email }} --dns-nsone --dns-nsone-credentials /tmp/.nsone.ini"
+    # command: "renew -vvv -n --agree-tos -m {{ notify_email }} --dns-cloudflare --dns-cloudflare-credentials /cf_token.ini --dns-cloudflare-propagation-seconds 60"
+    volumes:
+      - "{{ ubersmith_home }}/conf/certbot/etc:/etc/letsencrypt"
+      - "{{ ubersmith_home }}/conf/certbot/lib:/var/lib/letsencrypt"
+      - "{{ ubersmith_home }}/conf/certbot/log:/var/log/letsencrypt"
+      - "{{ ubersmith_home }}/conf/ssl:/opt/certbot/deploy"
+      - "webroot:/var/www/ubersmith_root"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: journald
+      options:
+        tag: ubersmith/certbot
+{% endif %}
+  falco:
+    image: falcosecurity/falco-no-driver:latest
+    restart: unless-stopped
+    hostname: falco.{{ container_domain }}
+    privileged: true
+    security_opt:
+     - apparmor:unconfined
+    logging:
+      driver: journald
+      options:
+        tag: ubersmith/falco
+    tty: true
+    volumes:
+     - /var/run/docker.sock:/host/var/run/docker.sock
+     - /proc:/host/proc:ro
+     - /etc:/host/etc
+     - "{{ ubersmith_home }}/conf/falco/falco_rules.local.yaml:/etc/falco/falco_rules.local.yaml"
+    depends_on:
+      web:
+        condition: service_started
+  clamav:
+    image: clamav/clamav:1.4_base
+    restart: unless-stopped
+    hostname: clamav.{{ container_domain }}
+    volumes:
+      - "clamav_signatures:/var/lib/clamav"
+    logging:
+      driver: journald
+      options:
+        tag: ubersmith/clamav
+volumes:
+  clamav_signatures: {}
+  database: {}
+  database_keyring: {}
+  logs: {}
+  redis: {}
+  search: {}
+  webroot: {}
+  pmm-data: {}
