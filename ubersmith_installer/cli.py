@@ -1478,6 +1478,21 @@ def upgrade_appliance(
     click.echo("Pulling images via docker compose...")
     appliance_ops.compose_pull(appliance_home_path)
 
+    # KNOWN ISSUE (not yet resolved, tracked in
+    # https://github.com/TeamUbersmith/ubersmith_installer/issues/36):
+    # stop_containers() does not currently
+    # guarantee InnoDB gets a clean shutdown (a full checkpoint that empties
+    # the redo log) before app_db is removed. Observed in real CI: the
+    # mysql 5.7 step-up container (started below, after image-based gating
+    # correctly determines it's needed) then fails with "Upgrade is not
+    # supported after a crash or shutdown with innodb_fast_shutdown = 2 ...
+    # appears logically non empty". This needs an explicit clean-shutdown
+    # step (e.g. an in-container `mysqladmin shutdown` with adequate grace
+    # time, verified via the server log, before `docker compose rm`/stop)
+    # rather than relying on whatever signal/grace-period docker compose's
+    # default stop behavior gives the mysqld process. Left as a known,
+    # documented blocker on the appliance upgrade path rather than guessed
+    # at further -- needs real MySQL/InnoDB shutdown-sequencing work.
     click.echo("Stopping existing containers...")
     appliance_ops.stop_containers(appliance_home_path)
 
