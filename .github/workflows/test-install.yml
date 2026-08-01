@@ -1,0 +1,39 @@
+name: Test Install
+
+on: [push]
+
+jobs:
+  install:
+    name: Install Ubersmith (Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify Docker is available
+        run: docker version
+
+      - name: Install Python 3.11+ venv support and expect
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-venv expect
+
+      - name: Run installer non-interactively via expect
+        run: |
+          chmod +x .github/scripts/run_install.exp
+          .github/scripts/run_install.exp
+
+      - name: Verify containers are up
+        run: docker ps --format '{{.Names}}\t{{.Status}}'
+
+      - name: Smoke test HTTPS endpoint
+        run: |
+          curl -k -sS -o /dev/null -w '%{http_code}\n' \
+            --resolve ubersmith.ci.test:443:127.0.0.1 \
+            https://ubersmith.ci.test/ | grep -qE '^(200|30[123])$'
+
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          sudo docker ps -a
+          sudo docker compose -f /usr/local/ubersmith/docker-compose.yml logs --tail=200 || true
