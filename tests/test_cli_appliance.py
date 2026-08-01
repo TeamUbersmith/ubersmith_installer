@@ -207,6 +207,46 @@ def test_install_appliance_dry_run_renders_all_configs_and_writes_state(tmp_path
     assert "PLEASE NOTE" in result.output
 
 
+def test_install_appliance_major_4_records_actual_mysql_version(tmp_path, monkeypatch):
+    """Regression test: install-appliance must record the MySQL version
+    actually installed for the chosen major version (57 -> "5.7" for major
+    4), not a hardcoded "8.0" -- the latter is a latent bug in the Ansible
+    source itself (its "Database upgrade successful..." ini_file task is
+    tagged plain `upgrade`, so it also fires during install, always writing
+    "8.0" regardless of major version) that this codebase deliberately does
+    NOT reproduce, since it silently defeats the mysql 5.6->5.7 step-up
+    migration for any appliance that later goes through a normal
+    install-then-upgrade lifecycle.
+    """
+    _patch_home(monkeypatch, tmp_path)
+    appliance_home = tmp_path / "appliance"
+    state_file = tmp_path / "state.ini"
+
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        [
+            "install-appliance",
+            "--ubersmith-major-version",
+            "4",
+            "--appliance-home",
+            str(appliance_home),
+            "--app-virtual-host",
+            "appliance.example.com",
+            "--state-file",
+            str(state_file),
+            "--skip-preflight",
+            "--dry-run",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+
+    parser = configparser.ConfigParser(interpolation=None)
+    parser.read(state_file, encoding="utf-8")
+    assert parser.get("ubersmith_installer", "app_mysql_version") == "5.7"
+
+
 def test_install_appliance_dry_run_skips_docker_calls(tmp_path, monkeypatch):
     _patch_home(monkeypatch, tmp_path)
     mocks = _patch_install_side_effects(monkeypatch)

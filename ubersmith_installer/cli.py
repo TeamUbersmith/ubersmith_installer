@@ -1216,10 +1216,22 @@ def install_appliance(
             fg="yellow",
         )
 
-    # "Database upgrade successful, set value in ini file for future use"
-    # hardcodes app_mysql_version to 8.0 regardless of ubersmith_major_version
-    # -- this task is tagged plain `upgrade`, so it runs on install too.
-    state.write_state({"app_mysql_version": "8.0"}, path=state_file)
+    # Deliberate fix, not a faithful port: the Ansible "Database upgrade
+    # successful, set value in ini file for future use" task is tagged
+    # plain `upgrade` (not `upgrade_only`), so it *also* runs during a
+    # fresh install and unconditionally writes app_mysql_version=8.0 --
+    # regardless of which major version was actually installed (even a
+    # fresh major-4 install, which runs mysql 5.7, gets this wrong value).
+    # Since upgrade_appliance's own `lookup('ini', ..., default=5.6')` only
+    # falls back to "5.6" when the key is ABSENT, this bug means the mysql
+    # 5.6->5.7 step-up migration can never fire for any appliance that went
+    # through a normal install-then-upgrade lifecycle via the real Ansible
+    # tool -- it always sees "8.0" already recorded from install. Fixed
+    # here by recording the version that's actually installed (derived from
+    # this major version's `mysql_version`, e.g. 57 -> "5.7", 80 -> "8.0")
+    # instead of a hardcoded "8.0".
+    installed_mysql_version = f"{release['mysql_version'] // 10}.{release['mysql_version'] % 10}"
+    state.write_state({"app_mysql_version": installed_mysql_version}, path=state_file)
 
     if not dry_run:
         appliance_ops.configure_uberapp_user_password(
@@ -1245,7 +1257,7 @@ def install_appliance(
         appliance_home=str(appliance_home_path),
         app_virtual_host=app_virtual_host,
         appliance_installed_version=release["appliance_release_version"],
-        app_mysql_version="8.0",
+        app_mysql_version=installed_mysql_version,
     )
     state.write_installer_state(installer_state, path=state_file)
 
