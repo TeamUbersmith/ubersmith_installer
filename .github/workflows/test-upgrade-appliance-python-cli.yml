@@ -1,0 +1,141 @@
+name: Test Upgrade Appliance (Python CLI, Ubuntu 24.04)
+
+# Proves the compatibility promise the Python CLI rewrite is built around,
+# for the Appliance product: an existing, real Ansible-installed Ubersmith
+# Appliance can be upgraded in place by the NEW Python CLI's
+# `upgrade-appliance` command, and that doing so does not clobber
+# site-specific admin customizations to docker-compose.override.yml.
+#
+# Seeds a major version 4 install here (unlike test-upgrade-python-cli.yml,
+# which had to move to a same-major-version 5.x -> 5.x upgrade because the
+# ubersmith role's last major-4 images were no longer published). Checked
+# via `docker manifest inspect` against every image
+# roles/appliance/vars/main.yml's appliance_release dict resolves to for
+# BOTH major versions before writing this workflow:
+#   major 4 (mysql_version 57, appliance_release_version 4.6.3, r4):
+#     ghcr.io/teamubersmith/appliance_db_ps57:4.6.3-r4  -- EXISTS
+#     ghcr.io/teamubersmith/appliance:4.6.3-r4          -- EXISTS
+#     ghcr.io/teamubersmith/appliance_cron:4.6.3-r4     -- EXISTS
+#     ghcr.io/teamubersmith/xtrabackup2:4.6.3-r4        -- EXISTS (app_backup)
+#     ghcr.io/teamubersmith/ps57:4.6.3-r4               -- EXISTS (mysql 5.7 step-up image)
+#   major 5 (mysql_version 80, appliance_release_version 5.1.4, r3):
+#     ghcr.io/teamubersmith/appliance_db_ps80:5.1.4-r3  -- EXISTS
+#     ghcr.io/teamubersmith/appliance:5.1.4-r3          -- EXISTS
+#     ghcr.io/teamubersmith/appliance_cron:5.1.4-r3     -- EXISTS
+#     ghcr.io/teamubersmith/xtrabackup8:5.1.4-r3        -- EXISTS (app_backup)
+#     ghcr.io/teamubersmith/ps57:5.1.4-r3               -- EXISTS
+# All major-4 and major-5 appliance images are still published, so this
+# workflow exercises a genuine 4.x -> 5.x major-version upgrade end-to-end
+# (`upgrade-appliance` always targets the current major version 5
+# regardless of what was previously installed): container image swap,
+# template re-render, the override-file legacy fixups, and upgrade.php.
+
+on:
+  push:
+    paths:
+      - "ubersmith_installer/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - ".github/workflows/test-upgrade-appliance-python-cli.yml"
+      - ".github/scripts/run_install_appliance.exp"
+  pull_request:
+    paths:
+      - "ubersmith_installer/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - ".github/workflows/test-upgrade-appliance-python-cli.yml"
+      - ".github/scripts/run_install_appliance.exp"
+
+jobs:
+  upgrade:
+    name: Upgrade Ubersmith Appliance via Python CLI (Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      APPLIANCE_HOME: /usr/local/ubersmith
+      OVERRIDE_MARKER: "# CI-CUSTOM-MARKER: hand-added admin customization, must survive upgrade"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Verify Docker is available
+        run: docker version
+
+      - name: Install Python 3.11+ venv support and expect
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-venv expect
+
+      # Seeds a real install using the OLD Ansible installer, exactly as
+      # test-upgrade-python-cli.yml does for the ubersmith role (see the
+      # note at the top of this file for why major version 4 is viable
+      # here).
+      #
+      # Plain `sudo env ...` (not `sudo -E`) is used so HOME is reset to
+      # /root for this run -- matching the plain `sudo` used later for
+      # `ubersmith-installer upgrade-appliance`, so both commands agree on
+      # where ~/.ubersmith_installer.ini (ansible_user_dir-relative) lives.
+      - name: Run OLD Ansible installer non-interactively (ubersmith_major_version=4)
+        run: |
+          sudo env \
+            ANSIBLE_NOCOLOR=1 \
+            ANSIBLE_FORCE_COLOR=0 \
+            UBERSMITH_INTERACTIVE=false \
+            expect .github/scripts/run_install_appliance.exp
+
+      - name: Verify old install's containers are up
+        run: docker ps --format '{{.Names}}\t{{.Status}}'
+
+      - name: Smoke test HTTPS endpoint (old install)
+        run: |
+          curl -k -sS -o /dev/null -w '%{http_code}\n' \
+            --resolve ubersmith.ci.test:8443:127.0.0.1 \
+            https://ubersmith.ci.test:8443/ | grep -qE '^(200|30[123])$'
+
+      # The critical compatibility check: hand-customize
+      # docker-compose.override.yml the way a real admin would (an
+      # arbitrary comment/port mapping no template ever generates), then
+      # after the upgrade assert it is still there verbatim -- proving
+      # `upgrade-appliance` did NOT wholesale regenerate this file (it is an
+      # install-only template in the Ansible source -- see the CRITICAL note
+      # in the `upgrade-appliance` command's docstring).
+      - name: Hand-customize docker-compose.override.yml like a real admin would
+        run: |
+          sudo tee -a "$APPLIANCE_HOME/docker-compose.override.yml" > /dev/null <<EOF
+          $OVERRIDE_MARKER
+          EOF
+          echo "--- docker-compose.override.yml after hand customization ---"
+          sudo cat "$APPLIANCE_HOME/docker-compose.override.yml"
+
+      - name: Install the Python CLI package
+        run: pip install -e .
+
+      - name: Run upgrade-appliance non-interactively via the Python CLI
+        run: sudo env HOME=/root "$(command -v ubersmith-installer)" upgrade-appliance --non-interactive
+
+      - name: Verify containers are up after upgrade
+        run: docker ps --format '{{.Names}}\t{{.Status}}'
+
+      - name: Smoke test HTTPS endpoint (post-upgrade)
+        run: |
+          curl -k -sS -o /dev/null -w '%{http_code}\n' \
+            --resolve ubersmith.ci.test:8443:127.0.0.1 \
+            https://ubersmith.ci.test:8443/ | grep -qE '^(200|30[123])$'
+
+      - name: Assert hand-added docker-compose.override.yml customization survived verbatim
+        run: |
+          sudo grep -qF "$OVERRIDE_MARKER" "$APPLIANCE_HOME/docker-compose.override.yml"
+
+      - name: Assert installer state was updated to the new (5.x) version
+        run: |
+          sudo cat /root/.ubersmith_installer.ini
+          sudo grep -qE '^appliance_installed_version = 5\.' /root/.ubersmith_installer.ini
+
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          sudo docker ps -a
+          sudo docker compose -f "$APPLIANCE_HOME/docker-compose.yml" logs --tail=200 || true

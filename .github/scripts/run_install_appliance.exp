@@ -1,0 +1,29 @@
+#!/usr/bin/env expect -f
+#
+# Drives install_appliance.sh through its interactive vars_prompt questions
+# for CI. Seeds a major-version-4 install (not 5): unlike the ubersmith
+# role's images, the major-4 appliance images
+# (ghcr.io/teamubersmith/appliance*:4.6.3-r4) are still published in the
+# registry, so a real 4.x-origin appliance install can still be seeded here,
+# letting test-upgrade-appliance-python-cli.yml exercise a genuine 4.x -> 5.x
+# major-version upgrade instead of only a same-major-version one. Requires
+# UBERSMITH_INTERACTIVE=false in the environment so pause prompts are skipped
+# (not that install_appliance.yml has any -- the pre-upgrade reminder pause
+# is tagged upgrade_only and this seed run always passes --skip-tags
+# upgrade_only).
+
+set timeout 1800
+spawn ./install_appliance.sh
+
+expect "Choose which version of Ubersmith's Appliance to install (4 or 5)"
+send "4\r"
+
+expect "Choose an installation directory for Ubersmith's Appliance"
+send "\r"
+
+expect "Enter the domain name associated with your Ubersmith installation"
+send "ubersmith.ci.test\r"
+
+expect eof
+catch wait result
+exit [lindex $result 3]

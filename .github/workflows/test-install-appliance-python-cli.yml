@@ -1,0 +1,60 @@
+name: Test Install Appliance (Python CLI, Ubuntu 24.04)
+
+on:
+  push:
+    paths:
+      - "ubersmith_installer/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - ".github/workflows/test-install-appliance-python-cli.yml"
+  pull_request:
+    paths:
+      - "ubersmith_installer/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - ".github/workflows/test-install-appliance-python-cli.yml"
+
+jobs:
+  install:
+    name: Install Ubersmith Appliance via Python CLI (Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Verify Docker is available
+        run: docker version
+
+      - name: Install package
+        run: pip install -e .
+
+      - name: Run installer non-interactively via the Python CLI
+        run: |
+          sudo "$(command -v ubersmith-installer)" install-appliance \
+            --non-interactive \
+            --ubersmith-major-version 5 \
+            --appliance-home /usr/local/ubersmith \
+            --app-virtual-host ubersmith.ci.test
+
+      - name: Verify containers are up
+        run: docker ps --format '{{.Names}}\t{{.Status}}'
+
+      # The appliance's app_web container maps its internal :443 to host
+      # port 8443 (and :80 to 8080) -- see
+      # roles/appliance/templates/docker-compose.yml.j2 -- unlike the
+      # ubersmith role's proxy, which exposes 443 directly.
+      - name: Smoke test HTTPS endpoint
+        run: |
+          curl -k -sS -o /dev/null -w '%{http_code}\n' \
+            --resolve ubersmith.ci.test:8443:127.0.0.1 \
+            https://ubersmith.ci.test:8443/ | grep -qE '^(200|30[123])$'
+
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          sudo docker ps -a
+          sudo docker compose -f /usr/local/ubersmith/docker-compose.yml logs --tail=200 || true
