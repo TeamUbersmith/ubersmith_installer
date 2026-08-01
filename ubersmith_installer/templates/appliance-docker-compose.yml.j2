@@ -1,0 +1,77 @@
+version: '3'
+services:
+  app_db:
+    image: {{ registry }}/appliance_db_ps{{ appliance_release[ubersmith_major_version].mysql_version }}:{{ appliance_version }}-{{ containers_release_version }}
+    hostname: database.appliance.{{ app_virtual_host }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3307:3306"
+    environment:
+      MYSQL_USER: uberapp
+      MYSQL_DATABASE: uberapp
+    volumes:
+      - "app_database:/var/lib/mysql"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: journald
+      options:
+        tag: ubersmith/app_db
+{% endif %}
+  app_web:
+    image: {{ registry }}/{{ appliance_release[ubersmith_major_version].containers.appweb_container_repo }}:{{ appliance_version }}-{{ containers_release_version }}
+    hostname: appliance.{{ app_virtual_host }}
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+      - "8443:443"
+    environment:
+      UBER_HOSTNAME: appliance.{{ app_virtual_host }}
+      DATABASE_USER: uberapp
+      DATABASE_HOST: app_db
+      DATABASE_NAME: uberapp
+    volumes:
+      - "app_webroot:/var/www/appliance_root"
+      - "rrds:/var/www/appliance_root/rrds"
+      - "app_logs:/var/www/appliance_root/logs"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: journald
+      options:
+        tag: ubersmith/app_web
+{% endif %}
+    depends_on:
+      - app_db
+  app_cron:
+    image: {{ registry }}/appliance_cron:{{ appliance_version }}-{{ containers_release_version }}
+    hostname: cron.appliance.{{ app_virtual_host }}
+    restart: unless-stopped
+    volumes:
+      - "app_webroot:/var/www/appliance_root"
+      - "rrds:/var/www/appliance_root/rrds"
+{% if ansible_os_family != 'Darwin' %}
+    logging:
+      driver: journald
+      options:
+        tag: ubersmith/app_cron
+{% endif %}
+    depends_on:
+      - app_web
+  app_backup:
+    image: {{ registry }}/xtrabackup{{ appliance_release[ubersmith_major_version].backup_version }}:{{ appliance_version }}-{{ containers_release_version }}
+    hostname: backups.appliance.{{ app_virtual_host }}
+    # entrypoint: /mysqldump.sh
+    environment:
+      DATABASE_HOST: app_db
+      DATABASE_NAME: uberapp
+    volumes:
+      - "{{ appliance_home }}/backup:/backup"
+      - "app_database:/var/lib/mysql"
+    depends_on:
+      - app_db
+      
+volumes:
+  app_database: {}
+  app_logs: {}
+  app_webroot: {}
+  rrds: {}
+  

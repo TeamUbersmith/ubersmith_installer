@@ -288,3 +288,153 @@ def test_get_timezone_file_returns_real_looking_path():
     tz_file = templates.get_timezone_file()
     assert isinstance(tz_file, str)
     assert tz_file.startswith("/")
+
+
+# ---------------------------------------------------------------------------
+# Appliance role templates
+# ---------------------------------------------------------------------------
+
+
+def _appliance_docker_compose_context(**overrides):
+    """A representative context providing every variable
+    appliance-docker-compose.yml.j2 references."""
+    context = {
+        "registry": "ghcr.io/teamubersmith",
+        "ubersmith_major_version": "5",
+        "appliance_version": "5.1.4",
+        "containers_release_version": "r3",
+        "appliance_home": "/opt/appliance",
+        "app_virtual_host": "appliance.example.com",
+        "appliance_release": {
+            "5": {
+                "mysql_version": 80,
+                "appliance_release_version": "5.1.4",
+                "backup_version": 8,
+                "containers": {
+                    "release_version": "r3",
+                    "appweb_container_repo": "appliance",
+                },
+            },
+        },
+        "ansible_os_family": "Debian",
+    }
+    context.update(overrides)
+    return context
+
+
+def _appliance_docker_compose_override_context(**overrides):
+    context = {
+        "mysql_appliance_password": "appliance-secret",
+        "mysql_root_password": "root-secret",
+        "appliance_home": "/opt/appliance",
+        "app_virtual_host": "appliance.example.com",
+        "ansible_os_family": "Debian",
+        "timezone_file": {"stdout": "/usr/share/zoneinfo/UTC"},
+    }
+    context.update(overrides)
+    return context
+
+
+def _appliance_vhost_context(**overrides):
+    context = {
+        "appliance_root": "/var/www/appliance_root",
+        "app_virtual_host": "appliance.example.com",
+    }
+    context.update(overrides)
+    return context
+
+
+def test_render_appliance_docker_compose_is_valid_yaml_with_expected_top_level_keys():
+    rendered = templates.render_appliance_docker_compose(
+        _appliance_docker_compose_context()
+    )
+    parsed = yaml.safe_load(rendered)
+
+    assert isinstance(parsed, dict)
+    assert "services" in parsed
+    assert "volumes" in parsed
+    assert isinstance(parsed["services"], dict)
+    assert isinstance(parsed["volumes"], dict)
+    assert "app_web" in parsed["services"]
+    assert "app_db" in parsed["services"]
+    assert "app_cron" in parsed["services"]
+    assert "app_backup" in parsed["services"]
+
+
+def test_render_appliance_docker_compose_omits_journald_logging_on_darwin():
+    rendered = templates.render_appliance_docker_compose(
+        _appliance_docker_compose_context(ansible_os_family="Darwin")
+    )
+    parsed = yaml.safe_load(rendered)
+
+    assert "logging" not in parsed["services"]["app_web"]
+
+
+def test_render_appliance_docker_compose_includes_journald_logging_off_darwin():
+    rendered = templates.render_appliance_docker_compose(
+        _appliance_docker_compose_context(ansible_os_family="Debian")
+    )
+    parsed = yaml.safe_load(rendered)
+
+    assert parsed["services"]["app_web"]["logging"]["driver"] == "journald"
+
+
+def test_render_appliance_docker_compose_auto_supplies_os_family_when_absent():
+    context = _appliance_docker_compose_context()
+    del context["ansible_os_family"]
+    rendered = templates.render_appliance_docker_compose(context)
+    assert "services:" in rendered
+
+
+def test_render_appliance_docker_compose_override_is_valid_yaml_on_linux():
+    rendered = templates.render_appliance_docker_compose_override(
+        _appliance_docker_compose_override_context(ansible_os_family="Debian")
+    )
+    parsed = yaml.safe_load(rendered)
+    assert "/usr/share/zoneinfo/UTC:/etc/localtime" in rendered
+    assert parsed["services"]["app_db"]["environment"]["MYSQL_ROOT_PASSWORD"] == (
+        "root-secret"
+    )
+    assert parsed["services"]["app_web"]["environment"]["MYSQL_PASSWORD"] == (
+        "appliance-secret"
+    )
+
+
+def test_render_appliance_docker_compose_override_omits_timezone_on_darwin():
+    context = _appliance_docker_compose_override_context(ansible_os_family="Darwin")
+    del context["timezone_file"]
+    rendered = templates.render_appliance_docker_compose_override(context)
+    assert "/etc/localtime" not in rendered
+
+
+def test_render_appliance_docker_compose_override_auto_supplies_facts_when_absent():
+    context = _appliance_docker_compose_override_context()
+    del context["ansible_os_family"]
+    del context["timezone_file"]
+    # Should not raise even though ansible_os_family/timezone_file were not
+    # supplied -- they get computed from the real host.
+    rendered = templates.render_appliance_docker_compose_override(context)
+    assert "services:" in rendered
+
+
+def test_render_appliance_vhost_does_not_raise_undefined_error():
+    rendered = templates.render_appliance_vhost(_appliance_vhost_context())
+    assert "ServerName appliance.appliance.example.com" in rendered
+    assert "DocumentRoot /var/www/appliance_root/www" in rendered
+
+
+def test_render_appliance_mysql_cnf_major_version_4():
+    rendered = templates.render_appliance_mysql_cnf({}, "4")
+    assert "max_connections = 2000" in rendered
+
+
+def test_render_appliance_mysql_cnf_major_version_5():
+    rendered = templates.render_appliance_mysql_cnf({}, "5")
+    assert "max_connections = 2000" in rendered
+
+
+def test_render_appliance_mysql_cnf_rejects_unsupported_major_version():
+    import pytest
+
+    with pytest.raises(ValueError):
+        templates.render_appliance_mysql_cnf({}, "6")

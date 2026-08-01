@@ -16,6 +16,23 @@ templates copied into ``ubersmith_installer/templates/``:
     * ubersmith-deploy.sh.j2
     * ubersmith_certbot_renew.sh.j2
 
+APPLIANCE role templates (``roles/appliance/templates/``) are also mirrored
+here, under names prefixed with ``appliance-`` (or, for the one filename that
+did not collide with an existing ubersmith-role template,
+``appliance_vhost.j2`` unprefixed) to avoid clobbering the ubersmith-role
+copies of the same base filename:
+
+    * roles/appliance/templates/appliance_vhost.j2
+      -> ubersmith_installer/templates/appliance_vhost.j2 (no collision)
+    * roles/appliance/templates/docker-compose.yml.j2
+      -> ubersmith_installer/templates/appliance-docker-compose.yml.j2
+    * roles/appliance/templates/docker-compose.override.yml.j2
+      -> ubersmith_installer/templates/appliance-docker-compose.override.yml.j2
+    * roles/appliance/templates/ubersmith.cnf.4.j2
+      -> ubersmith_installer/templates/appliance-ubersmith.cnf.4.j2
+    * roles/appliance/templates/ubersmith.cnf.5.j2
+      -> ubersmith_installer/templates/appliance-ubersmith.cnf.5.j2
+
 Design notes
 ------------
 ``roles/ubersmith/templates/docker-compose.yml.j2`` was audited (grepping for
@@ -345,3 +362,73 @@ def render_certbot_renew_script(context: Mapping[str, Any]) -> str:
     Variables referenced by this template: ``ubersmith_home``.
     """
     return render("ubersmith_certbot_renew.sh.j2", context)
+
+
+# ---------------------------------------------------------------------------
+# Appliance role templates (see module docstring for the naming/collision
+# scheme used when copying these in from roles/appliance/templates/).
+# ---------------------------------------------------------------------------
+
+
+def render_appliance_docker_compose(context: Mapping[str, Any]) -> str:
+    """Render ``appliance-docker-compose.yml.j2`` with the given context.
+
+    Mirrors ``roles/appliance/templates/docker-compose.yml.j2``. Variables
+    referenced: ``registry``, ``appliance_release`` (nested dict keyed by
+    ``ubersmith_major_version``, with ``mysql_version``, ``backup_version``,
+    and a nested ``containers`` dict with ``appweb_container_repo``),
+    ``ubersmith_major_version``, ``appliance_version``,
+    ``containers_release_version``, ``app_virtual_host``, ``appliance_home``,
+    and the Ansible fact ``ansible_os_family`` (supplied automatically --
+    see module docstring).
+    """
+    return render("appliance-docker-compose.yml.j2", context)
+
+
+def render_appliance_docker_compose_override(context: Mapping[str, Any]) -> str:
+    """Render ``appliance-docker-compose.override.yml.j2`` with the context.
+
+    Mirrors ``roles/appliance/templates/docker-compose.override.yml.j2``.
+    Variables referenced: ``mysql_appliance_password``,
+    ``mysql_root_password``, ``appliance_home``, ``app_virtual_host``, and
+    the Ansible facts ``ansible_os_family`` (auto-supplied, see module
+    docstring) and ``timezone_file.stdout``.
+
+    Note the appliance role's Ansible task registers ``timezone_file`` via
+    ``ansible.builtin.command: readlink -f /etc/localtime`` (a ``command``
+    module result, exposing ``.stdout``) rather than via ``ansible.builtin.
+    stat`` (exposing ``.stat.lnk_source``) as the ubersmith role does -- so
+    the shape of the auto-supplied ``timezone_file`` mapping differs from
+    ``render_docker_compose_override`` above, even though both are computed
+    from the same underlying ``get_timezone_file()`` helper.
+    """
+    ctx = dict(context)
+    ctx.setdefault("ansible_os_family", get_os_family())
+    if "timezone_file" not in ctx:
+        ctx["timezone_file"] = {"stdout": get_timezone_file()}
+    return render("appliance-docker-compose.override.yml.j2", ctx)
+
+
+def render_appliance_vhost(context: Mapping[str, Any]) -> str:
+    """Render ``appliance_vhost.j2`` with the given context.
+
+    Mirrors ``roles/appliance/templates/appliance_vhost.j2``. Variables
+    referenced: ``appliance_root``, ``app_virtual_host``.
+    """
+    return render("appliance_vhost.j2", context)
+
+
+def render_appliance_mysql_cnf(context: Mapping[str, Any], major_version: str) -> str:
+    """Render ``appliance-ubersmith.cnf.4.j2`` or ``...cnf.5.j2``.
+
+    ``major_version`` selects which of the two templates to render (mirrors
+    Ansible's ``src: "ubersmith.cnf.{{ ubersmith_major_version }}.j2"`` in
+    the appliance role). Both templates are currently static (no
+    variables), but ``context`` is accepted for interface consistency and
+    forward-compatibility.
+    """
+    if str(major_version) == "4":
+        return render("appliance-ubersmith.cnf.4.j2", context)
+    if str(major_version) == "5":
+        return render("appliance-ubersmith.cnf.5.j2", context)
+    raise ValueError(f"Unsupported ubersmith major version: {major_version!r}")
