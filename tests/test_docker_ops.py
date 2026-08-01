@@ -217,3 +217,133 @@ def test_backup_mysql_keyring_invokes_expected_container(tmp_path):
     # The backup directory is created even though the container would also
     # need it to exist for the bind mount.
     assert (ubersmith_home / "backup").is_dir()
+
+
+def test_get_web_container_env_returns_config_env():
+    client = MagicMock()
+    container = MagicMock()
+    container.attrs = {"Config": {"Env": ["DATABASE_HOST=db", "FOO=bar"]}}
+    client.containers.get.return_value = container
+
+    env = docker_ops.get_web_container_env(client=client)
+
+    client.containers.get.assert_called_once_with("ubersmith-web-1")
+    assert env == ["DATABASE_HOST=db", "FOO=bar"]
+
+
+def test_is_local_database_true_when_database_host_db_present():
+    assert docker_ops.is_local_database(["DATABASE_HOST=db", "FOO=bar"]) is True
+
+
+def test_is_local_database_false_when_remote():
+    assert docker_ops.is_local_database(["DATABASE_HOST=remote.example.com"]) is False
+
+
+def test_chown_database_files_invokes_expected_container():
+    client = MagicMock()
+
+    docker_ops.chown_database_files(client=client)
+
+    client.containers.run.assert_called_once()
+    kwargs = client.containers.run.call_args.kwargs
+    assert kwargs["image"] == "busybox"
+    assert kwargs["command"] == "chown -R 1001:1001 /mysql"
+    assert kwargs["user"] == "root"
+    assert kwargs["remove"] is True
+    assert kwargs["volumes"]["ubersmith_database"] == {"bind": "/mysql", "mode": "rw"}
+
+
+def test_wait_for_containers_healthy_succeeds_after_retries():
+    client = MagicMock()
+    container = MagicMock()
+    # unhealthy, unhealthy, healthy
+    container.attrs = {"State": {"Health": {"Status": "starting"}}}
+    statuses = iter(["starting", "starting", "healthy"])
+
+    def get_attrs():
+        return {"State": {"Health": {"Status": next(statuses)}}}
+
+    type(container).attrs = property(lambda self: get_attrs())
+    client.containers.get.return_value = container
+    sleep = MagicMock()
+
+    docker_ops.wait_for_containers_healthy(
+        ["ubersmith-web-1"], client=client, retries=5, delay=1, sleep=sleep
+    )
+
+    assert sleep.call_count == 2
+    sleep.assert_called_with(1)
+
+
+def test_wait_for_containers_healthy_raises_after_exhausting_retries():
+    client = MagicMock()
+    container = MagicMock()
+    container.attrs = {"State": {"Health": {"Status": "unhealthy"}}}
+    client.containers.get.return_value = container
+    sleep = MagicMock()
+
+    try:
+        docker_ops.wait_for_containers_healthy(
+            ["ubersmith-web-1"], client=client, retries=3, delay=1, sleep=sleep
+        )
+        assert False, "expected TimeoutError"
+    except TimeoutError:
+        pass
+
+    assert sleep.call_count == 2  # slept between attempts, not after the last
+
+
+def test_check_database_container_healthy_polls_db_container():
+    client = MagicMock()
+    container = MagicMock()
+    container.attrs = {"State": {"Health": {"Status": "healthy"}}}
+    client.containers.get.return_value = container
+    sleep = MagicMock()
+
+    docker_ops.check_database_container_healthy(client=client, sleep=sleep)
+
+    client.containers.get.assert_called_once_with("ubersmith-db-1")
+
+
+def test_run_updatedb_execs_expected_command_and_returns_stdout_stderr():
+    client = MagicMock()
+    container = MagicMock()
+    container.exec_run.return_value = (0, (b"stdout output", b"stderr output"))
+    client.containers.get.return_value = container
+
+    stdout, stderr = docker_ops.run_updatedb("/var/www/ubersmith_root", client=client)
+
+    client.containers.get.assert_called_once_with("ubersmith-php-1")
+    args, kwargs = container.exec_run.call_args
+    assert "php /var/www/ubersmith_root/app/www/setup/updatedb.php ubersmith --debug" in args[0]
+    assert kwargs.get("demux") is True
+    assert stdout == "stdout output"
+    assert stderr == "stderr output"
+
+
+def test_remove_setup_dir_execs_expected_command():
+    client = MagicMock()
+    container = MagicMock()
+    client.containers.get.return_value = container
+
+    docker_ops.remove_setup_dir("/var/www/ubersmith_root", client=client)
+
+    client.containers.get.assert_called_once_with("ubersmith-web-1")
+    args, _ = container.exec_run.call_args
+    assert args[0] == "/bin/bash -c 'rm -rf /var/www/ubersmith_root/app/www/setup'"
+
+
+def test_prune_old_images_invokes_expected_filter():
+    client = MagicMock()
+
+    docker_ops.prune_old_images(client=client)
+
+    client.images.prune.assert_called_once_with(filters={"until": "2160h"})
+
+
+def test_prune_old_images_respects_custom_until():
+    client = MagicMock()
+
+    docker_ops.prune_old_images(client=client, until="720h")
+
+    client.images.prune.assert_called_once_with(filters={"until": "720h"})

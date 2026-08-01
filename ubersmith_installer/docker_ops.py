@@ -11,6 +11,13 @@ containers up. It is a faithful port of the equivalent tasks in
     * "Copy ubersmith_restart" / "Copy ubersmith_start" / "Copy falco rules"
     * "Update and start ubersmith containers"
     * "Scale redis containers"
+    * "Check for remote database" / local-database gating on
+      ``DATABASE_HOST=db`` in the web container's env
+    * "Make sure UID/GID 1001 owns the database files"
+    * "Wait for containers to come online" / "Check database container status"
+    * "Run updatedb.php" / "Display updatedb.php debug output"
+    * "Remove setup"
+    * "Docker image cleanup"
 
 Image pulls/introspection go through the ``docker`` Python SDK (mirroring
 ``community.docker.docker_image``), while compose-level lifecycle commands
@@ -306,3 +313,184 @@ def backup_mysql_keyring(
             str(backup_dir): {"bind": "/backup", "mode": "rw"},
         },
     )
+
+
+#: Default sleep callable injected into wait_for_containers_healthy so tests
+#: can run instantly. Matches time.sleep's signature.
+SleepFn = Callable[[float], None]
+
+
+def get_web_container_env(client: Optional["docker.DockerClient"] = None) -> list:
+    """Return the raw ``Config.Env`` list of the ubersmith-web-1 container.
+
+    Mirrors the "Check for remote database" task:
+    ``community.docker.docker_container_info`` on ``ubersmith-web-1``,
+    registered as ``web_container_info`` -- later tasks key off
+    ``web_container_info.container.Config.Env`` to decide whether the
+    upgrade is dealing with a local (in-stack) or remote database.
+    """
+    if client is None:
+        client = docker.from_env()
+
+    container = client.containers.get("ubersmith-web-1")
+    return list(container.attrs["Config"]["Env"])
+
+
+def is_local_database(env: Sequence[str]) -> bool:
+    """Return whether the web container's env indicates a local database.
+
+    Mirrors the exact Ansible expression used throughout main.yml to gate
+    local-database-only upgrade steps:
+    ``"'DATABASE_HOST=db' in web_container_info.container.Config.Env"`` --
+    a literal substring-in-list membership check, not a dict lookup (the
+    variable is only ever set to the hostname "db" for the bundled/local
+    database container; anything else, including a remote host, will not
+    match this exact string).
+    """
+    return "DATABASE_HOST=db" in env
+
+
+def chown_database_files(client: Optional["docker.DockerClient"] = None) -> None:
+    """Chown the ubersmith_database volume to uid/gid 1001.
+
+    Mirrors the "Make sure UID/GID 1001 owns the database files" task: runs
+    a short-lived busybox container (root user, auto-remove) that runs
+    ``chown -R 1001:1001 /mysql`` with the ``ubersmith_database`` volume
+    bind-mounted at ``/mysql``. Only relevant when `is_local_database` is
+    True -- the caller is responsible for that check, mirroring the task's
+    ``when: "'DATABASE_HOST=db' in web_container_info.container.Config.Env"``.
+    """
+    if client is None:
+        client = docker.from_env()
+
+    client.containers.run(
+        image="busybox",
+        command="chown -R 1001:1001 /mysql",
+        user="root",
+        remove=True,
+        volumes={"ubersmith_database": {"bind": "/mysql", "mode": "rw"}},
+    )
+
+
+def wait_for_containers_healthy(
+    names: Sequence[str],
+    *,
+    client: Optional["docker.DockerClient"] = None,
+    retries: int = 10,
+    delay: int = 30,
+    sleep: Optional[SleepFn] = None,
+) -> None:
+    """Poll each named container until Docker reports it healthy.
+
+    Mirrors the "Wait for containers to come online" task:
+    ``community.docker.docker_container_info`` on each of
+    ``ubersmith-web-1``, ``ubersmith-php-1``, ``ubersmith-solr-1``, polled
+    ``until: ... State.Health.Status == "healthy"`` with ``retries: 10`` /
+    ``delay: 30``. Only relevant when the database is local -- the caller
+    is responsible for gating on `is_local_database`.
+
+    Raises TimeoutError if any container never becomes healthy within
+    `retries` attempts.
+    """
+    if client is None:
+        client = docker.from_env()
+    if sleep is None:
+        sleep = time.sleep
+
+    for name in names:
+        healthy = False
+        for attempt in range(retries):
+            container = client.containers.get(name)
+            status = container.attrs.get("State", {}).get("Health", {}).get("Status")
+            if status == "healthy":
+                healthy = True
+                break
+            if attempt < retries - 1:
+                sleep(delay)
+        if not healthy:
+            raise TimeoutError(
+                f"Container '{name}' did not become healthy after "
+                f"{retries} retries ({delay}s delay)"
+            )
+
+
+def check_database_container_healthy(
+    *,
+    client: Optional["docker.DockerClient"] = None,
+    retries: int = 6,
+    delay: int = 10,
+    sleep: Optional[SleepFn] = None,
+) -> None:
+    """Poll ubersmith-db-1 until Docker reports it healthy.
+
+    Mirrors the "Check database container status" task:
+    ``community.docker.docker_container_info`` on ``ubersmith-db-1``,
+    polled ``until: ... State.Health.Status == "healthy"`` with
+    ``retries: 6`` / ``delay: 10``. Only relevant when the database is
+    local -- the caller is responsible for gating on `is_local_database`.
+    """
+    wait_for_containers_healthy(
+        ["ubersmith-db-1"],
+        client=client,
+        retries=retries,
+        delay=delay,
+        sleep=sleep,
+    )
+
+
+def run_updatedb(
+    ubersmith_root: str, *, client: Optional["docker.DockerClient"] = None
+) -> tuple:
+    """Run updatedb.php inside the php container.
+
+    Mirrors the "Run updatedb.php" task: ``community.docker.docker_container_exec``
+    on ``ubersmith-php-1``, running
+    ``/bin/bash -c 'php {{ ubersmith_root }}/app/www/setup/updatedb.php ubersmith --debug'``.
+    Returns (stdout, stderr) so the caller can display them, mirroring the
+    "Display updatedb.php debug output" task.
+    """
+    if client is None:
+        client = docker.from_env()
+
+    command = (
+        f"/bin/bash -c 'php {ubersmith_root}/app/www/setup/updatedb.php "
+        "ubersmith --debug'"
+    )
+    container = client.containers.get("ubersmith-php-1")
+    exit_code, output = container.exec_run(command, demux=True)
+    stdout, stderr = output if isinstance(output, tuple) else (output, None)
+    stdout = stdout.decode() if isinstance(stdout, (bytes, bytearray)) else (stdout or "")
+    stderr = stderr.decode() if isinstance(stderr, (bytes, bytearray)) else (stderr or "")
+    return stdout, stderr
+
+
+def remove_setup_dir(
+    ubersmith_root: str, *, client: Optional["docker.DockerClient"] = None
+) -> None:
+    """Remove the setup/ directory from the web container.
+
+    Mirrors the "Remove setup" task: ``community.docker.docker_container_exec``
+    on ``ubersmith-web-1``, running
+    ``/bin/bash -c 'rm -rf {{ ubersmith_root }}/app/www/setup'``. Allows
+    Ubersmith to start (the app refuses to run while setup/ is present).
+    """
+    if client is None:
+        client = docker.from_env()
+
+    command = f"/bin/bash -c 'rm -rf {ubersmith_root}/app/www/setup'"
+    container = client.containers.get("ubersmith-web-1")
+    container.exec_run(command)
+
+
+def prune_old_images(
+    client: Optional["docker.DockerClient"] = None, until: str = "2160h"
+) -> None:
+    """Prune dangling/unused Docker images older than `until`.
+
+    Mirrors the "Docker image cleanup" task: ``community.docker.docker_prune``
+    with ``images: true`` and ``images_filters: {until: 2160h}``.
+    """
+    if client is None:
+        client = docker.from_env()
+
+    client.images.prune(filters={"until": until})
