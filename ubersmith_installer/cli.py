@@ -16,6 +16,7 @@ role, an ``upgrade`` subcommand, and any other subcommands.
 
 from __future__ import annotations
 
+import getpass
 import os
 import subprocess
 import sys
@@ -27,13 +28,16 @@ from . import (
     certbot,
     certs,
     compose_override,
+    configure_state,
     docker_ops,
     migrations,
     mta,
+    patch_apply,
     patch_cleanup,
     preflight,
     prompts,
     redis_migration,
+    retry_letsencrypt as retry_letsencrypt_module,
     secrets,
     state,
     system_config,
@@ -914,6 +918,470 @@ def upgrade(
     click.echo(f"  ubersmith_installed_version = {release['ubersmith_release_version']}")
     click.echo(f"  database topology           = {'local' if is_local_database else 'remote'}")
     click.echo(f"  installer state written to  = {state_file}")
+
+
+@main.command()
+@click.option(
+    "--ubersmith-home",
+    "ubersmith_home",
+    default=None,
+    help="Current path in use by Ubersmith / Appliance.",
+)
+@click.option(
+    "--virtual-host",
+    "virtual_host",
+    default=None,
+    help=(
+        "Enter the address in use by Ubersmith / Appliance; for multiple "
+        "hostnames use a comma delimited list."
+    ),
+)
+@click.option(
+    "--admin-email",
+    "admin_email",
+    default=None,
+    help="Enter the email address of the Ubersmith administrator.",
+)
+@click.option(
+    "--non-interactive",
+    is_flag=True,
+    default=False,
+    help=(
+        "Never prompt. All 3 values (--ubersmith-home, --virtual-host, "
+        "--admin-email) must be supplied; otherwise the command aborts with "
+        "an error instead of prompting."
+    ),
+)
+@click.option(
+    "--state-file",
+    "state_file",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=state.DEFAULT_STATE_PATH,
+    show_default=True,
+    help="Path to the installer state ini file to write.",
+)
+def configure(
+    ubersmith_home: str | None,
+    virtual_host: str | None,
+    admin_email: str | None,
+    non_interactive: bool,
+    state_file: Path,
+) -> None:
+    """Reconfigure an existing Ubersmith install's stored settings.
+
+    Reaches parity with ``configure.yml``: gathers ``ubersmith_home``,
+    ``virtual_host``, and ``admin_email`` (interactively by default,
+    matching today's ``vars_prompt`` UX -- note the prompt text differs
+    slightly from ``install``'s for ``ubersmith_home``/``virtual_host``),
+    confirms ``ubersmith_home`` contains an existing installation, and
+    writes the values (plus mirrored ``appliance_home``/``app_virtual_host``
+    copies) into the installer state file.
+    """
+    required_names = [name for name, _, _ in prompts.CONFIGURE_PROMPTS]
+    supplied = {
+        "ubersmith_home": ubersmith_home,
+        "virtual_host": virtual_host,
+        "admin_email": admin_email,
+    }
+    provided = {name: value for name, value in supplied.items() if value is not None}
+
+    if len(provided) == len(required_names):
+        answers = provided
+    elif non_interactive:
+        missing = [name for name in required_names if name not in provided]
+        flags = ", ".join(f"--{name.replace('_', '-')}" for name in missing)
+        click.secho(
+            f"--non-interactive was given but the following value(s) are missing: {flags}",
+            fg="red",
+            bold=True,
+        )
+        sys.exit(2)
+    else:
+        answers = prompts.prompt_for_configure_values(defaults=provided)
+
+    ubersmith_home = answers["ubersmith_home"]
+    virtual_host = answers["virtual_host"]
+    admin_email = answers["admin_email"]
+
+    try:
+        configure_state.reconfigure(
+            ubersmith_home, virtual_host, admin_email, state_file=state_file
+        )
+    except ValueError as exc:
+        click.secho(str(exc), fg="red", bold=True)
+        sys.exit(1)
+
+    click.echo()
+    click.secho("Ubersmith configuration updated.", fg="green", bold=True)
+    click.echo(f"  ubersmith_home              = {ubersmith_home}")
+    click.echo(f"  virtual_host                = {virtual_host}")
+    click.echo(f"  admin_email                 = {admin_email}")
+    click.echo(f"  installer state written to  = {state_file}")
+
+
+@main.command(name="retry-letsencrypt")
+@click.option(
+    "--non-interactive",
+    is_flag=True,
+    default=False,
+    help=(
+        "No-op today -- this command has no interactive prompts of its own "
+        "(retry_letsencrypt.yml has none either). Accepted for consistency "
+        "with the other subcommands' flag conventions."
+    ),
+)
+@click.option(
+    "--state-file",
+    "state_file",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=state.DEFAULT_STATE_PATH,
+    show_default=True,
+    help="Path to the installer state ini file to read.",
+)
+@click.option(
+    "--skip-preflight",
+    is_flag=True,
+    default=False,
+    help="Skip OS/Docker preflight checks (for testing in non-standard environments).",
+)
+def retry_letsencrypt(
+    non_interactive: bool,
+    state_file: Path,
+    skip_preflight: bool,
+) -> None:
+    """Retry the Let's Encrypt certificate request for an existing install.
+
+    Reaches parity with ``retry_letsencrypt.yml``: reads the existing
+    installer state (failing clearly, same pattern as ``upgrade``, if it's
+    missing), then requests certificates via the webroot method for every
+    configured virtual host, runs the deploy hooks, gracefully reloads
+    Apache, and re-installs the daily renewal cron task.
+    """
+    installer_state = state.read_state(path=state_file)
+    required_fields = (
+        "ubersmith_home",
+        "virtual_host",
+        "admin_email",
+        "ubersmith_installed_version",
+    )
+    missing_fields = [
+        name for name in required_fields if getattr(installer_state, name) is None
+    ]
+    if missing_fields:
+        click.secho(
+            "Installer configuration is not present (missing: "
+            f"{', '.join(missing_fields)} in {state_file}). Run `install` first.",
+            fg="red",
+            bold=True,
+        )
+        sys.exit(1)
+
+    if not skip_preflight:
+        click.echo("Running preflight checks...")
+        result = preflight.run_preflight_checks(check_service_enabled=False)
+
+        for warning in result.warnings:
+            click.secho(f"  [WARN] {warning}", fg="yellow")
+
+        if not result.ok:
+            for error in result.errors:
+                click.secho(f"  [FAIL] {error}", fg="red")
+            click.secho("Preflight checks failed.", fg="red", bold=True)
+            sys.exit(1)
+
+        click.secho("Preflight checks passed.", fg="green")
+    else:
+        click.secho("Skipping preflight checks (--skip-preflight).", fg="yellow")
+
+    ubersmith_home_path = Path(installer_state.ubersmith_home)
+    virtual_hosts = [
+        h.strip() for h in installer_state.virtual_host.split(",") if h.strip()
+    ]
+
+    click.echo("Retrying Let's Encrypt certificate request...")
+    retry_letsencrypt_module.retry_letsencrypt(
+        virtual_hosts,
+        ubersmith_home_path,
+        installer_state.admin_email,
+        DEFAULT_CERTBOT_VERSION,
+    )
+
+    click.echo()
+    click.secho("Let's Encrypt certificate retry complete.", fg="green", bold=True)
+    click.echo(f"  virtual_host(s) = {', '.join(virtual_hosts)}")
+
+
+@main.command(name="add-brand")
+@click.option(
+    "--new-virtual-host",
+    "new_virtual_host",
+    default=None,
+    help=(
+        "Enter the hostname(s) for the new brand; for multiple brands use a "
+        "comma delimited list."
+    ),
+)
+@click.option(
+    "--non-interactive",
+    is_flag=True,
+    default=False,
+    help=(
+        "Never prompt. --new-virtual-host must be supplied; otherwise the "
+        "command aborts with an error instead of prompting."
+    ),
+)
+@click.option(
+    "--state-file",
+    "state_file",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=state.DEFAULT_STATE_PATH,
+    show_default=True,
+    help="Path to the installer state ini file to read/update.",
+)
+@click.option(
+    "--skip-preflight",
+    is_flag=True,
+    default=False,
+    help="Skip OS/Docker preflight checks (for testing in non-standard environments).",
+)
+def add_brand(
+    new_virtual_host: str | None,
+    non_interactive: bool,
+    state_file: Path,
+    skip_preflight: bool,
+) -> None:
+    """Add a new brand (additional virtual host(s)) to an existing install.
+
+    Reaches parity with the two-step sequence ``add_new_brand.sh`` runs
+    back-to-back (``add_new_brand.yml -t new_brand`` then
+    ``retry_letsencrypt.yml``): prompts for (or accepts via flag) the new
+    hostname(s), reads the existing installer state, computes the combined
+    ``virtual_host`` list (existing + new), generates a self-signed cert and
+    apache vhost config for the NEW host(s) only (existing hosts already
+    have theirs from a prior install/add-brand run -- an intentional
+    simplification vs. faithfully replaying the tagged Ansible tasks, which
+    would harmlessly but pointlessly re-generate them for every host on
+    every run), updates the installer state's ``virtual_host`` to the
+    combined list, then retries the Let's Encrypt certificate request for
+    the FULL combined host list.
+    """
+    if new_virtual_host is None:
+        if non_interactive:
+            click.secho(
+                "--non-interactive was given but the following value(s) are "
+                "missing: --new-virtual-host",
+                fg="red",
+                bold=True,
+            )
+            sys.exit(2)
+        answers = prompts.prompt_for_add_brand_values()
+        new_virtual_host = answers["new_virtual_host"]
+
+    installer_state = state.read_state(path=state_file)
+    required_fields = ("ubersmith_home", "virtual_host", "admin_email")
+    missing_fields = [
+        name for name in required_fields if getattr(installer_state, name) is None
+    ]
+    if missing_fields:
+        click.secho(
+            "Installer configuration is not present (missing: "
+            f"{', '.join(missing_fields)} in {state_file}). Run `install` first.",
+            fg="red",
+            bold=True,
+        )
+        sys.exit(1)
+
+    if not skip_preflight:
+        click.echo("Running preflight checks...")
+        result = preflight.run_preflight_checks(check_service_enabled=False)
+
+        for warning in result.warnings:
+            click.secho(f"  [WARN] {warning}", fg="yellow")
+
+        if not result.ok:
+            for error in result.errors:
+                click.secho(f"  [FAIL] {error}", fg="red")
+            click.secho("Preflight checks failed.", fg="red", bold=True)
+            sys.exit(1)
+
+        click.secho("Preflight checks passed.", fg="green")
+    else:
+        click.secho("Skipping preflight checks (--skip-preflight).", fg="yellow")
+
+    ubersmith_home_path = Path(installer_state.ubersmith_home)
+    admin_email = installer_state.admin_email
+    existing_hosts = [
+        h.strip() for h in installer_state.virtual_host.split(",") if h.strip()
+    ]
+    new_hosts = [h.strip() for h in new_virtual_host.split(",") if h.strip()]
+    combined_hosts = existing_hosts + new_hosts
+
+    owner_uid = os.getuid() if hasattr(os, "getuid") else 0
+    owner_gid = os.getgid() if hasattr(os, "getgid") else 0
+
+    ssl_dir = ubersmith_home_path / "conf" / "ssl"
+    for host in new_hosts:
+        certs.generate_selfsigned_cert(host, ssl_dir)
+
+    for host in new_hosts:
+        _write_rendered(
+            ubersmith_home_path / "conf" / "httpd" / "sites-enabled" / f"{host}.conf",
+            templates.render_instance_vhost(
+                {
+                    "admin_email": admin_email,
+                    "ubersmith_root": UBERSMITH_ROOT,
+                    "item": host,
+                    "fcgi_host": FCGI_HOST,
+                    "mozilla_ciphers": DEFAULT_MOZILLA_CIPHERS,
+                }
+            ),
+            0o640,
+            owner_uid,
+            owner_gid,
+        )
+
+    combined_virtual_host = ",".join(combined_hosts)
+    state.write_state(
+        {
+            "virtual_host": combined_virtual_host,
+            "app_virtual_host": combined_virtual_host,
+        },
+        path=state_file,
+    )
+
+    click.echo("Retrying Let's Encrypt certificate request...")
+    retry_letsencrypt_module.retry_letsencrypt(
+        combined_hosts,
+        ubersmith_home_path,
+        admin_email,
+        DEFAULT_CERTBOT_VERSION,
+    )
+
+    click.echo()
+    click.secho("Brand added.", fg="green", bold=True)
+    click.echo(f"  new virtual_host(s)         = {', '.join(new_hosts)}")
+    click.echo(f"  virtual_host(s)             = {combined_virtual_host}")
+    click.echo(f"  installer state written to  = {state_file}")
+
+
+@main.command()
+@click.option(
+    "--patch-id",
+    "patch_id",
+    default=None,
+    help=(
+        "Apply this patch ID directly instead of prompting from the "
+        "available-patches list (required with --non-interactive, since a "
+        "patch ID cannot be chosen interactively without a human present)."
+    ),
+)
+@click.option(
+    "--non-interactive",
+    is_flag=True,
+    default=False,
+    help=(
+        "Never prompt for a patch ID -- --patch-id must be supplied; "
+        "otherwise the command aborts with an error instead of prompting."
+    ),
+)
+@click.option(
+    "--state-file",
+    "state_file",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=state.DEFAULT_STATE_PATH,
+    show_default=True,
+    help="Path to the installer state ini file to read/update.",
+)
+def patch(
+    patch_id: str | None,
+    non_interactive: bool,
+    state_file: Path,
+) -> None:
+    """Fetch and apply an official Ubersmith patch release.
+
+    Reaches parity with ``patch_ubersmith.yml``: reads the existing
+    installer state, confirms patches are supported for this install (the
+    ``docker-compose.override.yml`` patches volume mount must be present),
+    clears any previous patch state, lists the patch releases available for
+    the currently installed Ubersmith version, prompts the admin to choose
+    one (or uses ``--patch-id`` for non-interactive use), downloads and
+    unpacks the chosen release asset, applies it (restarting the web
+    container, fixing ownership, and copying the patch files into place),
+    and records the applied patch's metadata in ``.patched``.
+    """
+    installer_state = state.read_state(path=state_file)
+    required_fields = ("ubersmith_home", "ubersmith_installed_version")
+    missing_fields = [
+        name for name in required_fields if getattr(installer_state, name) is None
+    ]
+    if missing_fields:
+        click.secho(
+            "Installer configuration is not present (missing: "
+            f"{', '.join(missing_fields)} in {state_file}). Run `install` first.",
+            fg="red",
+            bold=True,
+        )
+        sys.exit(1)
+
+    ubersmith_home_path = Path(installer_state.ubersmith_home)
+    ubersmith_version = installer_state.ubersmith_installed_version
+
+    if not patch_apply.check_patches_supported(ubersmith_home_path):
+        click.secho(
+            "Ubersmith is not currently configured to accept patches. "
+            "Please contact support@ubersmith.com.",
+            fg="red",
+            bold=True,
+        )
+        sys.exit(1)
+
+    patch_apply.cleanup_previous_patch_state(ubersmith_home_path)
+
+    click.echo("Determining available patches...")
+    patches = patch_apply.list_available_patches(ubersmith_version)
+
+    if patch_id is None:
+        if non_interactive:
+            click.secho(
+                "--non-interactive was given but --patch-id is missing (a "
+                "patch ID cannot be chosen non-interactively).",
+                fg="red",
+                bold=True,
+            )
+            sys.exit(2)
+        patch_id = patch_apply.prompt_for_patch_id(patches, ubersmith_version)
+
+    selected = next(
+        (p for p in patches if str(p["id"]) == str(patch_id)), None
+    )
+    if selected is None:
+        click.secho(
+            f"Patch ID {patch_id!r} is not among the available patches for "
+            f"Ubersmith {ubersmith_version}.",
+            fg="red",
+            bold=True,
+        )
+        sys.exit(1)
+
+    click.echo(f"Downloading and unpacking patch {patch_id}...")
+    patch_apply.download_and_unpack_patch(
+        patch_id, selected["asset_url"], ubersmith_home_path
+    )
+
+    click.echo("Applying patch...")
+    patch_apply.apply_patch(ubersmith_home_path, patch_id)
+
+    patch_apply.record_patch_metadata(
+        ubersmith_home_path,
+        patch_id,
+        installer=getpass.getuser(),
+        github_page=selected["html_url"],
+    )
+
+    click.echo()
+    click.secho("Ubersmith patch applied.", fg="green", bold=True)
+    click.echo(f"  patch_id = {patch_id}")
+    click.echo(f"  name     = {selected['name']}")
 
 
 if __name__ == "__main__":

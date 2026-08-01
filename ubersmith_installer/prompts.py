@@ -66,6 +66,55 @@ INSTALL_PROMPTS: tuple[tuple[str, str, str], ...] = (
 )
 
 
+#: Mirrors configure.yml's vars_prompt block: (var name, prompt text,
+#: default) in the exact order they are asked today. Note the prompt text
+#: for ubersmith_home/virtual_host differs slightly from INSTALL_PROMPTS.
+CONFIGURE_PROMPTS: tuple[tuple[str, str, str], ...] = (
+    (
+        "ubersmith_home",
+        "Current path in use by Ubersmith / Appliance",
+        "/usr/local/ubersmith",
+    ),
+    (
+        "virtual_host",
+        "Enter the address in use by Ubersmith / Appliance; for multiple "
+        "hostnames use a comma delimited list",
+        "ubersmith.example.com",
+    ),
+    (
+        "admin_email",
+        "Enter the email address of the Ubersmith administrator",
+        "admin@example.org",
+    ),
+)
+
+#: Mirrors add_new_brand.yml's single vars_prompt entry.
+ADD_BRAND_PROMPTS: tuple[tuple[str, str, str], ...] = (
+    (
+        "new_virtual_host",
+        "Enter the hostname(s) for the new brand; for multiple brands use a "
+        "comma delimited list",
+        "ubersmith.example.com",
+    ),
+)
+
+
+def prompt_for_values(
+    prompt_specs: tuple[tuple[str, str, str], ...], defaults: dict | None = None
+) -> dict:
+    """Generic version of :func:`prompt_for_install_values`: asks each
+    ``(name, prompt_text, default)`` triple in `prompt_specs`, in order,
+    honoring any ``defaults`` overrides the same way. Used by
+    ``prompt_for_install_values``/``prompt_for_configure_values``/
+    ``prompt_for_add_brand_values`` to avoid duplicating the prompt loop.
+    """
+    overrides = defaults or {}
+    answers: dict = {}
+    for name, prompt_text, default in prompt_specs:
+        answers[name] = click.prompt(prompt_text, default=overrides.get(name, default))
+    return answers
+
+
 def prompt_for_install_values(defaults: dict | None = None) -> dict:
     """Interactively prompt for the 5 ``install_ubersmith.yml`` vars_prompt values.
 
@@ -78,11 +127,29 @@ def prompt_for_install_values(defaults: dict | None = None) -> dict:
     ``ubersmith_home``, ``lets_encrypt_certificate``, ``virtual_host``,
     ``admin_email``.
     """
-    overrides = defaults or {}
-    answers: dict = {}
-    for name, prompt_text, default in INSTALL_PROMPTS:
-        answers[name] = click.prompt(prompt_text, default=overrides.get(name, default))
-    return answers
+    return prompt_for_values(INSTALL_PROMPTS, defaults)
+
+
+def prompt_for_configure_values(defaults: dict | None = None) -> dict:
+    """Interactively prompt for the 3 ``configure.yml`` vars_prompt values.
+
+    Asks the same 3 questions, in the same order, with the same prompt text
+    and defaults as ``configure.yml``'s ``vars_prompt`` block -- note the
+    prompt text differs slightly from ``prompt_for_install_values`` for
+    ``ubersmith_home``/``virtual_host``.
+
+    Returns a dict keyed by variable name: ``ubersmith_home``,
+    ``virtual_host``, ``admin_email``.
+    """
+    return prompt_for_values(CONFIGURE_PROMPTS, defaults)
+
+
+def prompt_for_add_brand_values(defaults: dict | None = None) -> dict:
+    """Interactively prompt for the 1 ``add_new_brand.yml`` vars_prompt value.
+
+    Returns a dict keyed by variable name: ``new_virtual_host``.
+    """
+    return prompt_for_values(ADD_BRAND_PROMPTS, defaults)
 
 
 def is_lets_encrypt_requested(answer: str) -> bool:
