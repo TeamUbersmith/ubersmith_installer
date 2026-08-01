@@ -19,6 +19,9 @@ jobs:
           sudo apt-get install -y python3-venv expect
 
       - name: Run installer non-interactively via expect
+        env:
+          ANSIBLE_NOCOLOR: "1"
+          ANSIBLE_FORCE_COLOR: "0"
         run: expect .github/scripts/run_install.exp
 
       - name: Verify containers are up

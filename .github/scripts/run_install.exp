@@ -21,7 +21,7 @@ send "ubersmith.ci.test\r"
 expect "Enter the email address of the Ubersmith administrator"
 send "ci-test@ubersmith.com\r"
 
-expect "CTRL+C to continue"
+expect "timezone is configured as"
 send "\r"
 
 expect eof
