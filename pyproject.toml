@@ -13,6 +13,7 @@ dependencies = [
     "Jinja2>=3.1",
     "click>=8.1",
     "distro>=1.9",
+    "cryptography>=42",
 ]
 
 [project.optional-dependencies]
