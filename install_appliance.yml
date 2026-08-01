@@ -18,7 +18,7 @@
       private: false
 
   vars:
-    interactive: true
+    interactive: "{{ (lookup('env', 'UBERSMITH_INTERACTIVE') | default('true', true)) | bool }}"
 
   roles:
     - common

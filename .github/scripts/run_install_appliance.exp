@@ -7,10 +7,11 @@
 # registry, so a real 4.x-origin appliance install can still be seeded here,
 # letting test-upgrade-appliance-python-cli.yml exercise a genuine 4.x -> 5.x
 # major-version upgrade instead of only a same-major-version one. Requires
-# UBERSMITH_INTERACTIVE=false in the environment so pause prompts are skipped
-# (not that install_appliance.yml has any -- the pre-upgrade reminder pause
-# is tagged upgrade_only and this seed run always passes --skip-tags
-# upgrade_only).
+# UBERSMITH_INTERACTIVE=false in the environment so pause prompts are
+# skipped -- install_appliance.yml includes the shared `common` role, whose
+# "Output Current Timezone" pause is gated only on `interactive` (wired to
+# this env var, same fix as install_ubersmith.yml), and would otherwise
+# hang here waiting for input on a non-interactive CI runner.
 
 set timeout 1800
 spawn ./install_appliance.sh

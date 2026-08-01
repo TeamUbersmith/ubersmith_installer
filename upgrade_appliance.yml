@@ -26,7 +26,7 @@
       }}"
     ubersmith_major_version: "5"
 
-    interactive: true
+    interactive: "{{ (lookup('env', 'UBERSMITH_INTERACTIVE') | default('true', true)) | bool }}"
 
   roles:
     - common

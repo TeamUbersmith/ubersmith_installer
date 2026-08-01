@@ -28,7 +28,7 @@
     ubersmith_major_version: "5"
     lets_encrypt_certificate: "{{ lookup('ini', 'lets_encrypt_certificate section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini default=yes')
       }}"
-    interactive: true
+    interactive: "{{ (lookup('env', 'UBERSMITH_INTERACTIVE') | default('true', true)) | bool }}"
 
   roles:
     - common
