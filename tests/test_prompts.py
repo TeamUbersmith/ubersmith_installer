@@ -7,6 +7,8 @@ from click.testing import CliRunner
 from ubersmith_installer.prompts import (
     is_lets_encrypt_requested,
     prompt_for_install_values,
+    show_compose_override_reminder,
+    show_pre_upgrade_reminder,
 )
 
 
@@ -99,3 +101,67 @@ def test_prompt_defaults_can_be_overridden():
 )
 def test_is_lets_encrypt_requested(answer, expected):
     assert is_lets_encrypt_requested(answer) is expected
+
+
+def test_pre_upgrade_reminder_blocks_and_confirms_when_interactive(monkeypatch):
+    calls = []
+
+    def fake_confirm(text, default=None, abort=None):
+        calls.append((text, default, abort))
+        return True
+
+    monkeypatch.setattr(click, "confirm", fake_confirm)
+
+    show_pre_upgrade_reminder(interactive=True)
+
+    assert len(calls) == 1
+
+
+def test_pre_upgrade_reminder_never_confirms_when_non_interactive(monkeypatch, capsys):
+    calls = []
+    monkeypatch.setattr(click, "confirm", lambda *a, **k: calls.append(1) or True)
+
+    show_pre_upgrade_reminder(interactive=False)
+
+    assert calls == []
+    out = capsys.readouterr().out
+    assert "release notes" in out
+    assert "backup" in out.lower()
+
+
+@pytest.mark.parametrize("interactive", [True, False])
+def test_compose_override_reminder_noop_for_old_versions(monkeypatch, capsys, interactive):
+    calls = []
+    monkeypatch.setattr(click, "confirm", lambda *a, **k: calls.append(1) or True)
+
+    for version in ("4.6.0", "4.5.9", "1.0.0"):
+        show_compose_override_reminder(interactive=interactive, installed_version=version)
+
+    assert calls == []
+    assert capsys.readouterr().out == ""
+
+
+def test_compose_override_reminder_blocks_and_confirms_when_interactive(monkeypatch):
+    calls = []
+
+    def fake_confirm(text, default=None, abort=None):
+        calls.append((text, default, abort))
+        return True
+
+    monkeypatch.setattr(click, "confirm", fake_confirm)
+
+    show_compose_override_reminder(interactive=True, installed_version="5.0.0")
+
+    assert len(calls) == 1
+
+
+def test_compose_override_reminder_never_confirms_when_non_interactive(monkeypatch, capsys):
+    calls = []
+    monkeypatch.setattr(click, "confirm", lambda *a, **k: calls.append(1) or True)
+
+    show_compose_override_reminder(interactive=False, installed_version="5.0.0")
+
+    assert calls == []
+    out = capsys.readouterr().out
+    assert "ports directive" in out
+    assert "timezone volume" in out
