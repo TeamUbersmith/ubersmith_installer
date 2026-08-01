@@ -98,6 +98,41 @@ ADD_BRAND_PROMPTS: tuple[tuple[str, str, str], ...] = (
     ),
 )
 
+#: Mirrors install_appliance.yml's vars_prompt block: (var name, prompt
+#: text, default) in the exact order they are asked today. Note the prompt
+#: text/defaults differ from INSTALL_PROMPTS even though the first var name
+#: is the same (``ubersmith_major_version``) -- this one chooses the
+#: Appliance release, not the full Ubersmith stack.
+APPLIANCE_INSTALL_PROMPTS: tuple[tuple[str, str, str], ...] = (
+    (
+        "ubersmith_major_version",
+        "Choose which version of Ubersmith's Appliance to install (4 or 5)",
+        "5",
+    ),
+    (
+        "appliance_home",
+        "Choose an installation directory for Ubersmith's Appliance",
+        "/usr/local/ubersmith",
+    ),
+    (
+        "app_virtual_host",
+        "Enter the domain name associated with your Ubersmith installation",
+        "example.com",
+    ),
+)
+
+#: Mirrors "Remind admin to make a backup before proceeding with an
+#: upgrade" (roles/appliance/tasks/main.yml, tagged upgrade_only, ~line 3):
+#: exact pause prompt text shown before an appliance upgrade proceeds. Note
+#: this differs from ``PRE_UPGRADE_REMINDER`` (no release-notes link,
+#: mentions "Ubersmith appliance database" specifically) -- not generic
+#: enough to reuse ``show_pre_upgrade_reminder`` as-is.
+APPLIANCE_PRE_UPGRADE_REMINDER = (
+    "Please ensure you have made a backup of your Ubersmith appliance "
+    "database before proceeding with the upgrade process. (CTRL+C to "
+    "continue)"
+)
+
 
 def prompt_for_values(
     prompt_specs: tuple[tuple[str, str, str], ...], defaults: dict | None = None
@@ -150,6 +185,18 @@ def prompt_for_add_brand_values(defaults: dict | None = None) -> dict:
     Returns a dict keyed by variable name: ``new_virtual_host``.
     """
     return prompt_for_values(ADD_BRAND_PROMPTS, defaults)
+
+
+def prompt_for_appliance_install_values(defaults: dict | None = None) -> dict:
+    """Interactively prompt for the 3 ``install_appliance.yml`` vars_prompt values.
+
+    Asks the same 3 questions, in the same order, with the same prompt text
+    and defaults as ``install_appliance.yml``'s ``vars_prompt`` block.
+
+    Returns a dict keyed by variable name: ``ubersmith_major_version``,
+    ``appliance_home``, ``app_virtual_host``.
+    """
+    return prompt_for_values(APPLIANCE_INSTALL_PROMPTS, defaults)
 
 
 def is_lets_encrypt_requested(answer: str) -> bool:
@@ -223,3 +270,19 @@ def show_compose_override_reminder(interactive: bool, installed_version: str) ->
         click.confirm("Continue with the upgrade?", default=True, abort=True)
         return
     click.echo(f"[info] {COMPOSE_OVERRIDE_REMINDER}")
+
+
+def show_appliance_pre_upgrade_reminder(interactive: bool) -> None:
+    """Mirror "Remind admin to make a backup before proceeding with an
+    upgrade" (roles/appliance/tasks/main.yml, ~line 3).
+
+    Same interactive/non-interactive split as :func:`show_pre_upgrade_reminder`
+    (blocking ``click.confirm`` when interactive, non-blocking informational
+    ``click.echo`` otherwise), but with the appliance role's own distinct
+    reminder text (see ``APPLIANCE_PRE_UPGRADE_REMINDER``).
+    """
+    if interactive:
+        click.echo(APPLIANCE_PRE_UPGRADE_REMINDER)
+        click.confirm("Continue with the upgrade?", default=True, abort=True)
+        return
+    click.echo(f"[info] {APPLIANCE_PRE_UPGRADE_REMINDER}")

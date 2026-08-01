@@ -234,6 +234,29 @@ def test_compose_up_invokes_expected_command(tmp_path):
     assert kwargs["cwd"] == appliance_home
 
 
+def test_compose_up_with_services_appends_service_list(tmp_path):
+    appliance_home = tmp_path / "appliance"
+    runner = MagicMock()
+
+    appliance_ops.compose_up(
+        appliance_home, services=["app_web", "app_db", "app_cron"], runner=runner, env={}
+    )
+
+    args, kwargs = runner.call_args
+    assert args[0] == [
+        "docker",
+        "compose",
+        "-p",
+        "ubersmith",
+        "up",
+        "-d",
+        "app_web",
+        "app_db",
+        "app_cron",
+    ]
+    assert kwargs["cwd"] == appliance_home
+
+
 def test_wait_for_containers_healthy_polls_appliance_container_names():
     client = MagicMock()
     container = MagicMock()
@@ -451,3 +474,59 @@ def test_step_up_mysql_57_raises_on_wait_timeout_but_still_starts_container():
     # The container is removed even though the wait never succeeded, since
     # the removal happens in a `finally`.
     stepup_container.remove.assert_called_once_with(force=True)
+
+
+# --- configure_uberapp_user_password / run_upgrade_php -----------------------
+
+
+def test_configure_uberapp_user_password_invokes_expected_mysql_command():
+    runner = MagicMock()
+
+    appliance_ops.configure_uberapp_user_password(
+        "dbpassword123", "xmlrpcpassword456", runner=runner
+    )
+
+    runner.assert_called_once()
+    (cmd,), _ = runner.call_args
+    assert cmd[0] == "mysql"
+    assert "--host=127.0.0.1" in cmd
+    assert "--port=3307" in cmd
+    assert "--user=uberapp" in cmd
+    assert "--password=dbpassword123" in cmd
+    assert "uberapp" in cmd
+    query = cmd[-1]
+    assert "xmlrpcpassword456" in query
+    assert "login = 'ubersmith'" in query
+
+
+def test_configure_uberapp_user_password_escapes_single_quotes():
+    runner = MagicMock()
+
+    appliance_ops.configure_uberapp_user_password(
+        "dbpassword123", "weird'pass", runner=runner
+    )
+
+    (cmd,), _ = runner.call_args
+    query = cmd[-1]
+    assert "weird''pass" in query
+
+
+def test_run_upgrade_php_invokes_expected_command(tmp_path):
+    appliance_home = tmp_path / "appliance"
+    runner = MagicMock()
+
+    appliance_ops.run_upgrade_php(appliance_home, runner=runner, env={})
+
+    args, kwargs = runner.call_args
+    assert args[0] == [
+        "docker",
+        "compose",
+        "-p",
+        "ubersmith",
+        "exec",
+        "-T",
+        "app_web",
+        "php",
+        "/var/www/appliance_root/www/upgrade.php",
+    ]
+    assert kwargs["cwd"] == appliance_home

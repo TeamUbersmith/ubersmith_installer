@@ -340,16 +340,22 @@ def chown_database_files(client: Optional["docker.DockerClient"] = None) -> None
 def compose_up(
     appliance_home: Path,
     *,
+    services: Optional[Sequence[str]] = None,
     runner: Optional[SubprocessRunner] = None,
     env: Optional[Mapping[str, str]] = None,
 ) -> None:
-    """Bring up all appliance containers via ``docker compose``.
+    """Bring up appliance containers via ``docker compose``.
 
     Mirrors the "Run docker compose up -d" task: ``docker compose -p
     ubersmith up -d``, run with ``chdir: appliance_home``. Unlike
-    ``docker_ops.compose_up``, no explicit service list or ``--quiet-pull``
-    flag is given -- this brings up every service defined by the compose
-    file.
+    ``docker_ops.compose_up``, no ``--quiet-pull`` flag is given.
+
+    ``services`` lets callers target a specific subset, matching the "Check
+    ubersmith containers before proceeding with upgrade" task later in the
+    same file (``docker compose -p ubersmith up -d app_web app_db
+    app_cron``) -- the default (``None``) reproduces the original
+    no-explicit-service-list invocation exactly, bringing up every service
+    defined by the compose file.
     """
     if runner is None:
         runner = _default_runner
@@ -357,6 +363,8 @@ def compose_up(
     base_env = dict(env) if env is not None else dict(os.environ)
 
     cmd = ["docker", "compose", "-p", "ubersmith", "up", "-d"]
+    if services:
+        cmd.extend(services)
     runner(cmd, cwd=Path(appliance_home), env=base_env)
 
 
@@ -481,3 +489,78 @@ def step_up_mysql_57(
         container.remove(force=True)
 
     return True
+
+
+def configure_uberapp_user_password(
+    mysql_appliance_password: str,
+    uberapp_user_password: str,
+    *,
+    runner: Optional[Callable[[Sequence[str]], subprocess.CompletedProcess]] = None,
+) -> None:
+    """Update the appliance's uberapp/xml-rpc user password.
+
+    Mirrors the "Configure uberapp user password" task: a
+    ``community.mysql.mysql_query`` against ``login_host: localhost``,
+    ``login_port: 3307`` (the host-published port for ``app_db`` -- see
+    ``appliance-docker-compose.yml.j2``'s ``127.0.0.1:3307:3306`` mapping),
+    authenticating as ``uberapp``/``mysql_appliance_password`` against the
+    ``uberapp`` database, running ``UPDATE user SET password = %s WHERE
+    login = %s`` with positional args ``[uberapp_user_password,
+    "ubersmith"]``.
+
+    This shells out to the ``mysql`` CLI (rather than reimplementing a MySQL
+    wire-protocol client), matching the subprocess-based pattern used
+    throughout this module and ``migrations.py``. Only ever called during
+    install -- this task carries no ``upgrade``/``upgrade_only`` tag, so it
+    never runs again during an upgrade.
+    """
+    if runner is None:
+        runner = lambda cmd: subprocess.run(list(cmd), check=True, capture_output=True)
+
+    escaped_password = uberapp_user_password.replace("'", "''")
+    query = f"UPDATE user SET password = '{escaped_password}' WHERE login = 'ubersmith'"
+    cmd = [
+        "mysql",
+        "--host=127.0.0.1",
+        "--port=3307",
+        "--user=uberapp",
+        f"--password={mysql_appliance_password}",
+        "uberapp",
+        "-e",
+        query,
+    ]
+    runner(cmd)
+
+
+def run_upgrade_php(
+    appliance_home: Path,
+    *,
+    runner: Optional[SubprocessRunner] = None,
+    env: Optional[Mapping[str, str]] = None,
+) -> None:
+    """Run the appliance's upgrade.php inside the app_web container.
+
+    Mirrors the "Run upgrade.php" (upgrade_only) task: ``docker compose -p
+    ubersmith exec -T app_web php
+    /var/www/appliance_root/www/upgrade.php``, run with ``chdir:
+    appliance_home``. Note this targets a different container/path than
+    ubersmith's own ``docker_ops.run_updatedb`` (``ubersmith-php-1``, via
+    ``docker_container_exec`` rather than ``docker compose exec``).
+    """
+    if runner is None:
+        runner = _default_runner
+
+    base_env = dict(env) if env is not None else dict(os.environ)
+
+    cmd = [
+        "docker",
+        "compose",
+        "-p",
+        "ubersmith",
+        "exec",
+        "-T",
+        "app_web",
+        "php",
+        "/var/www/appliance_root/www/upgrade.php",
+    ]
+    runner(cmd, cwd=Path(appliance_home), env=base_env)

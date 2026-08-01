@@ -25,6 +25,8 @@ from pathlib import Path
 import click
 
 from . import (
+    appliance_compose_override,
+    appliance_ops,
     certbot,
     certs,
     compose_override,
@@ -122,6 +124,32 @@ OLD_PHP_VERSIONS = ["5.6", "7.1", "7.3", "8.2"]
 #: a prior upgrade).
 MYSQL_CNF_RERENDER_MAX_VERSION = "5.2.0"
 
+#: Mirrors roles/appliance/vars/main.yml -- the release metadata needed to
+#: render appliance-docker-compose.yml.j2 for a given ubersmith_major_version.
+APPLIANCE_RELEASE = {
+    "4": {
+        "mysql_version": 57,
+        "appliance_release_version": "4.6.3",
+        "backup_version": 2,
+        "containers": {
+            "release_version": "r4",
+            "appweb_container_repo": "appliance",
+        },
+    },
+    "5": {
+        "mysql_version": 80,
+        "appliance_release_version": "5.1.4",
+        "backup_version": 8,
+        "containers": {
+            "release_version": "r3",
+            "appweb_container_repo": "appliance",
+        },
+    },
+}
+
+#: Mirrors roles/appliance/vars/main.yml's fixed `appliance_root` value.
+APPLIANCE_ROOT = "/var/www/appliance_root"
+
 
 def _image_refs(release: dict, certbot_version: str) -> list[str]:
     """Build the "Pull required images" image reference list.
@@ -147,6 +175,27 @@ def _image_refs(release: dict, certbot_version: str) -> list[str]:
         f"ghcr.io/teamubersmith/certbot:{certbot_version}",
         "falcosecurity/falco-no-driver:latest",
         "clamav/clamav:1.4_base",
+    ]
+
+
+def _appliance_image_refs(release: dict) -> list[str]:
+    """Build the appliance "Pull required images" image reference list.
+
+    Mirrors the ``with_items`` list on the "Pull required images; this may
+    take a few moments" task in roles/appliance/tasks/main.yml exactly --
+    note this list is much shorter than ubersmith's: just the db, appweb,
+    and cron images (the xtrabackup/app_backup image referenced by
+    appliance-docker-compose.yml.j2 is not explicitly pulled here, only
+    picked up later by ``docker compose pull``/``docker compose up``).
+    """
+    registry = DEFAULT_REGISTRY
+    version = release["appliance_release_version"]
+    containers_release = release["containers"]["release_version"]
+    tag = f"{version}-{containers_release}"
+    return [
+        f"{registry}/appliance_db_ps{release['mysql_version']}:{tag}",
+        f"{registry}/{release['containers']['appweb_container_repo']}:{tag}",
+        f"{registry}/appliance_cron:{tag}",
     ]
 
 
@@ -916,6 +965,521 @@ def upgrade(
     click.echo(f"  admin_email                 = {admin_email}")
     click.echo(f"  upgraded from version       = {old_installed_version}")
     click.echo(f"  ubersmith_installed_version = {release['ubersmith_release_version']}")
+    click.echo(f"  database topology           = {'local' if is_local_database else 'remote'}")
+    click.echo(f"  installer state written to  = {state_file}")
+
+
+@main.command(name="install-appliance")
+@click.option(
+    "--ubersmith-major-version",
+    "ubersmith_major_version",
+    default=None,
+    help="Choose which version of Ubersmith's Appliance to install (4 or 5).",
+)
+@click.option(
+    "--appliance-home",
+    "appliance_home",
+    default=None,
+    help="Choose an installation directory for Ubersmith's Appliance.",
+)
+@click.option(
+    "--app-virtual-host",
+    "app_virtual_host",
+    default=None,
+    help="Enter the domain name associated with your Ubersmith installation.",
+)
+@click.option(
+    "--non-interactive",
+    is_flag=True,
+    default=False,
+    help=(
+        "Never prompt. All 3 install values (--ubersmith-major-version, "
+        "--appliance-home, --app-virtual-host) must be supplied; otherwise "
+        "the command aborts with an error instead of prompting."
+    ),
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help=(
+        "Skip Docker/network side effects (image pulls, `docker compose "
+        "pull`/`up`, waiting for containers healthy, and configuring the "
+        "uberapp/xml-rpc user password). Directories, self-signed certs, "
+        "rendered config files, and the state file are still written for "
+        "real under --appliance-home. Intended for exercising this command "
+        "in CI/tests without requiring root, a Docker daemon, or touching a "
+        "real system."
+    ),
+)
+@click.option(
+    "--state-file",
+    "state_file",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=state.DEFAULT_STATE_PATH,
+    show_default=True,
+    help="Path to the installer state ini file to write.",
+)
+@click.option(
+    "--skip-preflight",
+    is_flag=True,
+    default=False,
+    help="Skip OS/Docker preflight checks (for testing in non-standard environments).",
+)
+def install_appliance(
+    ubersmith_major_version: str | None,
+    appliance_home: str | None,
+    app_virtual_host: str | None,
+    non_interactive: bool,
+    dry_run: bool,
+    state_file: Path,
+    skip_preflight: bool,
+) -> None:
+    """Install the Ubersmith Appliance.
+
+    Reaches parity with ``install_appliance.yml`` + ``roles/common`` + the
+    fresh-install-scope tasks (every task NOT tagged ``upgrade_only``) in
+    ``roles/appliance/tasks/main.yml``: runs preflight checks, gathers the 3
+    install-time values, generates/reads the appliance's MySQL passwords and
+    a self-signed cert, creates the appliance directory tree and static
+    helper files, renders every appliance config template to its real
+    destination under ``--appliance-home``, pulls images and brings up
+    containers, configures the appliance's uberapp/xml-rpc user password,
+    and writes the installer state file.
+    """
+    required_names = [name for name, _, _ in prompts.APPLIANCE_INSTALL_PROMPTS]
+    supplied = {
+        "ubersmith_major_version": ubersmith_major_version,
+        "appliance_home": appliance_home,
+        "app_virtual_host": app_virtual_host,
+    }
+    provided = {name: value for name, value in supplied.items() if value is not None}
+
+    if len(provided) == len(required_names):
+        answers = provided
+    elif non_interactive:
+        missing = [name for name in required_names if name not in provided]
+        flags = ", ".join(f"--{name.replace('_', '-')}" for name in missing)
+        click.secho(
+            f"--non-interactive was given but the following value(s) are missing: {flags}",
+            fg="red",
+            bold=True,
+        )
+        sys.exit(2)
+    else:
+        answers = prompts.prompt_for_appliance_install_values(defaults=provided)
+
+    ubersmith_major_version = answers["ubersmith_major_version"]
+    appliance_home = answers["appliance_home"]
+    app_virtual_host = answers["app_virtual_host"]
+
+    if not skip_preflight:
+        click.echo("Running preflight checks...")
+        result = preflight.run_preflight_checks(check_service_enabled=False)
+
+        for warning in result.warnings:
+            click.secho(f"  [WARN] {warning}", fg="yellow")
+
+        if not result.ok:
+            for error in result.errors:
+                click.secho(f"  [FAIL] {error}", fg="red")
+            click.secho("Preflight checks failed.", fg="red", bold=True)
+            sys.exit(1)
+
+        click.secho("Preflight checks passed.", fg="green")
+    else:
+        click.secho("Skipping preflight checks (--skip-preflight).", fg="yellow")
+
+    release = APPLIANCE_RELEASE.get(ubersmith_major_version)
+    if release is None:
+        click.secho(
+            f"Unsupported ubersmith_major_version: {ubersmith_major_version!r} "
+            f"(expected one of {sorted(APPLIANCE_RELEASE)}).",
+            fg="red",
+            bold=True,
+        )
+        sys.exit(1)
+
+    appliance_home_path = Path(appliance_home)
+    owner_uid = os.getuid() if hasattr(os, "getuid") else 0
+    owner_gid = os.getgid() if hasattr(os, "getgid") else 0
+
+    # MySQL/xml-rpc passwords -- lookup('password', ...) equivalent (see
+    # roles/appliance/vars/main.yml). `appliance_user_pass`
+    # (mysql_appliance_user_password) is deliberately never generated here:
+    # it's defined in the Ansible source but never actually referenced by
+    # any task or template in the role (Ansible vars are lazily evaluated,
+    # so its lookup() is never triggered in practice) -- generating it would
+    # create a password file the real installer never creates.
+    password_paths = secrets.appliance_password_paths(Path.home(), app_virtual_host)
+    mysql_root_password = secrets.get_or_create_password(password_paths["root_db_pass"])
+    mysql_appliance_password = secrets.get_or_create_password(
+        password_paths["appliance_db_pass"]
+    )
+    uberapp_user_password = secrets.get_or_create_password(
+        password_paths["appliance_xmlrpc_pass"]
+    )
+
+    # Self-signed certificate for the appliance's virtual host.
+    ssl_dir = appliance_home_path / "conf" / "ssl"
+    certs.generate_selfsigned_cert(app_virtual_host, ssl_dir)
+
+    # Config directories + static helper files.
+    appliance_ops.create_config_directories(appliance_home_path, owner_uid, owner_gid)
+    appliance_ops.copy_static_files(appliance_home_path)
+
+    # Render every appliance template to its real destination.
+    common_context = {
+        "registry": DEFAULT_REGISTRY,
+        "appliance_release": APPLIANCE_RELEASE,
+        "ubersmith_major_version": ubersmith_major_version,
+        "appliance_version": release["appliance_release_version"],
+        "containers_release_version": release["containers"]["release_version"],
+        "app_virtual_host": app_virtual_host,
+        "appliance_home": str(appliance_home_path),
+    }
+
+    # "Create ubersmith apache virtual host configuration file" -- force:
+    # false, so only written the first time.
+    vhost_path = appliance_home_path / "conf" / "httpd" / "sites-enabled" / "appliance.conf"
+    if not vhost_path.exists():
+        _write_rendered(
+            vhost_path,
+            templates.render_appliance_vhost(
+                {"appliance_root": APPLIANCE_ROOT, "app_virtual_host": app_virtual_host}
+            ),
+            0o640,
+            owner_uid,
+            owner_gid,
+        )
+
+    # Fresh installs always render the percona server config override --
+    # this task carries no upgrade/upgrade_only tag (mysql_config only), so
+    # it is install-only (see CRITICAL note on `upgrade_appliance`).
+    _write_rendered(
+        appliance_home_path / "conf" / "mysql" / "ubersmith.cnf",
+        templates.render_appliance_mysql_cnf({}, ubersmith_major_version),
+        0o644,
+        owner_uid,
+        owner_gid,
+    )
+
+    _write_rendered(
+        appliance_home_path / "docker-compose.yml",
+        templates.render_appliance_docker_compose(common_context),
+        0o600,
+        owner_uid,
+        owner_gid,
+    )
+
+    # "Create docker compose override file" also carries no upgrade/
+    # upgrade_only tag (compose_file only) -- install-only, same as above.
+    override_path = appliance_home_path / "docker-compose.override.yml"
+    _write_rendered(
+        override_path,
+        templates.render_appliance_docker_compose_override(
+            {
+                **common_context,
+                "mysql_appliance_password": mysql_appliance_password,
+                "mysql_root_password": mysql_root_password,
+            }
+        ),
+        0o600,
+        owner_uid,
+        owner_gid,
+    )
+
+    # The two narrow legacy override fixups are tagged plain `upgrade` (not
+    # `upgrade_only`), so Ansible runs them right after rendering the file
+    # on a fresh install too -- always a no-op here since the freshly
+    # rendered file already has the current content.
+    appliance_compose_override.apply_legacy_override_fixups(
+        override_path, appliance_home_path, app_virtual_host
+    )
+
+    if not dry_run:
+        click.echo("Pulling images (this may take a few moments)...")
+        docker_ops.pull_images(_appliance_image_refs(release))
+        appliance_ops.compose_pull(appliance_home_path)
+
+        click.echo("Starting appliance containers...")
+        appliance_ops.compose_up(appliance_home_path)
+        appliance_ops.wait_for_containers_healthy()
+    else:
+        click.secho(
+            "Skipping image pull / docker compose pull / up / wait "
+            "(--dry-run).",
+            fg="yellow",
+        )
+
+    # "Database upgrade successful, set value in ini file for future use"
+    # hardcodes app_mysql_version to 8.0 regardless of ubersmith_major_version
+    # -- this task is tagged plain `upgrade`, so it runs on install too.
+    state.write_state({"app_mysql_version": "8.0"}, path=state_file)
+
+    if not dry_run:
+        appliance_ops.configure_uberapp_user_password(
+            mysql_appliance_password, uberapp_user_password
+        )
+    else:
+        click.secho(
+            "Skipping uberapp user password configuration (--dry-run).",
+            fg="yellow",
+        )
+
+    # "Output appliance xml-rpc username and password".
+    click.echo()
+    click.secho("*** PLEASE NOTE ***", fg="yellow", bold=True)
+    click.echo("The appliance user has been configured with the following credentials:")
+    click.echo("username: ubersmith")
+    click.echo(f"password: {uberapp_user_password}")
+    click.echo("Please use these values to configure the appliance entry in Ubersmith.")
+
+    installer_state = state.InstallerState(
+        ubersmith_home=str(appliance_home_path),
+        virtual_host=app_virtual_host,
+        appliance_home=str(appliance_home_path),
+        app_virtual_host=app_virtual_host,
+        appliance_installed_version=release["appliance_release_version"],
+        app_mysql_version="8.0",
+    )
+    state.write_installer_state(installer_state, path=state_file)
+
+    click.echo()
+    click.secho("Ubersmith Appliance install complete.", fg="green", bold=True)
+    click.echo(f"  appliance_home              = {appliance_home_path}")
+    click.echo(f"  app_virtual_host            = {app_virtual_host}")
+    click.echo(f"  appliance_installed_version = {release['appliance_release_version']}")
+    click.echo(f"  installer state written to  = {state_file}")
+    if dry_run:
+        click.secho(
+            "  (--dry-run: Docker side effects were skipped)",
+            fg="yellow",
+        )
+
+
+@main.command(name="upgrade-appliance")
+@click.option(
+    "--non-interactive",
+    is_flag=True,
+    default=False,
+    help=(
+        "Never block on the pre-upgrade reminder prompt -- it is logged as "
+        "an informational message instead."
+    ),
+)
+@click.option(
+    "--state-file",
+    "state_file",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=state.DEFAULT_STATE_PATH,
+    show_default=True,
+    help="Path to the installer state ini file to read/update.",
+)
+@click.option(
+    "--skip-preflight",
+    is_flag=True,
+    default=False,
+    help="Skip OS/Docker preflight checks (for testing in non-standard environments).",
+)
+def upgrade_appliance(
+    non_interactive: bool,
+    state_file: Path,
+    skip_preflight: bool,
+) -> None:
+    """Upgrade an existing Ubersmith Appliance install.
+
+    Reaches parity with ``upgrade_appliance.yml`` -t ``upgrade,upgrade_only``
+    -- i.e. every task in ``roles/appliance/tasks/main.yml`` tagged
+    ``upgrade`` or ``upgrade_only``. Like ``upgrade_appliance.yml`` itself,
+    this always targets the current major version 5 release regardless of
+    what was previously installed, and reads its configuration from the
+    installer state file written by a prior ``install-appliance`` run.
+
+    CRITICAL: the percona server config override (``conf/mysql/ubersmith.cnf``,
+    tagged ``mysql_config`` only) and ``docker-compose.override.yml`` (tagged
+    ``compose_file`` only) are install-only templates -- they carry no
+    "upgrade"/"upgrade_only" tag in the Ansible source and are NEVER
+    wholesale re-rendered here. Only docker-compose.override.yml gets two
+    narrow, in-place text fixups (see
+    :mod:`ubersmith_installer.appliance_compose_override`). Likewise,
+    "Configure uberapp user password" and "Output appliance xml-rpc username
+    and password" are tagged ``password`` only (no upgrade/upgrade_only tag)
+    -- the xml-rpc user password is configured once at install time and is
+    never reset or re-displayed by an upgrade.
+    """
+    installer_state = state.read_state(path=state_file)
+    required_fields = ("appliance_home", "app_virtual_host")
+    missing_fields = [
+        name for name in required_fields if getattr(installer_state, name) is None
+    ]
+    if missing_fields:
+        click.secho(
+            "Installer configuration is not present (missing: "
+            f"{', '.join(missing_fields)} in {state_file}). Run "
+            "`install-appliance` first.",
+            fg="red",
+            bold=True,
+        )
+        sys.exit(1)
+
+    if not skip_preflight:
+        click.echo("Running preflight checks...")
+        result = preflight.run_preflight_checks(check_service_enabled=False)
+
+        for warning in result.warnings:
+            click.secho(f"  [WARN] {warning}", fg="yellow")
+
+        if not result.ok:
+            for error in result.errors:
+                click.secho(f"  [FAIL] {error}", fg="red")
+            click.secho("Preflight checks failed.", fg="red", bold=True)
+            sys.exit(1)
+
+        click.secho("Preflight checks passed.", fg="green")
+    else:
+        click.secho("Skipping preflight checks (--skip-preflight).", fg="yellow")
+
+    # upgrade_appliance.yml hardcodes ubersmith_major_version: "5".
+    ubersmith_major_version = "5"
+    release = APPLIANCE_RELEASE[ubersmith_major_version]
+
+    appliance_home_path = Path(installer_state.appliance_home)
+    app_virtual_host = installer_state.app_virtual_host
+    # Mirrors upgrade_appliance.yml's `lookup('ini', ... default=5.6)`.
+    app_mysql_version = installer_state.app_mysql_version or "5.6"
+
+    interactive = not non_interactive
+    owner_uid = os.getuid() if hasattr(os, "getuid") else 0
+    owner_gid = os.getgid() if hasattr(os, "getgid") else 0
+
+    # "Remind admin to make a backup before proceeding with an upgrade"
+    # (upgrade_only).
+    prompts.show_appliance_pre_upgrade_reminder(interactive)
+
+    click.echo("Pulling images (this may take a few moments)...")
+    docker_ops.pull_images(_appliance_image_refs(release))
+
+    # "Check ubersmith containers before proceeding with upgrade" -- a
+    # failsafe ensuring the bare-minimum containers are running before doing
+    # anything else, in case a prior upgrade attempt failed partway through.
+    appliance_ops.compose_up(
+        appliance_home_path, services=["app_web", "app_db", "app_cron"]
+    )
+
+    # MySQL/xml-rpc passwords must already exist from the original install.
+    password_paths = secrets.appliance_password_paths(Path.home(), app_virtual_host)
+    mysql_root_password = secrets.get_or_create_password(password_paths["root_db_pass"])
+    mysql_appliance_password = secrets.get_or_create_password(
+        password_paths["appliance_db_pass"]
+    )
+
+    # "Create appliance configuration directories" is tagged plain `upgrade`,
+    # so it's re-run on every upgrade too -- idempotent mkdir/chmod/chown.
+    appliance_ops.create_config_directories(appliance_home_path, owner_uid, owner_gid)
+
+    common_context = {
+        "registry": DEFAULT_REGISTRY,
+        "appliance_release": APPLIANCE_RELEASE,
+        "ubersmith_major_version": ubersmith_major_version,
+        "appliance_version": release["appliance_release_version"],
+        "containers_release_version": release["containers"]["release_version"],
+        "app_virtual_host": app_virtual_host,
+        "appliance_home": str(appliance_home_path),
+    }
+
+    _write_rendered(
+        appliance_home_path / "docker-compose.yml",
+        templates.render_appliance_docker_compose(common_context),
+        0o600,
+        owner_uid,
+        owner_gid,
+    )
+
+    # "Create ubersmith apache virtual host configuration file" -- force:
+    # false, so only written if it doesn't already exist.
+    vhost_path = appliance_home_path / "conf" / "httpd" / "sites-enabled" / "appliance.conf"
+    if not vhost_path.exists():
+        _write_rendered(
+            vhost_path,
+            templates.render_appliance_vhost(
+                {"appliance_root": APPLIANCE_ROOT, "app_virtual_host": app_virtual_host}
+            ),
+            0o640,
+            owner_uid,
+            owner_gid,
+        )
+
+    # conf/mysql/ubersmith.cnf and docker-compose.override.yml are NEVER
+    # wholesale re-rendered here -- see CRITICAL note in this command's
+    # docstring. Only narrow, in-place fixups to the EXISTING override file.
+    override_path = appliance_home_path / "docker-compose.override.yml"
+    appliance_compose_override.apply_legacy_override_fixups(
+        override_path, appliance_home_path, app_virtual_host
+    )
+
+    # copy_static_files() unconditionally re-copies backup_rrds.sh too (an
+    # install-only, untagged task in the Ansible source) -- harmless since
+    # it's always the same shipped static file, matching the same
+    # simplification `upgrade`'s copy_static_files() call makes for
+    # ubersmith_start.sh (see that command's comment).
+    appliance_ops.copy_static_files(appliance_home_path)
+
+    # "Check for remote database".
+    app_web_env = appliance_ops.get_app_web_container_env()
+    is_local_database = appliance_ops.is_local_database(app_web_env)
+
+    # "Create self signed certificates" -- tagged plain `upgrade`; the
+    # Ansible task has a `creates:` guard this codebase doesn't replicate
+    # (regenerates unconditionally), matching the same simplification
+    # already accepted for `install`/`install-appliance`.
+    ssl_dir = appliance_home_path / "conf" / "ssl"
+    certs.generate_selfsigned_cert(app_virtual_host, ssl_dir)
+
+    click.echo("Pulling images via docker compose...")
+    appliance_ops.compose_pull(appliance_home_path)
+
+    click.echo("Stopping existing containers...")
+    appliance_ops.stop_containers(appliance_home_path)
+
+    volumes = appliance_ops.get_existing_volumes(appliance_home_path)
+    appliance_ops.remove_webroot_volume_if_present(appliance_home_path, volumes)
+
+    if is_local_database:
+        appliance_ops.chown_database_files()
+
+    appliance_ops.step_up_mysql_57(
+        DEFAULT_REGISTRY,
+        release["appliance_release_version"],
+        release["containers"]["release_version"],
+        app_mysql_version,
+        is_local_database,
+    )
+
+    click.echo("Starting appliance containers...")
+    appliance_ops.compose_up(appliance_home_path)
+
+    click.echo("Waiting for containers to come online...")
+    appliance_ops.wait_for_containers_healthy()
+
+    # "Database upgrade successful, set value in ini file for future use".
+    state.write_state({"app_mysql_version": "8.0"}, path=state_file)
+
+    click.echo("Running upgrade.php...")
+    appliance_ops.run_upgrade_php(appliance_home_path)
+
+    appliance_ops.prune_old_images()
+
+    updated_state = state.InstallerState(
+        appliance_installed_version=release["appliance_release_version"],
+    )
+    state.write_installer_state(updated_state, path=state_file)
+
+    click.echo()
+    click.secho("Ubersmith Appliance upgrade complete.", fg="green", bold=True)
+    click.echo(f"  appliance_home              = {appliance_home_path}")
+    click.echo(f"  app_virtual_host            = {app_virtual_host}")
+    click.echo(f"  appliance_installed_version = {release['appliance_release_version']}")
     click.echo(f"  database topology           = {'local' if is_local_database else 'remote'}")
     click.echo(f"  installer state written to  = {state_file}")
 
