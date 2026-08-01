@@ -1,4 +1,4 @@
-name: Test Install
+name: Test Install (Ubuntu 24.04)
 
 on: [push]
 
