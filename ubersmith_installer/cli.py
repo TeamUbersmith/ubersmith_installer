@@ -26,10 +26,14 @@ import click
 from . import (
     certbot,
     certs,
+    compose_override,
     docker_ops,
+    migrations,
     mta,
+    patch_cleanup,
     preflight,
     prompts,
+    redis_migration,
     secrets,
     state,
     system_config,
@@ -101,6 +105,18 @@ DEFAULT_INI_CONTEXT = {
     "php_upload_max_filesize": "16M",
     "php_post_max_size": "50M",
 }
+
+#: Mirrors roles/ubersmith/vars/main.yml's `old_php_versions` -- the
+#: docker-compose.override.yml PHP-path fixups applied on every upgrade.
+OLD_PHP_VERSIONS = ["5.6", "7.1", "7.3", "8.2"]
+
+#: Mirrors the "Create percona server configuration overrides" task's
+#: `when: ubersmith_installed_version is version_compare('5.2.0', '<')`
+#: guard -- conf/mysql/ubersmith.cnf is only re-rendered on upgrade when the
+#: *previously installed* version predates 5.2.0 (which already has the
+#: sql_mode fix and the current mysql config baked in via a fresh install or
+#: a prior upgrade).
+MYSQL_CNF_RERENDER_MAX_VERSION = "5.2.0"
 
 
 def _image_refs(release: dict, certbot_version: str) -> list[str]:
@@ -556,6 +572,318 @@ def install(
             "  (--dry-run: Docker/MTA/Let's Encrypt side effects were skipped)",
             fg="yellow",
         )
+
+
+@main.command()
+@click.option(
+    "--non-interactive",
+    is_flag=True,
+    default=False,
+    help=(
+        "Never block on the pre-upgrade / license / docker-compose.override.yml "
+        "reminder prompts -- they are logged as informational messages instead. "
+        "Also skips the legacy .patched/patches cleanup, which only ever runs "
+        "interactively (matching patch_ubersmith's own behavior)."
+    ),
+)
+@click.option(
+    "--state-file",
+    "state_file",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=state.DEFAULT_STATE_PATH,
+    show_default=True,
+    help="Path to the installer state ini file to read/update.",
+)
+@click.option(
+    "--skip-preflight",
+    is_flag=True,
+    default=False,
+    help="Skip OS/Docker preflight checks (for testing in non-standard environments).",
+)
+def upgrade(
+    non_interactive: bool,
+    state_file: Path,
+    skip_preflight: bool,
+) -> None:
+    """Upgrade an existing Ubersmith install.
+
+    Reaches parity with ``upgrade_ubersmith.yml`` -t ``upgrade,upgrade_only``
+    -- i.e. every task in ``roles/ubersmith/tasks/main.yml`` tagged
+    ``upgrade`` or ``upgrade_only``. Unlike ``install``, this command always
+    targets the current major version 5 release (``upgrade_ubersmith.yml``
+    hardcodes ``ubersmith_major_version: "5"`` regardless of what was
+    previously installed) and reads its configuration from the installer
+    state file written by a prior ``install`` run, rather than prompting for
+    it.
+
+    CRITICAL: docker-compose.override.yml, the apache virtual host config,
+    rwhois.j2, and ubersmith.ini.j2 are install-only templates -- they carry
+    no "upgrade"/"upgrade_only" tag in the Ansible source and are NEVER
+    wholesale re-rendered here. Only docker-compose.override.yml gets a
+    handful of narrow, in-place text fixups (see
+    :mod:`ubersmith_installer.compose_override`).
+    """
+    installer_state = state.read_state(path=state_file)
+    required_fields = ("ubersmith_home", "virtual_host", "admin_email")
+    missing_fields = [
+        name for name in required_fields if getattr(installer_state, name) is None
+    ]
+    if missing_fields:
+        click.secho(
+            "Installer configuration is not present (missing: "
+            f"{', '.join(missing_fields)} in {state_file}). Run `install` first.",
+            fg="red",
+            bold=True,
+        )
+        sys.exit(1)
+
+    if not skip_preflight:
+        click.echo("Running preflight checks...")
+        result = preflight.run_preflight_checks(check_service_enabled=False)
+
+        for warning in result.warnings:
+            click.secho(f"  [WARN] {warning}", fg="yellow")
+
+        if not result.ok:
+            for error in result.errors:
+                click.secho(f"  [FAIL] {error}", fg="red")
+            click.secho("Preflight checks failed.", fg="red", bold=True)
+            sys.exit(1)
+
+        click.secho("Preflight checks passed.", fg="green")
+    else:
+        click.secho("Skipping preflight checks (--skip-preflight).", fg="yellow")
+
+    # upgrade_ubersmith.yml hardcodes ubersmith_major_version: "5" -- upgrade
+    # always targets the current major-5 release, regardless of what major
+    # version was previously installed.
+    ubersmith_major_version = "5"
+    release = UBERSMITH_RELEASE[ubersmith_major_version]
+
+    ubersmith_home_path = Path(installer_state.ubersmith_home)
+    virtual_hosts = [
+        h.strip() for h in installer_state.virtual_host.split(",") if h.strip()
+    ]
+    main_virtual_host = virtual_hosts[0] if virtual_hosts else installer_state.virtual_host
+    admin_email = installer_state.admin_email
+    # Mirrors the default used when no prior state exists (see `install`);
+    # in practice an upgrade target always has this set by a prior install.
+    old_installed_version = installer_state.ubersmith_installed_version or "4.0.0"
+
+    interactive = not non_interactive
+    owner_uid = os.getuid() if hasattr(os, "getuid") else 0
+    owner_gid = os.getgid() if hasattr(os, "getgid") else 0
+
+    # MySQL passwords must already exist from the original install --
+    # get_or_create_password reads the existing files rather than
+    # regenerating them.
+    password_paths = secrets.ubersmith_password_paths(Path.home(), main_virtual_host)
+    mysql_root_password = secrets.get_or_create_password(password_paths["root_db_pass"])
+    mysql_ubersmith_password = secrets.get_or_create_password(
+        password_paths["ubersmith_db_pass"]
+    )
+
+    # "Print administrator reminders" (release_notes_prompt/upgrade_only).
+    prompts.show_pre_upgrade_reminder(interactive)
+
+    # Remove legacy patch_ubersmith.sh artifacts (interactive-only).
+    patch_cleanup.cleanup_legacy_patches(
+        ubersmith_home_path, release["ubersmith_release_version"], interactive
+    )
+
+    # "Check for remote database" -- determines local-vs-remote database
+    # topology, gating several later upgrade_only steps.
+    web_container_env = docker_ops.get_web_container_env()
+    is_local_database = docker_ops.is_local_database(web_container_env)
+
+    # Phase 1 of the redis volume migration (must run before the existing
+    # containers are stopped, further down). A True return means phase 3
+    # (copy_redis_dump_in + chown_redis_dump) must run again later, once the
+    # new redis-data container exists.
+    redis_migration_needed = redis_migration.migrate_redis_volume(ubersmith_home_path)
+
+    # "Update mysql to use caching_sha2_password" (only meaningful for local
+    # databases predating 5.2.0 -- run_migrations checks both internally).
+    ran_migrations = migrations.run_migrations(
+        ubersmith_home_path,
+        mysql_root_password,
+        mysql_ubersmith_password,
+        old_installed_version,
+        is_local_database,
+    )
+    for name in ran_migrations:
+        click.echo(f"Ran migration: {name}")
+
+    # "Alert admin to necessary license updates" -- gated `when: interactive`
+    # in the Ansible source just like the other two reminders above/below,
+    # so it gets the same blocking-confirm-vs-informational-echo treatment.
+    license_message = migrations.license_update_reminder(old_installed_version)
+    if license_message is not None:
+        if interactive:
+            click.echo(license_message)
+            click.confirm("Continue with the upgrade?", default=True, abort=True)
+        else:
+            click.echo(f"[info] {license_message}")
+
+    # Re-render every template that IS re-rendered on upgrade (plain
+    # `upgrade` tag, no `upgrade_only`/install-only gate) -- reusing Phase
+    # 1's exact render functions.
+    common_context = {
+        "registry": DEFAULT_REGISTRY,
+        "ubersmith_version": release["ubersmith_release_version"],
+        "containers_release_version": release["containers"]["release_version"],
+        "container_domain": main_virtual_host,
+        "ubersmith_home": str(ubersmith_home_path),
+        "ubersmith_major_version": ubersmith_major_version,
+        "ubersmith_release": UBERSMITH_RELEASE,
+        "mozilla_ciphers": DEFAULT_MOZILLA_CIPHERS,
+        "pmm_version": DEFAULT_PMM_VERSION,
+        "certbot_version": DEFAULT_CERTBOT_VERSION,
+        "virtual_hosts": virtual_hosts,
+        "notify_email": admin_email,
+    }
+
+    _write_rendered(
+        ubersmith_home_path / "docker-compose.yml",
+        templates.render_docker_compose(common_context),
+        0o600,
+        owner_uid,
+        owner_gid,
+    )
+
+    # "Create percona server configuration overrides" only fires when the
+    # *previously installed* version predates 5.2.0.
+    if not preflight.version_gte(old_installed_version, MYSQL_CNF_RERENDER_MAX_VERSION):
+        _write_rendered(
+            ubersmith_home_path / "conf" / "mysql" / "ubersmith.cnf",
+            templates.render_mysql_cnf(ubersmith_major_version, {}),
+            0o644,
+            owner_uid,
+            owner_gid,
+        )
+
+    _write_rendered(
+        ubersmith_home_path / "conf" / "mysql" / "ubersmith_extra.cnf",
+        templates.render_mysql_extra_cnf({}),
+        0o644,
+        owner_uid,
+        owner_gid,
+    )
+
+    docker_ops.copy_mysql_component_files(ubersmith_home_path)
+
+    renewal_hooks_dir = (
+        ubersmith_home_path / "conf" / "certbot" / "etc" / "renewal-hooks" / "deploy"
+    )
+    _write_rendered(
+        renewal_hooks_dir / "ubersmith-deploy.sh",
+        templates.render_ubersmith_deploy_hook({}),
+        0o755,
+        owner_uid,
+        owner_gid,
+    )
+    _write_rendered(
+        renewal_hooks_dir / "postfix-deploy.sh",
+        templates.render_postfix_deploy_hook({}),
+        0o755,
+        owner_uid,
+        owner_gid,
+    )
+
+    _write_rendered(
+        ubersmith_home_path / "ubersmith_certbot_renew.sh",
+        templates.render_certbot_renew_script({"ubersmith_home": str(ubersmith_home_path)}),
+        0o700,
+        owner_uid,
+        owner_gid,
+    )
+
+    # "Create certbot container cron task" -- only re-installed if Let's
+    # Encrypt is still requested per the existing installer state.
+    requested_lets_encrypt = prompts.is_lets_encrypt_requested(
+        installer_state.lets_encrypt_certificate
+    )
+    if requested_lets_encrypt:
+        certbot.install_renewal_cron_task(ubersmith_home_path)
+
+    docker_ops.copy_static_files(ubersmith_home_path)
+    system_config.set_journald_retention()
+    system_config.restart_systemd_journald()
+
+    # Narrow, in-place fixups to the EXISTING docker-compose.override.yml --
+    # never wholesale re-rendered (see CRITICAL note in this command's
+    # docstring).
+    compose_override.apply_legacy_override_fixups(
+        ubersmith_home_path / "docker-compose.override.yml",
+        OLD_PHP_VERSIONS,
+        OVERRIDE_PHP_VERSION,
+    )
+
+    # "Give the administrator a chance to update docker-compose.override.yml"
+    # (only fires when installed_version > 4.6.0, per the function's own gate).
+    prompts.show_compose_override_reminder(interactive, old_installed_version)
+
+    if is_local_database:
+        docker_ops.chown_database_files()
+
+    click.echo("Stopping existing containers...")
+    docker_ops.stop_containers(ubersmith_home_path)
+
+    redis_migration.remove_webroot_volume_if_present()
+
+    click.echo("Pulling images (this may take a few moments)...")
+    docker_ops.pull_images(_image_refs(release, DEFAULT_CERTBOT_VERSION))
+
+    click.echo("Starting Ubersmith containers (maintenance mode enabled)...")
+    docker_ops.compose_up(ubersmith_home_path, extra_env={"MAINTENANCE": "1"})
+    docker_ops.scale_redis(ubersmith_home_path)
+
+    # Phase 3 of the redis volume migration -- only after the new
+    # redis-data container exists.
+    if redis_migration_needed:
+        redis_migration.copy_redis_dump_in(ubersmith_home_path)
+        redis_migration.chown_redis_dump()
+
+    if is_local_database:
+        click.echo("Waiting for containers to come online...")
+        docker_ops.wait_for_containers_healthy(
+            ["ubersmith-web-1", "ubersmith-php-1", "ubersmith-solr-1"]
+        )
+        docker_ops.check_database_container_healthy()
+
+    click.echo("Running updatedb.php...")
+    stdout, stderr = docker_ops.run_updatedb(UBERSMITH_ROOT)
+    click.echo(stderr)
+    click.echo(stdout)
+
+    docker_ops.remove_setup_dir(UBERSMITH_ROOT)
+
+    click.echo("Starting web container (maintenance mode disabled)...")
+    docker_ops.compose_up(
+        ubersmith_home_path,
+        extra_env={"MAINTENANCE": "0"},
+        services=["web"],
+        quiet_pull=False,
+    )
+
+    docker_ops.backup_mysql_keyring(ubersmith_home_path)
+    docker_ops.prune_old_images()
+
+    updated_state = state.InstallerState(
+        ubersmith_installed_version=release["ubersmith_release_version"],
+        lets_encrypt_certificate=installer_state.lets_encrypt_certificate,
+    )
+    state.write_installer_state(updated_state, path=state_file)
+
+    click.echo()
+    click.secho("Ubersmith upgrade complete.", fg="green", bold=True)
+    click.echo(f"  ubersmith_home              = {ubersmith_home_path}")
+    click.echo(f"  virtual_host(s)             = {', '.join(virtual_hosts)}")
+    click.echo(f"  admin_email                 = {admin_email}")
+    click.echo(f"  upgraded from version       = {old_installed_version}")
+    click.echo(f"  ubersmith_installed_version = {release['ubersmith_release_version']}")
+    click.echo(f"  database topology           = {'local' if is_local_database else 'remote'}")
+    click.echo(f"  installer state written to  = {state_file}")
 
 
 if __name__ == "__main__":

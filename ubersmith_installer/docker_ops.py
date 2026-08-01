@@ -114,6 +114,23 @@ COMPOSE_UP_SERVICES = [
 #: Default number of redis replicas ("Scale redis containers" task).
 DEFAULT_REDIS_SCALE = 3
 
+#: Exact service list from the "Stop existing containers" task (upgrade_only,
+#: ~line 666): docker compose rm -s -f web cron db php solr mail rsyslog
+#: rwhois redis redis-data certbot
+STOP_CONTAINERS_SERVICES = [
+    "web",
+    "cron",
+    "db",
+    "php",
+    "solr",
+    "mail",
+    "rsyslog",
+    "rwhois",
+    "redis",
+    "redis-data",
+    "certbot",
+]
+
 #: Type of the subprocess runner callable injectable into compose_up/
 #: scale_redis for testing. Matches the subset of subprocess.run's
 #: signature that this module relies on.
@@ -231,13 +248,22 @@ def compose_up(
     *,
     runner: Optional[SubprocessRunner] = None,
     env: Optional[Mapping[str, str]] = None,
+    services: Optional[Sequence[str]] = None,
+    quiet_pull: bool = True,
 ) -> None:
-    """Bring up the core Ubersmith containers via ``docker compose``.
+    """Bring up Ubersmith containers via ``docker compose``.
 
     Mirrors the "Update and start ubersmith containers" task:
     ``docker compose up -d --quiet-pull --no-color web cron db php solr mail
     rsyslog rwhois redis-data``, run with ``chdir: ubersmith_home`` and (in
     that task) ``MAINTENANCE: "1"`` merged into the environment.
+
+    ``services`` and ``quiet_pull`` let callers target a different subset of
+    services / drop the ``--quiet-pull`` flag, matching the "Start web
+    container with maintenance mode disabled" task later in the same file
+    (``docker compose up -d --no-color web``, with ``MAINTENANCE: "0"``) --
+    defaults reproduce the original full-service, quiet-pull invocation
+    exactly.
     """
     if runner is None:
         runner = _default_runner
@@ -246,15 +272,34 @@ def compose_up(
     if extra_env:
         base_env.update(extra_env)
 
-    cmd = [
-        "docker",
-        "compose",
-        "up",
-        "-d",
-        "--quiet-pull",
-        "--no-color",
-        *COMPOSE_UP_SERVICES,
-    ]
+    service_list = list(services) if services is not None else list(COMPOSE_UP_SERVICES)
+
+    cmd = ["docker", "compose", "up", "-d"]
+    if quiet_pull:
+        cmd.append("--quiet-pull")
+    cmd.append("--no-color")
+    cmd.extend(service_list)
+    runner(cmd, cwd=Path(ubersmith_home), env=base_env)
+
+
+def stop_containers(
+    ubersmith_home: Path,
+    *,
+    runner: Optional[SubprocessRunner] = None,
+    env: Optional[Mapping[str, str]] = None,
+) -> None:
+    """Stop and remove the existing Ubersmith containers via ``docker compose``.
+
+    Mirrors the "Stop existing containers" (upgrade_only) task: ``docker
+    compose rm -s -f web cron db php solr mail rsyslog rwhois redis
+    redis-data certbot``, run with ``chdir: ubersmith_home``.
+    """
+    if runner is None:
+        runner = _default_runner
+
+    base_env = dict(env) if env is not None else dict(os.environ)
+
+    cmd = ["docker", "compose", "rm", "-s", "-f", *STOP_CONTAINERS_SERVICES]
     runner(cmd, cwd=Path(ubersmith_home), env=base_env)
 
 
