@@ -1432,6 +1432,10 @@ def upgrade_appliance(
     # "Check for remote database".
     app_web_env = appliance_ops.get_app_web_container_env()
     is_local_database = appliance_ops.is_local_database(app_web_env)
+    click.echo(
+        f"Database topology: {'local' if is_local_database else 'remote'} "
+        f"(app_mysql_version={app_mysql_version!r})"
+    )
 
     # "Create self signed certificates" -- tagged plain `upgrade`; the
     # Ansible task has a `creates:` guard this codebase doesn't replicate
@@ -1452,13 +1456,15 @@ def upgrade_appliance(
     if is_local_database:
         appliance_ops.chown_database_files()
 
-    appliance_ops.step_up_mysql_57(
+    click.echo("Checking whether a mysql 5.6 -> 5.7 step-up is needed...")
+    stepped_up = appliance_ops.step_up_mysql_57(
         DEFAULT_REGISTRY,
         release["appliance_release_version"],
         release["containers"]["release_version"],
         app_mysql_version,
         is_local_database,
     )
+    click.echo(f"mysql 5.7 step-up: {'ran' if stepped_up else 'skipped'}")
 
     click.echo("Starting appliance containers...")
     appliance_ops.compose_up(appliance_home_path)
