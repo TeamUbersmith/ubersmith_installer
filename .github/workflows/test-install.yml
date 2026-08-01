@@ -19,9 +19,7 @@ jobs:
           sudo apt-get install -y python3-venv expect
 
       - name: Run installer non-interactively via expect
-        run: |
-          chmod +x .github/scripts/run_install.exp
-          .github/scripts/run_install.exp
+        run: expect .github/scripts/run_install.exp
 
       - name: Verify containers are up
         run: docker ps --format '{{.Names}}\t{{.Status}}'
