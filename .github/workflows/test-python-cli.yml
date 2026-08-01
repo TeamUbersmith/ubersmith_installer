@@ -1,0 +1,35 @@
+name: Test Python CLI
+
+on:
+  push:
+    paths:
+      - "ubersmith_installer/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - ".github/workflows/test-python-cli.yml"
+  pull_request:
+    paths:
+      - "ubersmith_installer/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - ".github/workflows/test-python-cli.yml"
+
+jobs:
+  test:
+    name: Unit tests (Python 3.11)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package with dev dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run unit tests
+        run: pytest -v
+
+      - name: Sanity-check CLI entry point
+        run: ubersmith-installer --help
