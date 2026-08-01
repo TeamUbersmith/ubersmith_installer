@@ -1,7 +1,7 @@
+---
 name: Test Install (Ubuntu 24.04)
 
 on: [push]
-
 jobs:
   install:
     name: Install Ubersmith (Ubuntu 24.04)

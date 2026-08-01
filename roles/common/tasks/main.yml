@@ -1,113 +1,113 @@
 ---
+- name: Verify that Ubersmith Version is either "4" or "5"
+  ansible.builtin.assert:
+    that:
+      - ubersmith_major_version == "4" or ubersmith_major_version == "5"
+    fail_msg: "The Ubersmith Version requested is not '4' or '5'. It is set to {{ ubersmith_major_version }}."
 
-  - name: Verify that Ubersmith Version is either "4" or "5"
-    ansible.builtin.assert:
-      that:
-        - ubersmith_major_version == "4" or ubersmith_major_version == "5"
-      fail_msg: "The Ubersmith Version requested is not '4' or '5'. It is set to {{ ubersmith_major_version }}."
+- name: Output Current Timezone
+  ansible.builtin.pause:
+    prompt: "This host's timezone is configured as {{ ansible_date_time.tz }}. If this is not correct, please exit the installer and reconfigure the host's timezone.
+      (CTRL+C to continue)"
+  when: interactive
+  tags:
+    - tz
+    - os
 
-  - name: Output Current Timezone
-    ansible.builtin.pause:
-      prompt: "This host's timezone is configured as {{ ansible_date_time.tz }}. If this is not correct, please exit the installer and reconfigure the host's timezone. (CTRL+C to continue)"
-    when: interactive
-    tags:
-      - tz
-      - os
+- name: Output OS and Version
+  ansible.builtin.debug:
+    msg: "This host is running {{ ansible_distribution }} {{ ansible_distribution_version }}."
+  tags:
+    - os
 
-  - name: Output OS and Version
-    debug:
-      msg: "This host is running {{ ansible_distribution }} {{ ansible_distribution_version }}."
-    tags:
-      - os
+- name: Output Running Kernel
+  ansible.builtin.debug:
+    msg: "This host is running Linux kernel version {{ ansible_kernel }}."
+  tags:
+    - os
 
-  - name: Output Running Kernel
-    debug:
-      msg: "This host is running Linux kernel version {{ ansible_kernel }}."
-    tags:
-      - os 
+- name: Verify OS Distribution is Debian, CentOS, Rocky, or Ubuntu
+  ansible.builtin.assert:
+    that:
+      - "ansible_distribution in supported_os"
+    msg: "Ensure Host is running Debian, CentOS, Rocky, or Ubuntu."
+  tags:
+    - os
 
-  - name: Verify OS Distribution is Debian, CentOS, Rocky, or Ubuntu
-    assert:  
-      that:
-        - "ansible_distribution in supported_os"
-      msg: "Ensure Host is running Debian, CentOS, Rocky, or Ubuntu."
-    tags:
-      - os
+- name: Verify Ubuntu OS Distribution Version and Kernel
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution_version is version_compare(supported_ubuntu_ver, '>=')
+      - ansible_kernel is version_compare('4.4.0', '>=' )
+    msg: "Ensure Host is running supported Ubuntu LTS with 4.4.0+ kernel"
+  when: ansible_distribution == 'Ubuntu'
+  tags:
+    - os
 
-  - name: Verify Ubuntu OS Distribution Version and Kernel
-    assert:  
-      that:
-        - ansible_distribution_version is version_compare(supported_ubuntu_ver, '>=')
-        - ansible_kernel is version_compare('4.4.0', '>=' )
-      msg: "Ensure Host is running supported Ubuntu LTS with 4.4.0+ kernel"
-    when: ansible_distribution == 'Ubuntu'
-    tags:
-      - os
+- name: Verify CentOS OS Distribution Version and Kernel
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution_version|int >= supported_centos_ver
+      - ansible_kernel is version_compare('3.10.0-693', '>=')
+    msg: "Ensure Host is running supported CentOS and kernel newer than 3.10.0-693"
+  when: (ansible_distribution == 'CentOS') or (ansible_distribution == 'Rocky')
+  tags:
+    - os
 
-  - name: Verify CentOS OS Distribution Version and Kernel
-    assert:  
-      that:
-        - ansible_distribution_version|int >= supported_centos_ver
-        - ansible_kernel is version_compare('3.10.0-693', '>=')
-      msg: "Ensure Host is running supported CentOS and kernel newer than 3.10.0-693"
-    when: (ansible_distribution == 'CentOS') or (ansible_distribution == 'Rocky')
-    tags:
-      - os
+- name: Verify Debian OS Distribution Version and Kernel
+  ansible.builtin.assert:
+    that:
+      - "ansible_distribution_version|int >= supported_debian_ver"
+      - "ansible_kernel is version_compare('4.0', '>=' )"
+    msg: "Ensure Host is running supported Debian"
+  when: ansible_distribution == 'Debian'
+  tags:
+    - os
 
-  - name: Verify Debian OS Distribution Version and Kernel
-    assert:  
-      that:
-        - "ansible_distribution_version|int >= supported_debian_ver"
-        - "ansible_kernel is version_compare('4.0', '>=' )"
-      msg: "Ensure Host is running supported Debian"
-    when: ansible_distribution == 'Debian'
-    tags:
-      - os
+# The installation instructions require Docker is installed before the installer is run.
+# Since there are many platforms users could be trying to install on, it's easier to
+# let the sysadmin handle the installation of Docker.
+- name: Verify docker is installed
+  community.docker.docker_host_info:
+  register: docker_result
+  tags:
+    - upgrade
 
-  # The installation instructions require Docker is installed before the installer is run.
-  # Since there are many platforms users could be trying to install on, it's easier to
-  # let the sysadmin handle the installation of Docker.
-  - name: verify docker is installed
-    community.docker.docker_host_info:
-    register: docker_result
-    tags:
-      - upgrade
-  
-  - name: display docker_host_info info
-    debug:
-      var: docker_result
-    when:
-      - debug is defined
-    tags:
-      - upgrade
+- name: Display docker_host_info info
+  ansible.builtin.debug:
+    var: docker_result
+  when:
+    - debug is defined
+  tags:
+    - upgrade
 
-  # If we can't find Docker, we can't proceed.
-  # can_talk_to_docker is defined in the documentation, but this
-  # does not appear to reflect reality
-  - name: output error when docker is not installed
-    ansible.builtin.fail:
-      msg: "Docker does not appear to be installed. Please install Docker (https://docs.docker.com/engine/installation/)."
-    when: docker_result.failed
-    tags:
-      - upgrade
+# If we can't find Docker, we can't proceed.
+# can_talk_to_docker is defined in the documentation, but this
+# does not appear to reflect reality
+- name: Output error when docker is not installed
+  ansible.builtin.fail:
+    msg: "Docker does not appear to be installed. Please install Docker (https://docs.docker.com/engine/installation/)."
+  when: docker_result.failed
+  tags:
+    - upgrade
 
-  # Check the version reported by the running version of Docker.
-  - name: verify docker version
-    ansible.builtin.fail:
-      msg:  "The Docker version installed is not supported. Please upgrade Docker (https://docs.docker.com/engine/installation/)."
-    when: docker_result.host_info.ServerVersion is version(docker_ok_version, '<')
-    tags:
-      - upgrade
+# Check the version reported by the running version of Docker.
+- name: Verify docker version
+  ansible.builtin.fail:
+    msg: "The Docker version installed is not supported. Please upgrade Docker (https://docs.docker.com/engine/installation/)."
+  when: docker_result.host_info.ServerVersion is version(docker_ok_version, '<')
+  tags:
+    - upgrade
 
-  # Enable the Docker service in the event the installer / sysadmin did not.
-  - name: ensure the docker service is enabled
-    service:
-      name: docker
-      enabled: yes
-    register: docker_enabled
-    failed_when:
-      - docker_enabled.enabled is defined
-      - not docker_enabled.enabled
-    when: 
-      - ansible_os_family != "Darwin"
-      - ansible_os_family != "Windows"
+# Enable the Docker service in the event the installer / sysadmin did not.
+- name: Ensure the docker service is enabled
+  ansible.builtin.service:
+    name: docker
+    enabled: true
+  register: docker_enabled
+  failed_when:
+    - docker_enabled.enabled is defined
+    - not docker_enabled.enabled
+  when:
+    - ansible_os_family != "Darwin"
+    - ansible_os_family != "Windows"
