@@ -8,6 +8,8 @@ daemon or network access is required.
 import stat
 from unittest.mock import MagicMock
 
+import docker
+
 from ubersmith_installer import appliance_ops
 
 
@@ -129,6 +131,49 @@ def test_is_local_database_false_when_remote():
 def test_is_local_database_false_for_ubersmith_style_host():
     # Sanity check the appliance check is distinct from docker_ops'.
     assert appliance_ops.is_local_database(["DATABASE_HOST=db"]) is False
+
+
+def test_get_running_app_db_image_returns_image_reference():
+    client = MagicMock()
+    container = MagicMock()
+    container.attrs = {
+        "Config": {"Image": "ghcr.io/teamubersmith/appliance_db_ps57:4.6.3-r4"}
+    }
+    client.containers.get.return_value = container
+
+    image = appliance_ops.get_running_app_db_image(client=client)
+
+    client.containers.get.assert_called_once_with("ubersmith-app_db-1")
+    assert image == "ghcr.io/teamubersmith/appliance_db_ps57:4.6.3-r4"
+
+
+def test_get_running_app_db_image_returns_none_when_not_found():
+    client = MagicMock()
+    client.containers.get.side_effect = docker.errors.NotFound("not found")
+
+    assert appliance_ops.get_running_app_db_image(client=client) is None
+
+
+def test_is_pre_mysql_8_image_true_for_ps57():
+    assert (
+        appliance_ops.is_pre_mysql_8_image(
+            "ghcr.io/teamubersmith/appliance_db_ps57:4.6.3-r4"
+        )
+        is True
+    )
+
+
+def test_is_pre_mysql_8_image_false_for_ps80():
+    assert (
+        appliance_ops.is_pre_mysql_8_image(
+            "ghcr.io/teamubersmith/appliance_db_ps80:5.1.4-r3"
+        )
+        is False
+    )
+
+
+def test_is_pre_mysql_8_image_false_when_none():
+    assert appliance_ops.is_pre_mysql_8_image(None) is False
 
 
 def test_compose_pull_invokes_expected_command(tmp_path):

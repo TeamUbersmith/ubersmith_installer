@@ -92,6 +92,11 @@ def _patch_upgrade_side_effects(monkeypatch, *, is_local_database=True):
                 else ["DATABASE_HOST=remote.example.com"]
             )
         ),
+        "get_running_app_db_image": MagicMock(
+            return_value="ghcr.io/teamubersmith/appliance_db_ps57:4.6.3-r4"
+            if is_local_database
+            else None
+        ),
         "stop_containers": MagicMock(),
         "get_existing_volumes": MagicMock(return_value=["ubersmith_app_webroot"]),
         "remove_webroot_volume_if_present": MagicMock(),
@@ -112,6 +117,10 @@ def _patch_upgrade_side_effects(monkeypatch, *, is_local_database=True):
     monkeypatch.setattr(
         "ubersmith_installer.cli.appliance_ops.get_app_web_container_env",
         mocks["get_app_web_container_env"],
+    )
+    monkeypatch.setattr(
+        "ubersmith_installer.cli.appliance_ops.get_running_app_db_image",
+        mocks["get_running_app_db_image"],
     )
     monkeypatch.setattr(
         "ubersmith_installer.cli.appliance_ops.stop_containers", mocks["stop_containers"]

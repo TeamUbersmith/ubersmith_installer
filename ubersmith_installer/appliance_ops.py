@@ -92,6 +92,12 @@ IF_ABSENT_HELPER_SCRIPTS = [
 #: (appliance-specific -- ubersmith's equivalent checks "ubersmith-web-1").
 APP_WEB_CONTAINER_NAME = "ubersmith-app_web-1"
 
+#: Container name of the live database, inspected (before it's stopped) to
+#: determine whether a mysql 5.7 step-up is actually needed. See
+#: `is_pre_mysql_8_image` for why this is used instead of the
+#: `app_mysql_version` ini value.
+APP_DB_CONTAINER_NAME = "ubersmith-app_db-1"
+
 #: Volume containing the appliance database, chowned by "Make sure UID/GID
 #: 1001 owns the database files" and mounted into the mysql 5.7 step-up
 #: container.
@@ -220,6 +226,47 @@ def is_local_database(env: Sequence[str]) -> bool:
     match this exact string).
     """
     return "DATABASE_HOST=app_db" in env
+
+
+def get_running_app_db_image(client: Optional["docker.DockerClient"] = None) -> Optional[str]:
+    """Return the image reference the *currently running* app_db container
+    was started from (e.g. ``ghcr.io/teamubersmith/appliance_db_ps57:...``),
+    or None if the container doesn't exist (e.g. a remote database).
+
+    Must be called before the container is stopped/replaced further along
+    in the upgrade sequence.
+    """
+    if client is None:
+        client = docker.from_env()
+
+    try:
+        container = client.containers.get(APP_DB_CONTAINER_NAME)
+    except docker.errors.NotFound:
+        return None
+
+    return str(container.attrs["Config"]["Image"])
+
+
+def is_pre_mysql_8_image(image: Optional[str]) -> bool:
+    """Return whether `image` (an app_db image reference, or None) predates
+    MySQL 8 -- i.e. whether the mysql 5.7 step-up is needed before it's
+    safe to start the target major version's (mysql 8.0-based) app_db image
+    against the same data volume.
+
+    Deliberately does NOT trust the ini-tracked ``app_mysql_version`` value
+    for this decision (see `ubersmith_installer.cli`'s ``upgrade_appliance``
+    for why: the Ansible source has a latent bug where a fresh install
+    always records "8.0" regardless of what was actually installed, and
+    even a "fresh" ps57 (mysql 5.7) image has been observed to initialize
+    a data directory using a pre-5.7.9 redo log format, which mysql 8.0
+    cannot read -- so the real, current state of the running container is
+    the only reliable signal). Returns False (no step-up) if `image` is
+    None (no local database to introspect) or already references a ps80
+    (mysql 8.0) image; True otherwise.
+    """
+    if image is None:
+        return False
+    return "_ps80" not in image
 
 
 def compose_pull(

@@ -1446,7 +1446,8 @@ def upgrade_appliance(
     is_local_database = appliance_ops.is_local_database(app_web_env)
     click.echo(
         f"Database topology: {'local' if is_local_database else 'remote'} "
-        f"(app_mysql_version={app_mysql_version!r})"
+        f"(ini-tracked app_mysql_version={app_mysql_version!r}, not used for "
+        "the mysql 5.7 step-up decision -- see below)"
     )
 
     # "Create self signed certificates" -- tagged plain `upgrade`; the
@@ -1455,6 +1456,24 @@ def upgrade_appliance(
     # already accepted for `install`/`install-appliance`.
     ssl_dir = appliance_home_path / "conf" / "ssl"
     certs.generate_selfsigned_cert(app_virtual_host, ssl_dir)
+
+    # Determine, from the CURRENTLY RUNNING app_db container's own image
+    # reference, whether the mysql 5.7 step-up is needed -- deliberately not
+    # trusted from the ini-tracked app_mysql_version, since (a) the Ansible
+    # source has a latent bug where a fresh install always records "8.0"
+    # regardless of what was actually installed, and (b) even a "fresh"
+    # ps57 (mysql 5.7) image has been observed in practice to initialize
+    # data using a pre-5.7.9 redo log format that mysql 8.0 cannot read, so
+    # the real running state -- not a version label -- is what matters.
+    # Must happen before the container is stopped/replaced below.
+    running_app_db_image = appliance_ops.get_running_app_db_image()
+    needs_mysql_57_stepup = is_local_database and appliance_ops.is_pre_mysql_8_image(
+        running_app_db_image
+    )
+    click.echo(
+        f"Running app_db image: {running_app_db_image!r} -- mysql 5.7 "
+        f"step-up needed: {needs_mysql_57_stepup}"
+    )
 
     click.echo("Pulling images via docker compose...")
     appliance_ops.compose_pull(appliance_home_path)
@@ -1468,12 +1487,16 @@ def upgrade_appliance(
     if is_local_database:
         appliance_ops.chown_database_files()
 
-    click.echo("Checking whether a mysql 5.6 -> 5.7 step-up is needed...")
+    # step_up_mysql_57's own gate checks its `app_mysql_version` argument
+    # for the literal string "5.6" -- feed it a value reflecting the
+    # image-based decision above (`needs_mysql_57_stepup`), not the
+    # ini-tracked `app_mysql_version` (see the comment above for why that's
+    # unreliable).
     stepped_up = appliance_ops.step_up_mysql_57(
         DEFAULT_REGISTRY,
         release["appliance_release_version"],
         release["containers"]["release_version"],
-        app_mysql_version,
+        "5.6" if needs_mysql_57_stepup else "8.0",
         is_local_database,
     )
     click.echo(f"mysql 5.7 step-up: {'ran' if stepped_up else 'skipped'}")
