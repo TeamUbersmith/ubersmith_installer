@@ -1,0 +1,6 @@
+#!/bin/sh
+
+for DOMAIN in $RENEWED_DOMAINS;
+do
+        cat /etc/letsencrypt/live/$DOMAIN/cert.pem /etc/letsencrypt/live/$DOMAIN/chain.pem > /opt/certbot/deploy/$DOMAIN.combined.pem 
+done

@@ -1,0 +1,153 @@
+<VirtualHost *:80>
+  ServerAdmin {{ admin_email }}
+  DocumentRoot {{ ubersmith_root }}/app/www
+  ServerName {{ item }}
+  ServerAlias www.{{ item }}
+  IncludeOptional {{ ubersmith_root }}/conf/httpd/*.{{ item }}.conf
+  SetEnvIf Request_URI "^/(images|css|js|locale|admin/minidash.php)" dontlog
+  SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+  LogFormat "%h %l %{UberUser}n %{UberElapsed}n %{UberSessionWait}n %{UberSessionLock}n %{UberQueryTime}n %{UberQueryTime2}n %t \"%r\" %>s %b \"X-Ubersmith-Api-Token: %{X-Ubersmith-Api-Token}o\"" ubersmith
+  ErrorLog /dev/stderr
+  CustomLog /dev/stdout ubersmith env=!dontlog
+  Options +FollowSymLinks
+  DirectoryIndex index.php
+  LimitRequestBody 53000000
+
+  SetEnvIf Content-Type "(.*)" HTTP_CONTENT_TYPE=$1
+
+  <IfModule mod_rewrite.c>
+    RedirectMatch 404 ^/app/.*$
+    RewriteEngine On
+
+    RewriteCond %{REQUEST_URI} \.js\.php$
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f
+    RewriteRule ^(.*)$ fcgi://{{ fcgi_host }}:9000%{DOCUMENT_ROOT}/js/js.includer.php?_u=$1 [L,QSA,P]
+
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-d
+    RewriteRule ^(.*)$ fcgi://{{ fcgi_host }}:9000%{DOCUMENT_ROOT}/index.php?_u=$1 [L,QSA,P]
+
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} -f
+    RewriteRule ^/(.*\.(?:php|ico)(/.*)?)$ fcgi://{{ fcgi_host }}:9000%{DOCUMENT_ROOT}/$1 [L,QSA,P]
+
+    SetEnv MOD_REWRITE true
+
+  </IfModule>
+
+</VirtualHost>
+
+<VirtualHost *:443>
+  ServerAdmin {{ admin_email }}
+  DocumentRoot {{ ubersmith_root }}/app/www
+  ServerName {{ item }}
+  ServerAlias www.{{ item }}
+  IncludeOptional {{ ubersmith_root }}/conf/httpd/*.{{ item }}.ssl.conf
+  SetEnvIf Request_URI "^/(images|css|js|locale|admin/minidash.php)" dontlog
+  SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+  LogFormat "%h %l %{UberUser}n %{UberElapsed}n %{UberSessionWait}n %{UberSessionLock}n %{UberQueryTime}n %{UberQueryTime2}n %t \"%r\" %>s %b \"X-Ubersmith-Api-Token: %{X-Ubersmith-Api-Token}o\"" ubersmith
+  ErrorLog /dev/stderr
+  CustomLog /dev/stdout ubersmith env=!dontlog
+
+  # enable HTTP/2, if available
+  Protocols h2 http/1.1
+
+  Header always set Strict-Transport-Security "max-age=63072000"
+  Header always set X-Content-Type-Options "nosniff"
+  Header add Content-Security-Policy "frame-ancestors 'self';"
+  # Header add Content-Security-Policy-Report-Only: default-src 'none'; form-action 'none'; frame-ancestors 'none'; report-uri /csp.php
+
+  SSLCertificateFile {{ ubersmith_root }}/conf/ssl/{{ item }}.pem
+  SSLCertificateKeyFile {{ ubersmith_root }}/conf/ssl/{{ item }}.key
+  # SSLCACertificateFile {{ ubersmith_root }}/conf/ssl/cabundle.pem
+  SSLProtocol             all -SSLv3 -TLSv1 -TLSv1.1
+  SSLCipherSuite          {{ mozilla_ciphers.configurations.intermediate.ciphers.openssl | join(':') }}
+  SSLHonorCipherOrder     off
+  SSLSessionTickets       off
+
+  SSLEngine On
+
+  Options +FollowSymLinks
+  DirectoryIndex index.php
+  LimitRequestBody 53000000
+
+  SetEnvIf Content-Type "(.*)" HTTP_CONTENT_TYPE=$1
+
+  <IfModule mod_proxy_fcgi.c>
+      <Proxy fcgi://php:9000>
+          ProxySet timeout=300
+      </Proxy>
+  </IfModule>
+
+  <IfModule mod_rewrite.c>
+    RedirectMatch 404 ^/app/.*$
+    RewriteEngine On
+
+    RewriteCond %{REQUEST_URI} \.js\.php$
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f
+    RewriteRule ^(.*)$ fcgi://{{ fcgi_host }}:9000%{DOCUMENT_ROOT}/js/js.includer.php?_u=$1 [L,QSA,P]
+
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-d
+    RewriteRule ^(.*)$ fcgi://{{ fcgi_host }}:9000%{DOCUMENT_ROOT}/index.php?_u=$1 [L,QSA,P]
+
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} -f
+    RewriteRule ^/(.*\.(?:php|ico)(/.*)?)$ fcgi://{{ fcgi_host }}:9000%{DOCUMENT_ROOT}/$1 [L,QSA,P]
+
+    SetEnv MOD_REWRITE true
+
+  </IfModule>
+
+</VirtualHost>
+
+<Directory {{ ubersmith_root }}/app/www >
+	AllowOverride None
+
+	<LimitExcept POST GET>
+		Require all denied
+	</LimitExcept>
+</Directory>
+
+<Directory ~ "{{ ubersmith_root }}/app/www/(api|css|ipn|js|rssgen)">
+	Options -Indexes
+</Directory>
+
+<LocationMatch "^/(cron|include/sb/modules|order/templates)(?:/|$)">
+  Require all denied
+</LocationMatch>
+
+<Directory {{ ubersmith_root }}/app/www/images/>
+	Options -Indexes
+
+	<FilesMatch "\.(ico|jpg|jpeg|png|gif)$">
+	  Header set Cache-Control "private, max-age=7200"
+	</FilesMatch>
+</Directory>
+
+<Directory {{ ubersmith_root }}/app/www/include/>
+	Require all denied
+
+	<FilesMatch "\.(css|style)$">
+		Require all granted
+	</FilesMatch>
+</Directory>
+
+<Directory {{ ubersmith_root }}/app/www/locale/>
+	Options -Indexes
+
+	<FilesMatch "^(language\.ini|ubersmith\.mo|ubersmith\.po)$">
+		Require all denied
+	</FilesMatch>
+</Directory>
+
+<FilesMatch "^(php\.ini|config\.ini\.php|token\.xml\.php|update_translations\.php)$">
+	Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+	SetEnv MOD_HEADERS true
+</IfModule>
+
+SSLUseStapling On
+SSLStaplingCache "shmcb:logs/ssl_stapling(32768)"
+ServerTokens Prod
+MaxConnectionsPerChild 500

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+#
+# Requests a certificate renewal and gracefully restarts Apache and Postfix
+
+cd {{ ubersmith_home }}
+docker compose up certbot 
+sleep 120
+docker compose exec web /usr/local/apache2/bin/apachectl graceful
+docker compose exec mail /usr/sbin/postfix reload

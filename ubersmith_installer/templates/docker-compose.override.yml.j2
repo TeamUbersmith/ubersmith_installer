@@ -1,0 +1,94 @@
+services:
+  cron:
+    volumes:
+      - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
+      - "{{ ubersmith_home }}/app/patches:/var/www/ubersmith_root/app/patches"
+{% if ansible_os_family != 'Darwin' %}
+      - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
+{% endif %}
+      # - "{{ ubersmith_home }}/conf/cron:/etc/cron.d"
+  db:
+    cap_add:
+      - SYS_NICE
+    environment:
+      MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
+      MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
+      MYSQL_OPTION: ""
+{% if ansible_os_family != 'Darwin' %}
+    volumes:
+      - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
+{% endif %}
+  php:
+    # deploy:
+    # resources:
+    #   limits:
+    #     cpus: '0.50'
+    #     memory: 512M
+    volumes:
+      - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
+      - "{{ ubersmith_home }}/app/patches:/var/www/ubersmith_root/app/patches"
+{% if ansible_os_family != 'Darwin' %}
+      - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
+{% endif %}
+      - "{{ ubersmith_home }}/conf/php/ubersmith.ini:/etc/php/{{ php_version }}/fpm/conf.d/20-ubersmith.ini"
+  #     - "{{ ubersmith_home }}/conf/php/www.conf:/etc/php/{{ php_version }}/fpm/pool.d/www.conf"
+  web:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "{{ ubersmith_home }}/conf/ssl:/var/www/ubersmith_root/conf/ssl"
+      - "{{ ubersmith_home }}/conf/httpd:/var/www/ubersmith_root/conf/httpd"
+      - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
+      - "{{ ubersmith_home }}/app/patches:/var/www/ubersmith_root/app/patches"
+      - "{{ ubersmith_home }}/conf/httpd/sites-enabled:/usr/local/apache2/conf/sites-enabled"
+{% if ansible_os_family != 'Darwin' %}
+      - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
+{% endif %}
+    environment:
+      MYSQL_PASSWORD: "{{ mysql_ubersmith_password }}"
+{% if ansible_os_family != 'Darwin' %}
+      TIMEZONE: {{ timezone_file.stat.lnk_source | replace ("/usr/share/zoneinfo/", "") | replace("Etc/", "") | replace("UCT", "UTC") }}
+{% endif %}
+    #  DATABASE_HOST: "db"
+    #  USAGE_DATABASE: usage
+    #  USAGE_DATABASE_HOST: remote_db
+    #  USAGE_DATABASE_USERNAME: usage_guy
+    #  USAGE_DATABASE_PASSWORD: usage_password
+    #  REDIS_SENTINEL_ENABLE: 0
+    #  REDIS_SENTINEL_MASTER: mymaster
+    #  REDIS_USER: your_redis_user
+    #  REDIS_AUTH: your_redis_password
+    #  REDIS_SENTINEL_HOSTS: 10.0.0.1,10.0.0.2,10.0.0.3
+  mail:
+    volumes:
+      - "{{ ubersmith_home }}/app/custom:/var/www/ubersmith_root/app/custom"
+      - "{{ ubersmith_home }}/app/patches:/var/www/ubersmith_root/app/patches"
+{% if ansible_os_family != 'Darwin' %}
+      - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
+      - "{{ timezone_file.stat.lnk_source }}:/var/spool/postfix/etc/localtime"
+      # - "{{ ubersmith_home }}/conf/mail/aliases:/etc/aliases"
+{% endif %}
+      - "{{ ubersmith_home }}/conf/ssl:/var/www/ubersmith_root/conf/ssl"
+      # - "/usr/local/ubersmith/conf/mail/cacert.pem:/etc/postfix/cacert.pem"
+      # - "/usr/local/ubersmith/conf/mail/main.cf:/etc/postfix/main.cf"
+      # - "/usr/local/ubersmith/conf/mail/sasl_passwd:/etc/postfix/sasl_passwd"
+      # - "/usr/local/ubersmith/conf/mail/sasl_passwd.db:/etc/postfix/sasl_passwd.db"
+    environment:
+      - "POSTCONF_SMTPD_TLS_CERT_FILE=/etc/ssl/certs/{{ container_domain }}.pem"
+      - "POSTCONF_SMTPD_TLS_KEY_FILE=/etc/ssl/private/{{ container_domain }}.key" 
+      - POSTCONF_SMTP_TLS_SECURITY_LEVEL=may
+      - ANTIVIRUS=0
+      # - POSTCONF_DEFAULT_TRANSPORT="DO_NOT_ROUTE"
+  rwhois:
+    volumes:
+{% if ansible_os_family != 'Darwin' %}
+      - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
+{% endif %}
+      - "{{ ubersmith_home }}/conf/rwhois:/etc/xinetd.d"
+  backup:
+    environment:
+      MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
+  redis-commander:
+    ports:
+      - "8081"

@@ -132,3 +132,159 @@ def test_render_ubersmith_ini_does_not_raise_undefined_error():
     rendered = templates.render_ubersmith_ini(_ubersmith_ini_context())
     assert "session.gc_maxlifetime = 86400" in rendered
     assert "memory_limit = 512M" in rendered
+
+
+def _docker_compose_override_context(**overrides):
+    context = {
+        "ubersmith_home": "/opt/ubersmith",
+        "mysql_root_password": "root-secret",
+        "mysql_ubersmith_password": "ubersmith-secret",
+        "php_version": "8.4",
+        "container_domain": "ubersmith.example.com",
+        "ansible_os_family": "Debian",
+        "timezone_file": {"stat": {"lnk_source": "/usr/share/zoneinfo/UTC"}},
+    }
+    context.update(overrides)
+    return context
+
+
+def _instance_vhost_context(**overrides):
+    context = {
+        "admin_email": "admin@example.com",
+        "ubersmith_root": "/var/www/ubersmith_root",
+        "item": "ubersmith.example.com",
+        "fcgi_host": "php",
+        "mozilla_ciphers": {
+            "configurations": {
+                "intermediate": {
+                    "ciphers": {
+                        "openssl": [
+                            "ECDHE-RSA-AES128-GCM-SHA256",
+                            "ECDHE-ECDSA-AES128-GCM-SHA256",
+                        ],
+                    },
+                },
+            },
+        },
+    }
+    context.update(overrides)
+    return context
+
+
+def test_render_rwhois_does_not_raise_undefined_error():
+    rendered = templates.render_rwhois(
+        {
+            "ubersmith_root": "/var/www/ubersmith_root",
+            "main_virtual_host": "ubersmith.example.com",
+        }
+    )
+    assert "server = /var/www/ubersmith_root/app/www/rwhois.php" in rendered
+    assert "server_args = ubersmith.example.com" in rendered
+
+
+def test_render_docker_compose_override_is_valid_yaml_on_linux():
+    rendered = templates.render_docker_compose_override(
+        _docker_compose_override_context(ansible_os_family="Debian")
+    )
+    parsed = yaml.safe_load(rendered)
+    assert "/usr/share/zoneinfo/UTC:/etc/localtime" in rendered
+    assert parsed["services"]["db"]["environment"]["MYSQL_ROOT_PASSWORD"] == (
+        "root-secret"
+    )
+
+
+def test_render_docker_compose_override_omits_timezone_on_darwin():
+    context = _docker_compose_override_context(ansible_os_family="Darwin")
+    del context["timezone_file"]
+    rendered = templates.render_docker_compose_override(context)
+    assert "/etc/localtime" not in rendered
+
+
+def test_render_docker_compose_override_auto_supplies_facts_when_absent():
+    context = _docker_compose_override_context()
+    del context["ansible_os_family"]
+    del context["timezone_file"]
+    # Should not raise even though ansible_os_family/timezone_file were not
+    # supplied -- they get computed from the real host.
+    rendered = templates.render_docker_compose_override(context)
+    assert "services:" in rendered
+
+
+def test_render_mysql_cnf_major_version_4_uses_memfree():
+    rendered = templates.render_mysql_cnf(
+        "4", {"ansible_memfree_mb": 8000}
+    )
+    assert "innodb_buffer_pool_size        = 2400M" in rendered
+
+
+def test_render_mysql_cnf_major_version_5_uses_memtotal():
+    rendered = templates.render_mysql_cnf(
+        "5", {"ansible_memtotal_mb": 8000}
+    )
+    assert "innodb_buffer_pool_size        = 2400M" in rendered
+
+
+def test_render_mysql_cnf_auto_supplies_memory_facts_when_absent():
+    # Should not raise even without ansible_memfree_mb/ansible_memtotal_mb
+    # in the context -- computed automatically from the real host.
+    assert "innodb_buffer_pool_size" in templates.render_mysql_cnf("4", {})
+    assert "innodb_buffer_pool_size" in templates.render_mysql_cnf("5", {})
+
+
+def test_render_mysql_cnf_rejects_unsupported_major_version():
+    import pytest
+
+    with pytest.raises(ValueError):
+        templates.render_mysql_cnf("6", {})
+
+
+def test_render_mysql_extra_cnf_does_not_raise_undefined_error():
+    rendered = templates.render_mysql_extra_cnf({})
+    assert "mysql_native_password" in rendered
+
+
+def test_render_instance_vhost_does_not_raise_undefined_error():
+    rendered = templates.render_instance_vhost(_instance_vhost_context())
+    assert "ServerName ubersmith.example.com" in rendered
+    assert "ServerAdmin admin@example.com" in rendered
+
+
+def test_render_postfix_deploy_hook_does_not_raise_undefined_error():
+    rendered = templates.render_postfix_deploy_hook({})
+    assert "RENEWED_DOMAINS" in rendered
+
+
+def test_render_ubersmith_deploy_hook_does_not_raise_undefined_error():
+    rendered = templates.render_ubersmith_deploy_hook({})
+    assert "RENEWED_DOMAINS" in rendered
+
+
+def test_render_certbot_renew_script_does_not_raise_undefined_error():
+    rendered = templates.render_certbot_renew_script(
+        {"ubersmith_home": "/opt/ubersmith"}
+    )
+    assert "cd /opt/ubersmith" in rendered
+
+
+def test_get_memtotal_mb_returns_positive_int():
+    memtotal = templates.get_memtotal_mb()
+    assert isinstance(memtotal, int)
+    assert memtotal > 0
+
+
+def test_get_memfree_mb_returns_positive_int():
+    memfree = templates.get_memfree_mb()
+    assert isinstance(memfree, int)
+    assert memfree > 0
+
+
+def test_get_memfree_mb_does_not_exceed_memtotal_by_much():
+    # MemAvailable/MemFree should never wildly exceed MemTotal; sanity check
+    # rather than a strict invariant given the two are read independently.
+    assert templates.get_memfree_mb() <= templates.get_memtotal_mb() * 1.1
+
+
+def test_get_timezone_file_returns_real_looking_path():
+    tz_file = templates.get_timezone_file()
+    assert isinstance(tz_file, str)
+    assert tz_file.startswith("/")
