@@ -26,6 +26,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import time
 from pathlib import Path
 from typing import Callable, Mapping, Optional, Sequence
 
@@ -77,6 +78,16 @@ HELPER_SCRIPT_MODE = 0o700
 
 #: Mode used by the "Copy falco rules" task.
 FALCO_RULES_MODE = 0o644
+
+#: Mode used by the "Create mysql component configuration" task.
+MYSQL_COMPONENT_FILES_MODE = 0o644
+
+#: Filenames copied by the "Create mysql component configuration" task,
+#: bind-mounted as individual files into the db container by
+#: docker-compose.yml.j2 -- if these are missing, Docker silently creates an
+#: empty directory at the mount path instead of a file, breaking MySQL
+#: at-rest encryption / preventing the db container from starting.
+MYSQL_COMPONENT_FILES = ["component_keyring_file.cnf", "mysqld.my"]
 
 #: Exact service list from the "Update and start ubersmith containers" task:
 #: docker compose up -d --quiet-pull --no-color web cron db php solr mail
@@ -186,6 +197,27 @@ def copy_static_files(ubersmith_home: Path) -> None:
     falco_dest.chmod(FALCO_RULES_MODE)
 
 
+def copy_mysql_component_files(ubersmith_home: Path) -> None:
+    """Copy the MySQL at-rest-encryption component config files into place.
+
+    Mirrors the "Create mysql component configuration" task:
+    component_keyring_file.cnf and mysqld.my -> <ubersmith_home>/conf/mysql-components/ (0644).
+
+    docker-compose.yml.j2 bind-mounts these as individual files into the db
+    container; if they're missing, Docker creates an empty directory at the
+    mount path instead, which breaks MySQL at-rest encryption.
+    """
+    ubersmith_home = Path(ubersmith_home)
+    dest_dir = ubersmith_home / "conf" / "mysql-components"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    for filename in MYSQL_COMPONENT_FILES:
+        src = FILES_DIR / filename
+        dest = dest_dir / filename
+        shutil.copyfile(src, dest)
+        dest.chmod(MYSQL_COMPONENT_FILES_MODE)
+
+
 def compose_up(
     ubersmith_home: Path,
     extra_env: Optional[Mapping[str, str]] = None,
@@ -239,3 +271,38 @@ def scale_redis(
 
     cmd = ["docker", "compose", "up", "-d", "--scale", f"redis={count}", "redis"]
     runner(cmd, cwd=Path(ubersmith_home), env=base_env)
+
+
+def backup_mysql_keyring(
+    ubersmith_home: Path, *, client: Optional["docker.DockerClient"] = None
+) -> None:
+    """Back up the MySQL at-rest-encryption keyring volume.
+
+    Mirrors the "Make a backup of the mysql keyring" task: runs a
+    short-lived busybox container that tars the `ubersmith_database_keyring`
+    volume into `<ubersmith_home>/backup/component_keyring_file.<epoch>.tar`
+    (mode 0600). Must run after the containers (and thus the
+    `ubersmith_database_keyring` volume) exist -- i.e. after `compose_up`.
+    """
+    if client is None:
+        client = docker.from_env()
+
+    backup_dir = Path(ubersmith_home) / "backup"
+    backup_dir.mkdir(parents=True, exist_ok=True)
+
+    epoch = int(time.time())
+    command = (
+        f"tar cvf /backup/component_keyring_file.{epoch}.tar /keyring; "
+        "chmod 0600 /backup/*.tar"
+    )
+
+    client.containers.run(
+        image="busybox",
+        command=["/bin/sh", "-c", command],
+        user="root",
+        remove=True,
+        volumes={
+            "ubersmith_database_keyring": {"bind": "/keyring", "mode": "rw"},
+            str(backup_dir): {"bind": "/backup", "mode": "rw"},
+        },
+    )

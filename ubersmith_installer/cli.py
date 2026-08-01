@@ -23,7 +23,18 @@ from pathlib import Path
 
 import click
 
-from . import certbot, certs, docker_ops, mta, preflight, prompts, secrets, state, templates
+from . import (
+    certbot,
+    certs,
+    docker_ops,
+    mta,
+    preflight,
+    prompts,
+    secrets,
+    state,
+    system_config,
+    templates,
+)
 
 #: Mirrors roles/ubersmith/vars/main.yml -- the release metadata needed to
 #: render docker-compose.yml.j2 for a given ubersmith_major_version.
@@ -330,6 +341,7 @@ def install(
     # 5. Config directories + static helper files/rules.
     docker_ops.create_config_directories(ubersmith_home_path, owner_uid, owner_gid)
     docker_ops.copy_static_files(ubersmith_home_path)
+    docker_ops.copy_mysql_component_files(ubersmith_home_path)
 
     # 6. Render every template to its real destination.
     common_context = {
@@ -468,6 +480,17 @@ def install(
     else:
         click.secho("Skipping MTA stop/disable (--dry-run).", fg="yellow")
 
+    # 7b. Set systemd journal retention policy and restart journald to pick
+    # it up (best-effort: no-op with a warning on non-systemd hosts or
+    # without root, same as the Ansible task's practical behavior).
+    if not dry_run:
+        system_config.set_journald_retention()
+        system_config.restart_systemd_journald()
+    else:
+        click.secho(
+            "Skipping systemd journal retention policy (--dry-run).", fg="yellow"
+        )
+
     # 8. Pull images, bring up containers, scale redis.
     if not dry_run:
         click.echo("Pulling images (this may take a few moments)...")
@@ -476,9 +499,11 @@ def install(
         click.echo("Starting Ubersmith containers...")
         docker_ops.compose_up(ubersmith_home_path)
         docker_ops.scale_redis(ubersmith_home_path)
+        docker_ops.backup_mysql_keyring(ubersmith_home_path)
     else:
         click.secho(
-            "Skipping image pull / docker compose up / redis scaling (--dry-run).",
+            "Skipping image pull / docker compose up / redis scaling / "
+            "mysql keyring backup (--dry-run).",
             fg="yellow",
         )
 

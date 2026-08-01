@@ -37,12 +37,18 @@ def _patch_side_effecting_modules(monkeypatch):
     pull_images = MagicMock()
     compose_up = MagicMock()
     scale_redis = MagicMock()
+    backup_mysql_keyring = MagicMock()
     stop_and_disable_mtas = MagicMock()
     request_letsencrypt_certificates = MagicMock()
+    set_journald_retention = MagicMock()
+    restart_systemd_journald = MagicMock()
 
     monkeypatch.setattr("ubersmith_installer.cli.docker_ops.pull_images", pull_images)
     monkeypatch.setattr("ubersmith_installer.cli.docker_ops.compose_up", compose_up)
     monkeypatch.setattr("ubersmith_installer.cli.docker_ops.scale_redis", scale_redis)
+    monkeypatch.setattr(
+        "ubersmith_installer.cli.docker_ops.backup_mysql_keyring", backup_mysql_keyring
+    )
     monkeypatch.setattr(
         "ubersmith_installer.cli.mta.stop_and_disable_mtas", stop_and_disable_mtas
     )
@@ -50,12 +56,23 @@ def _patch_side_effecting_modules(monkeypatch):
         "ubersmith_installer.cli.certbot.request_letsencrypt_certificates",
         request_letsencrypt_certificates,
     )
+    monkeypatch.setattr(
+        "ubersmith_installer.cli.system_config.set_journald_retention",
+        set_journald_retention,
+    )
+    monkeypatch.setattr(
+        "ubersmith_installer.cli.system_config.restart_systemd_journald",
+        restart_systemd_journald,
+    )
     return {
         "pull_images": pull_images,
         "compose_up": compose_up,
         "scale_redis": scale_redis,
+        "backup_mysql_keyring": backup_mysql_keyring,
         "stop_and_disable_mtas": stop_and_disable_mtas,
         "request_letsencrypt_certificates": request_letsencrypt_certificates,
+        "set_journald_retention": set_journald_retention,
+        "restart_systemd_journald": restart_systemd_journald,
     }
 
 
@@ -179,8 +196,11 @@ def test_install_dry_run_skips_docker_mta_and_certbot(tmp_path, monkeypatch):
     mocks["pull_images"].assert_not_called()
     mocks["compose_up"].assert_not_called()
     mocks["scale_redis"].assert_not_called()
+    mocks["backup_mysql_keyring"].assert_not_called()
     mocks["stop_and_disable_mtas"].assert_not_called()
     mocks["request_letsencrypt_certificates"].assert_not_called()
+    mocks["set_journald_retention"].assert_not_called()
+    mocks["restart_systemd_journald"].assert_not_called()
 
 
 def test_install_full_flow_invokes_docker_mta_and_certbot(tmp_path, monkeypatch):
@@ -223,6 +243,9 @@ def test_install_full_flow_invokes_docker_mta_and_certbot(tmp_path, monkeypatch)
 
     mocks["compose_up"].assert_called_once_with(ubersmith_home)
     mocks["scale_redis"].assert_called_once_with(ubersmith_home)
+    mocks["backup_mysql_keyring"].assert_called_once_with(ubersmith_home)
+    mocks["set_journald_retention"].assert_called_once()
+    mocks["restart_systemd_journald"].assert_called_once()
 
     mocks["request_letsencrypt_certificates"].assert_called_once()
     args, kwargs = mocks["request_letsencrypt_certificates"].call_args

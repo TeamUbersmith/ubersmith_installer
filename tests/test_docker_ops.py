@@ -100,6 +100,27 @@ def test_copy_static_files_copies_expected_files_with_correct_modes(tmp_path):
     assert falco.read_bytes() == (docker_ops.FILES_DIR / "falco_rules.local.yaml").read_bytes()
 
 
+def test_copy_mysql_component_files_copies_expected_files_with_correct_modes(tmp_path):
+    ubersmith_home = tmp_path / "ubersmith"
+    ubersmith_home.mkdir()
+
+    docker_ops.copy_mysql_component_files(ubersmith_home)
+
+    keyring_cnf = ubersmith_home / "conf" / "mysql-components" / "component_keyring_file.cnf"
+    mysqld_my = ubersmith_home / "conf" / "mysql-components" / "mysqld.my"
+
+    assert keyring_cnf.is_file()
+    assert mysqld_my.is_file()
+
+    assert stat.S_IMODE(keyring_cnf.stat().st_mode) == docker_ops.MYSQL_COMPONENT_FILES_MODE
+    assert stat.S_IMODE(mysqld_my.stat().st_mode) == docker_ops.MYSQL_COMPONENT_FILES_MODE
+
+    assert keyring_cnf.read_bytes() == (
+        docker_ops.FILES_DIR / "component_keyring_file.cnf"
+    ).read_bytes()
+    assert mysqld_my.read_bytes() == (docker_ops.FILES_DIR / "mysqld.my").read_bytes()
+
+
 def test_compose_up_invokes_runner_with_expected_command_cwd_and_env(tmp_path):
     ubersmith_home = tmp_path / "ubersmith"
     runner = MagicMock()
@@ -164,3 +185,35 @@ def test_scale_redis_respects_custom_count(tmp_path):
 
     args, _ = runner.call_args
     assert args[0] == ["docker", "compose", "up", "-d", "--scale", "redis=5", "redis"]
+
+
+def test_backup_mysql_keyring_invokes_expected_container(tmp_path):
+    ubersmith_home = tmp_path / "ubersmith"
+    ubersmith_home.mkdir()
+    client = MagicMock()
+
+    docker_ops.backup_mysql_keyring(ubersmith_home, client=client)
+
+    client.containers.run.assert_called_once()
+    kwargs = client.containers.run.call_args.kwargs
+    assert kwargs["image"] == "busybox"
+    assert kwargs["user"] == "root"
+    assert kwargs["remove"] is True
+    assert kwargs["volumes"]["ubersmith_database_keyring"] == {
+        "bind": "/keyring",
+        "mode": "rw",
+    }
+    assert kwargs["volumes"][str(ubersmith_home / "backup")] == {
+        "bind": "/backup",
+        "mode": "rw",
+    }
+    command = kwargs["command"]
+    assert command[0] == "/bin/sh"
+    assert command[1] == "-c"
+    assert "tar cvf /backup/component_keyring_file." in command[2]
+    assert "/keyring" in command[2]
+    assert "chmod 0600 /backup/*.tar" in command[2]
+
+    # The backup directory is created even though the container would also
+    # need it to exist for the bind mount.
+    assert (ubersmith_home / "backup").is_dir()

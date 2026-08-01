@@ -70,6 +70,8 @@ def test_wait_for_port_available_times_out(monkeypatch):
 def test_request_letsencrypt_certificates_full_flow(answer):
     client = MagicMock()
     wait_for_port = MagicMock()
+    cron_reader = MagicMock(return_value="")
+    cron_writer = MagicMock()
     virtual_hosts = ["ubersmith.example.com", "billing.example.com"]
 
     certbot.request_letsencrypt_certificates(
@@ -82,11 +84,17 @@ def test_request_letsencrypt_certificates_full_flow(answer):
         wait_for_port=wait_for_port,
         uid=1000,
         gid=1000,
+        cron_reader=cron_reader,
+        cron_writer=cron_writer,
     )
 
     # Port wait happens three times: before cert request, before deploy
     # hooks, and after deploy hooks.
     assert wait_for_port.call_count == 3
+
+    # The renewal cron task is installed once, using the given ubersmith_home.
+    cron_writer.assert_called_once()
+    assert f"{UBERSMITH_HOME}/ubersmith_certbot_renew.sh" in cron_writer.call_args[0][0]
     for wait_call in wait_for_port.call_args_list:
         assert wait_call.kwargs["host"] == "0.0.0.0"
         assert wait_call.kwargs["port"] == 80
@@ -167,10 +175,67 @@ def test_request_letsencrypt_certificates_single_host_loops_once_per_step():
         wait_for_port=wait_for_port,
         uid=1000,
         gid=1000,
+        cron_reader=lambda: "",
+        cron_writer=MagicMock(),
     )
 
     # One virtual host -> one cert-request call + one deploy-hook call.
     assert client.containers.run.call_count == 2
+
+
+def test_request_letsencrypt_certificates_skips_cron_when_install_cron_false():
+    client = MagicMock()
+    wait_for_port = MagicMock()
+    cron_writer = MagicMock()
+
+    certbot.request_letsencrypt_certificates(
+        ["ubersmith.example.com"],
+        UBERSMITH_HOME,
+        "admin@example.org",
+        "v3.2.0",
+        "yes",
+        client=client,
+        wait_for_port=wait_for_port,
+        uid=1000,
+        gid=1000,
+        install_cron=False,
+        cron_writer=cron_writer,
+    )
+
+    cron_writer.assert_not_called()
+
+
+def test_install_renewal_cron_task_writes_expected_entry():
+    writer = MagicMock()
+
+    certbot.install_renewal_cron_task(
+        UBERSMITH_HOME, reader=lambda: "", writer=writer
+    )
+
+    written = writer.call_args[0][0]
+    assert certbot.RENEWAL_CRON_MARKER in written
+    assert f"@daily {UBERSMITH_HOME}/ubersmith_certbot_renew.sh" in written
+
+
+def test_install_renewal_cron_task_replaces_previous_entry_idempotently():
+    existing = (
+        "0 3 * * * /some/other/job\n"
+        f"{certbot.RENEWAL_CRON_MARKER}\n"
+        "@daily /old/path/ubersmith_certbot_renew.sh\n"
+    )
+    writer = MagicMock()
+
+    certbot.install_renewal_cron_task(
+        UBERSMITH_HOME, reader=lambda: existing, writer=writer
+    )
+
+    written = writer.call_args[0][0]
+    # The unrelated job survives untouched.
+    assert "0 3 * * * /some/other/job" in written
+    # The old managed entry is gone, replaced by exactly one new one.
+    assert written.count(certbot.RENEWAL_CRON_MARKER) == 1
+    assert "/old/path/ubersmith_certbot_renew.sh" not in written
+    assert f"@daily {UBERSMITH_HOME}/ubersmith_certbot_renew.sh" in written
 
 
 def test_run_certbot_request_uses_docker_sdk_shape():

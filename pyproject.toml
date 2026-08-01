@@ -27,3 +27,9 @@ ubersmith-installer = "ubersmith_installer.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["ubersmith_installer*"]
+
+[tool.setuptools.package-data]
+# Non-.py assets rendered/copied at install time (Jinja templates and static
+# helper files) -- without this, a real (non-editable) `pip install .` omits
+# them and every render_*()/copy_*() call raises FileNotFoundError.
+ubersmith_installer = ["templates/*.j2", "files/*"]
