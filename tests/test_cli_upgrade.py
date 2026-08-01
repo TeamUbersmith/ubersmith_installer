@@ -245,13 +245,20 @@ def test_upgrade_local_database_full_flow(tmp_path, monkeypatch):
     mocks["remove_webroot_volume_if_present"].assert_called_once()
     mocks["pull_images"].assert_called_once()
 
-    # First compose_up: maintenance mode enabled, full service list (default).
-    first_up_args, first_up_kwargs = mocks["compose_up"].call_args_list[0]
+    # compose_up call 0: the pre-upgrade failsafe (`docker compose up -d web
+    # db php`), run before anything else.
+    failsafe_args, failsafe_kwargs = mocks["compose_up"].call_args_list[0]
+    assert failsafe_args[0] == ubersmith_home
+    assert failsafe_kwargs["services"] == ["web", "db", "php"]
+    assert failsafe_kwargs["quiet_pull"] is False
+
+    # compose_up call 1: maintenance mode enabled, full service list (default).
+    first_up_args, first_up_kwargs = mocks["compose_up"].call_args_list[1]
     assert first_up_args[0] == ubersmith_home
     assert first_up_kwargs["extra_env"] == {"MAINTENANCE": "1"}
 
-    # Second compose_up: maintenance mode disabled, web only.
-    second_up_args, second_up_kwargs = mocks["compose_up"].call_args_list[1]
+    # compose_up call 2: maintenance mode disabled, web only.
+    second_up_args, second_up_kwargs = mocks["compose_up"].call_args_list[2]
     assert second_up_args[0] == ubersmith_home
     assert second_up_kwargs["extra_env"] == {"MAINTENANCE": "0"}
     assert second_up_kwargs["services"] == ["web"]

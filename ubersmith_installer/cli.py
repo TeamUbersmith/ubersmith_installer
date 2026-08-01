@@ -674,6 +674,16 @@ def upgrade(
     owner_uid = os.getuid() if hasattr(os, "getuid") else 0
     owner_gid = os.getgid() if hasattr(os, "getgid") else 0
 
+    # "Check ubersmith containers before proceeding with upgrade" -- a
+    # failsafe ensuring the bare-minimum containers are running before doing
+    # anything else, in case a prior upgrade attempt failed partway through.
+    # The Ansible task runs bare `docker compose up -d web db php` (no
+    # --quiet-pull); passing --no-color here is a harmless, cosmetic-only
+    # deviation (output coloring only), not a functional one.
+    docker_ops.compose_up(
+        ubersmith_home_path, services=["web", "db", "php"], quiet_pull=False
+    )
+
     # MySQL passwords must already exist from the original install --
     # get_or_create_password reads the existing files rather than
     # regenerating them.
@@ -725,6 +735,13 @@ def upgrade(
         else:
             click.echo(f"[info] {license_message}")
 
+    # "Create ubersmith configuration directories" is tagged plain `upgrade`
+    # (not `upgrade_only`), so Ansible re-runs it on every upgrade too --
+    # idempotent mkdir/chmod/chown, guards against directories that drifted
+    # or were never created (e.g. conf/sso, app/custom/*) since the original
+    # install.
+    docker_ops.create_config_directories(ubersmith_home_path, owner_uid, owner_gid)
+
     # Re-render every template that IS re-rendered on upgrade (plain
     # `upgrade` tag, no `upgrade_only`/install-only gate) -- reusing Phase
     # 1's exact render functions.
@@ -750,6 +767,12 @@ def upgrade(
         owner_uid,
         owner_gid,
     )
+
+    # ".env" is deliberately NOT re-rendered here. The Ansible "Create
+    # docker compose env file" task uses `force: false` (only written the
+    # first time), and on any real upgrade target it already exists from the
+    # original install -- so re-running it is always a no-op in the Ansible
+    # source too, not something this codebase is skipping/simplifying.
 
     # "Create percona server configuration overrides" only fires when the
     # *previously installed* version predates 5.2.0.
@@ -806,6 +829,13 @@ def upgrade(
     if requested_lets_encrypt:
         certbot.install_renewal_cron_task(ubersmith_home_path)
 
+    # copy_static_files() unconditionally overwrites ubersmith_start.sh from
+    # the currently-shipped version, which already hardcodes `--scale
+    # redis=3` -- this makes the Ansible source's separate "Ensure redis
+    # line exists" lineinfile fixup redundant given this codebase's
+    # full-file-copy approach (the fixup is a no-op in the Ansible source
+    # too, for the same reason: it always runs immediately after an
+    # equivalent full copy of ubersmith_start.sh).
     docker_ops.copy_static_files(ubersmith_home_path)
     system_config.set_journald_retention()
     system_config.restart_systemd_journald()
