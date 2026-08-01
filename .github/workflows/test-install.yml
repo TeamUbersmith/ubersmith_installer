@@ -22,6 +22,7 @@ jobs:
         env:
           ANSIBLE_NOCOLOR: "1"
           ANSIBLE_FORCE_COLOR: "0"
+          UBERSMITH_INTERACTIVE: "false"
         run: expect .github/scripts/run_install.exp
 
       - name: Verify containers are up
@@ -37,4 +38,4 @@ jobs:
         if: failure()
         run: |
           sudo docker ps -a
-          sudo docker compose -f /usr/local/ubersmith/docker-compose.yml logs --tail=200 || true
+          sudo docker compose -f "$HOME/ubersmith/docker-compose.yml" logs --tail=200 || true

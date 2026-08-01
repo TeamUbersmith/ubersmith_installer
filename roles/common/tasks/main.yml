@@ -9,6 +9,7 @@
   - name: Output Current Timezone
     ansible.builtin.pause:
       prompt: "This host's timezone is configured as {{ ansible_date_time.tz }}. If this is not correct, please exit the installer and reconfigure the host's timezone. (CTRL+C to continue)"
+    when: interactive
     tags:
       - tz
       - os

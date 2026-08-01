@@ -26,7 +26,7 @@
         private: no
 
     vars:
-      interactive: true
+      interactive: "{{ (lookup('env', 'UBERSMITH_INTERACTIVE') | default('true', true)) | bool }}"
       certificate_domains: "{{ virtual_host }}"
       notify_email: "{{ admin_email }}"
 
