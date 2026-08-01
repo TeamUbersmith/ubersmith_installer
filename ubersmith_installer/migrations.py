@@ -13,19 +13,22 @@ Specifically this module covers:
 
     * "Update mysql to use caching_sha2_password" (~line 650)
     * "Alert admin to necessary license updates" (~line 131)
-
-One "upgrade_only" task is intentionally NOT implemented as a migration:
-
     * "Ensure sql_mode is only set to NO_ENGINE_SUBSTITUTION for 5.x
-      upgrades" (~line 243) -- this Ansible task uses ``lineinfile`` to
-      force ``sql_mode = "NO_ENGINE_SUBSTITUTION"`` into an existing
-      ``conf/mysql/ubersmith.cnf`` after the fact. In this codebase,
-      ``ubersmith_installer/templates/ubersmith.cnf.5.j2`` already hardcodes
-      ``sql_mode = "NO_ENGINE_SUBSTITUTION"`` directly in the template
-      (Phase 1). Since the upgrade command re-renders that template
-      unconditionally via the existing ``templates.render_mysql_cnf()``
-      (a plain-``upgrade``-tagged task, reused as-is), the correct value is
-      always produced with no separate migration step needed.
+      upgrades" (~line 243)
+
+Correction: an earlier version of this module claimed the sql_mode task
+above was unnecessary because ``templates.render_mysql_cnf()`` is
+"re-rendered unconditionally" on upgrade and already hardcodes the correct
+value. That reasoning was wrong -- the upgrade command only calls
+``render_mysql_cnf()`` when the *previously installed* version predates
+5.2.0 (mirroring the separate "Create percona server configuration
+overrides" task's own, different version guard). For any install already
+at >= 5.2.0, ``conf/mysql/ubersmith.cnf`` is never touched at all otherwise
+-- so the real Ansible task's defensive, unconditional (for major version
+5) ``lineinfile`` fixup is genuinely needed as its own step, independent of
+whether the file was just re-rendered, to repair a wrong/missing
+``sql_mode`` line from a hand-edit or an older template on any existing
+5.x-and-up install. See :func:`ensure_sql_mode_no_engine_substitution`.
 
 CRITICAL: docker-compose.override.yml, the apache vhost config, rwhois.j2,
 and ubersmith.ini.j2 are install-only templates that may contain customer
@@ -36,6 +39,7 @@ module does so either.
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 from pathlib import Path
 from typing import List, Mapping, Optional
@@ -140,6 +144,45 @@ def license_update_reminder(installed_version: str) -> Optional[str]:
     return None
 
 
+def ensure_sql_mode_no_engine_substitution(
+    ubersmith_home: Path, ubersmith_major_version: str
+) -> bool:
+    """Mirror "Ensure sql_mode is only set to NO_ENGINE_SUBSTITUTION for 5.x
+    upgrades" -- a defensive ``lineinfile``-equivalent fixup applied to the
+    *existing* ``conf/mysql/ubersmith.cnf``, independent of whether that
+    file was just re-rendered by ``templates.render_mysql_cnf()`` this run.
+
+    Gated only on the target major version being "5" (matching the Ansible
+    task's own ``when: ubersmith_major_version | int == 5`` -- there is no
+    installed-version guard on this particular task, unlike the mysql cnf
+    re-render). Only replaces an existing ``sql_mode =`` line; if the file
+    doesn't have one at all, nothing is added (matching ``lineinfile``'s
+    default ``regexp``-only, non-``insertafter`` behavior for this task).
+
+    Returns whether the file was actually changed.
+    """
+    if str(ubersmith_major_version) != "5":
+        return False
+
+    cnf_path = Path(ubersmith_home) / "conf" / "mysql" / "ubersmith.cnf"
+    try:
+        text = cnf_path.read_text()
+    except (FileNotFoundError, OSError):
+        return False
+
+    new_text, count = re.subn(
+        r'^sql_mode\s*=.*$',
+        'sql_mode = "NO_ENGINE_SUBSTITUTION"',
+        text,
+        flags=re.MULTILINE,
+    )
+    if count == 0 or new_text == text:
+        return False
+
+    cnf_path.write_text(new_text)
+    return True
+
+
 def run_migrations(
     ubersmith_home: Path,
     mysql_root_password: str,
@@ -147,14 +190,15 @@ def run_migrations(
     installed_version: str,
     is_local_database: bool,
     *,
+    ubersmith_major_version: str = "5",
     runner: Optional[SubprocessRunner] = None,
 ) -> List[str]:
     """Run all applicable mutating migrations, returning the ones that ran.
 
     Orchestrates the "upgrade_only" migrations that actually change state
-    (currently just `migrate_caching_sha2_password`). Does NOT include
-    `license_update_reminder`, which is a non-mutating, purely informational
-    concern the integration step calls directly.
+    (`migrate_caching_sha2_password`, `ensure_sql_mode_no_engine_substitution`).
+    Does NOT include `license_update_reminder`, which is a non-mutating,
+    purely informational concern the integration step calls directly.
     """
     ran: List[str] = []
 
@@ -167,5 +211,8 @@ def run_migrations(
         runner=runner,
     ):
         ran.append("caching_sha2_password")
+
+    if ensure_sql_mode_no_engine_substitution(ubersmith_home, ubersmith_major_version):
+        ran.append("sql_mode_no_engine_substitution")
 
     return ran

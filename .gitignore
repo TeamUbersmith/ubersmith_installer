@@ -7,4 +7,14 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 .venv/
+venv/
+env/
 build/
+dist/
+*.whl
+*.egg
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/

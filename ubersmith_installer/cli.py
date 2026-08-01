@@ -766,13 +766,17 @@ def upgrade(
     redis_migration_needed = redis_migration.migrate_redis_volume(ubersmith_home_path)
 
     # "Update mysql to use caching_sha2_password" (only meaningful for local
-    # databases predating 5.2.0 -- run_migrations checks both internally).
+    # databases predating 5.2.0 -- run_migrations checks both internally)
+    # and the defensive sql_mode fixup (applies to whatever's on disk right
+    # now, whether that's the pre-existing file or one about to be
+    # re-rendered below -- either way the end result is the same).
     ran_migrations = migrations.run_migrations(
         ubersmith_home_path,
         mysql_root_password,
         mysql_ubersmith_password,
         old_installed_version,
         is_local_database,
+        ubersmith_major_version=ubersmith_major_version,
     )
     for name in ran_migrations:
         click.echo(f"Ran migration: {name}")
@@ -1863,15 +1867,17 @@ def patch(
 ) -> None:
     """Fetch and apply an official Ubersmith patch release.
 
-    Reaches parity with ``patch_ubersmith.yml``: reads the existing
-    installer state, confirms patches are supported for this install (the
-    ``docker-compose.override.yml`` patches volume mount must be present),
-    clears any previous patch state, lists the patch releases available for
-    the currently installed Ubersmith version, prompts the admin to choose
-    one (or uses ``--patch-id`` for non-interactive use), downloads and
-    unpacks the chosen release asset, applies it (restarting the web
-    container, fixing ownership, and copying the patch files into place),
-    and records the applied patch's metadata in ``.patched``.
+    Reaches parity with ``patch_ubersmith.yml`` as actually invoked by
+    ``patch_ubersmith.sh`` (with ``--skip-tags remove_patches``): reads the
+    existing installer state, confirms patches are supported for this
+    install (the ``docker-compose.override.yml`` patches volume mount must
+    be present), warns (without deleting anything) if a prior patch marker
+    is present, lists the patch releases available for the currently
+    installed Ubersmith version, prompts the admin to choose one (or uses
+    ``--patch-id`` for non-interactive use), downloads and unpacks the
+    chosen release asset, applies it (restarting the web container, fixing
+    ownership, and copying the patch files into place), and records the
+    applied patch's metadata in ``.patched``.
     """
     installer_state = state.read_state(path=state_file)
     required_fields = ("ubersmith_home", "ubersmith_installed_version")
@@ -1899,7 +1905,7 @@ def patch(
         )
         sys.exit(1)
 
-    patch_apply.cleanup_previous_patch_state(ubersmith_home_path)
+    patch_apply.warn_if_already_patched(ubersmith_home_path, not non_interactive)
 
     click.echo("Determining available patches...")
     patches = patch_apply.list_available_patches(ubersmith_version)

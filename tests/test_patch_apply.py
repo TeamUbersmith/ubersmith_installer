@@ -53,27 +53,61 @@ def test_check_patches_supported_false_when_override_file_missing(tmp_path):
     assert patch_apply.check_patches_supported(ubersmith_home) is False
 
 
-def test_cleanup_previous_patch_state_removes_marker_and_dir(tmp_path):
+def test_warn_if_already_patched_returns_false_and_warns_nothing_when_absent(tmp_path):
+    ubersmith_home = tmp_path / "ubersmith"
+    ubersmith_home.mkdir()
+
+    assert patch_apply.warn_if_already_patched(ubersmith_home, interactive=True) is False
+
+
+def test_warn_if_already_patched_never_deletes_anything(tmp_path, monkeypatch):
     ubersmith_home = tmp_path / "ubersmith"
     ubersmith_home.mkdir()
     patched_file = ubersmith_home / ".patched"
-    patched_file.write_text("stale patch data")
+    patched_file.write_text("prior patch data")
     patches_dir = ubersmith_home / "app" / "patches"
     patches_dir.mkdir(parents=True)
     (patches_dir / "leftover.txt").write_text("leftover")
 
-    patch_apply.cleanup_previous_patch_state(ubersmith_home)
+    monkeypatch.setattr(patch_apply.click, "confirm", lambda *a, **k: True)
 
-    assert not patched_file.exists()
-    assert not patches_dir.exists()
+    result = patch_apply.warn_if_already_patched(ubersmith_home, interactive=True)
+
+    assert result is True
+    # Nothing was removed -- only warned.
+    assert patched_file.exists()
+    assert patched_file.read_text() == "prior patch data"
+    assert (patches_dir / "leftover.txt").exists()
 
 
-def test_cleanup_previous_patch_state_is_idempotent_when_nothing_present(tmp_path):
+def test_warn_if_already_patched_blocks_on_confirm_when_interactive(tmp_path, monkeypatch):
     ubersmith_home = tmp_path / "ubersmith"
     ubersmith_home.mkdir()
+    (ubersmith_home / ".patched").write_text("data")
 
-    # Should not raise even though nothing exists to remove.
-    patch_apply.cleanup_previous_patch_state(ubersmith_home)
+    confirm_calls = []
+    monkeypatch.setattr(
+        patch_apply.click, "confirm", lambda *a, **k: confirm_calls.append((a, k)) or True
+    )
+
+    patch_apply.warn_if_already_patched(ubersmith_home, interactive=True)
+
+    assert len(confirm_calls) == 1
+
+
+def test_warn_if_already_patched_does_not_block_when_non_interactive(tmp_path, monkeypatch):
+    ubersmith_home = tmp_path / "ubersmith"
+    ubersmith_home.mkdir()
+    (ubersmith_home / ".patched").write_text("data")
+
+    def _fail_if_called(*a, **k):
+        raise AssertionError("click.confirm should not be called non-interactively")
+
+    monkeypatch.setattr(patch_apply.click, "confirm", _fail_if_called)
+
+    result = patch_apply.warn_if_already_patched(ubersmith_home, interactive=False)
+
+    assert result is True
 
 
 def test_list_available_patches_filters_by_version_substring():

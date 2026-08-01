@@ -1,13 +1,15 @@
 """Patch application for the Ubersmith installer.
 
-This module is a faithful port of ``patch_ubersmith.yml`` (repo root), the
-standalone playbook admins run to fetch and apply an official Ubersmith
-patch release. It mirrors, in order:
+This module is a faithful port of ``patch_ubersmith.yml`` (repo root) AS
+ACTUALLY INVOKED by ``patch_ubersmith.sh``, the standalone shell script
+admins run to fetch and apply an official Ubersmith patch release. It
+mirrors, in order:
 
     * "Fail if patches volume is not in docker compose file"
-    * "Remove .patched file" / "Remove patches directory" (unconditional --
-      see the note below contrasting this with
-      :mod:`ubersmith_installer.patch_cleanup`)
+    * "Determine if the installation has been patched" / "Pause for admin
+      if ubersmith has been patched" (see the note below on why this is
+      what actually runs, not the "Remove .patched file"/"Remove patches
+      directory" tasks)
     * "Determine available patches" (GitHub releases API, filtered by
       ``ubersmith_version``)
     * "Prompt for patch id"
@@ -18,21 +20,24 @@ patch release. It mirrors, in order:
       into place"
     * "Write patch data to .patched file"
 
-Note on cleanup semantics: ``patch_ubersmith.yml``'s own "Remove .patched
-file" / "Remove patches directory" tasks are **not** gated on
-``interactive`` -- they always run before a patch is applied, since a stale
-``.patched`` marker or leftover ``app/patches`` contents from a *previous*
-patch would conflict with the one about to be installed. This is
-deliberately different from :mod:`ubersmith_installer.patch_cleanup`, which
-mirrors the ``upgrade_only``, ``when: interactive`` gated cleanup tasks in
-``roles/ubersmith/tasks/main.yml`` that only run during an interactive
-*upgrade* (not a patch apply), and only when a human is present to notice
-the old ``.patched`` state is being discarded.
+Note on cleanup semantics: ``patch_ubersmith.yml`` DOES contain "Remove
+.patched file" / "Remove patches directory" tasks, but they are tagged
+``remove_patches``, and ``patch_ubersmith.sh`` always invokes the playbook
+with ``--skip-tags remove_patches`` -- so in real-world usage those two
+tasks NEVER run. What actually runs instead is the untagged "Determine if
+the installation has been patched" + "Pause for admin if ubersmith has been
+patched" tasks, which only WARN the admin (reminding them to review
+``.patched`` for conflicts) if a prior patch marker exists -- they do not
+delete anything. This module replicates that real behavior
+(:func:`warn_if_already_patched`), not the skipped-in-practice destructive
+tasks. This is a deliberately different concern from
+:mod:`ubersmith_installer.patch_cleanup`, which mirrors the separate
+``upgrade_only``, ``when: interactive`` gated cleanup tasks that run during
+an interactive *upgrade* (not a patch apply).
 """
 
 from __future__ import annotations
 
-import shutil
 import subprocess
 import tarfile
 import zipfile
@@ -102,28 +107,43 @@ def check_patches_supported(ubersmith_home: Path) -> bool:
     return PATCHES_MOUNT_MARKER in contents
 
 
-def cleanup_previous_patch_state(ubersmith_home: Path) -> None:
-    """Mirror "Remove .patched file" / "Remove patches directory".
+#: Matches the exact text of "Pause for admin if ubersmith has been patched".
+ALREADY_PATCHED_WARNING_TEMPLATE = (
+    "Ubersmith appears to be patched. Review the patch configuration file "
+    "in {patched_path} before proceeding to avoid conflicts."
+)
 
-    Unconditionally removes ``<ubersmith_home>/.patched`` and
-    ``<ubersmith_home>/app/patches``, regardless of interactive mode --
-    unlike :func:`ubersmith_installer.patch_cleanup.cleanup_legacy_patches`,
-    which only runs this cleanup during an interactive upgrade. This
-    function always runs it, matching ``patch_ubersmith.yml``'s own,
-    ungated tasks (tagged ``remove_patches``) which always clear out any
-    prior patch state before a new patch is applied.
 
-    Missing files/directories are silently ignored (matching Ansible's
-    ``state: absent``, which is idempotent).
+def warn_if_already_patched(ubersmith_home: Path, interactive: bool) -> bool:
+    """Mirror "Determine if the installation has been patched" / "Pause for
+    admin if ubersmith has been patched" -- the tasks that actually run in
+    real usage (see the module docstring for why the "Remove .patched
+    file"/"Remove patches directory" tasks are NOT replicated here: they're
+    always skipped via ``--skip-tags remove_patches`` in
+    ``patch_ubersmith.sh``).
+
+    Does not delete or modify anything -- only warns. In interactive mode,
+    blocks on a confirmation (matching the Ansible ``pause``); in
+    non-interactive mode, logs the same message and continues, since a
+    blocking prompt has no meaning there.
+
+    Returns whether a prior ``.patched`` marker was found (i.e. whether the
+    warning applied).
     """
     ubersmith_home = Path(ubersmith_home)
+    patched_path = ubersmith_home / ".patched"
 
-    patched_file = ubersmith_home / ".patched"
-    patched_file.unlink(missing_ok=True)
+    if not patched_path.exists():
+        return False
 
-    patches_dir = ubersmith_home / "app" / "patches"
-    if patches_dir.exists():
-        shutil.rmtree(patches_dir)
+    message = ALREADY_PATCHED_WARNING_TEMPLATE.format(patched_path=patched_path)
+    if interactive:
+        click.echo(message)
+        click.confirm("Continue applying the new patch?", default=True, abort=True)
+    else:
+        click.echo(f"[info] {message}")
+
+    return True
 
 
 def list_available_patches(

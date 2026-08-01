@@ -5,6 +5,7 @@ runner -- no real Docker daemon is required.
 """
 
 from pathlib import Path
+from typing import Optional
 
 import pytest
 
@@ -172,3 +173,74 @@ def test_run_migrations_does_not_include_license_reminder(tmp_path):
     )
 
     assert "license_update_reminder" not in ran
+
+
+def _write_cnf(ubersmith_home: Path, sql_mode_line: Optional[str]) -> Path:
+    cnf_dir = ubersmith_home / "conf" / "mysql"
+    cnf_dir.mkdir(parents=True)
+    cnf_path = cnf_dir / "ubersmith.cnf"
+    lines = ["[mysqld]", "max_connections = 2000"]
+    if sql_mode_line is not None:
+        lines.append(sql_mode_line)
+    cnf_path.write_text("\n".join(lines) + "\n")
+    return cnf_path
+
+
+def test_ensure_sql_mode_replaces_wrong_value(tmp_path):
+    cnf_path = _write_cnf(tmp_path, 'sql_mode = "SOME_OTHER_MODE"')
+
+    changed = migrations.ensure_sql_mode_no_engine_substitution(tmp_path, "5")
+
+    assert changed is True
+    text = cnf_path.read_text()
+    assert 'sql_mode = "NO_ENGINE_SUBSTITUTION"' in text
+    assert "SOME_OTHER_MODE" not in text
+    assert "max_connections = 2000" in text  # unrelated content survives
+
+
+def test_ensure_sql_mode_noop_when_already_correct(tmp_path):
+    _write_cnf(tmp_path, 'sql_mode = "NO_ENGINE_SUBSTITUTION"')
+
+    changed = migrations.ensure_sql_mode_no_engine_substitution(tmp_path, "5")
+
+    assert changed is False
+
+
+def test_ensure_sql_mode_noop_when_line_absent(tmp_path):
+    _write_cnf(tmp_path, None)
+
+    changed = migrations.ensure_sql_mode_no_engine_substitution(tmp_path, "5")
+
+    assert changed is False
+
+
+def test_ensure_sql_mode_noop_when_file_missing(tmp_path):
+    changed = migrations.ensure_sql_mode_no_engine_substitution(tmp_path, "5")
+
+    assert changed is False
+
+
+def test_ensure_sql_mode_noop_for_major_version_4(tmp_path):
+    _write_cnf(tmp_path, 'sql_mode = "SOME_OTHER_MODE"')
+
+    changed = migrations.ensure_sql_mode_no_engine_substitution(tmp_path, "4")
+
+    assert changed is False
+
+
+def test_run_migrations_includes_sql_mode_fixup_for_major_version_5(tmp_path):
+    _write_cnf(tmp_path, 'sql_mode = "WRONG"')
+
+    ran = migrations.run_migrations(
+        tmp_path,
+        mysql_root_password="rootpw",
+        mysql_password="ubersmithpw",
+        installed_version="5.2.2",
+        is_local_database=True,
+        ubersmith_major_version="5",
+        runner=lambda cmd, cwd, env: None,
+    )
+
+    assert "sql_mode_no_engine_substitution" in ran
+    # Already >= 5.2.0, so caching_sha2_password should NOT run.
+    assert "caching_sha2_password" not in ran
