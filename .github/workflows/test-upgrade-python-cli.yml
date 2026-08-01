@@ -1,10 +1,22 @@
 name: Test Upgrade (Python CLI, Ubuntu 24.04)
 
 # Proves the compatibility promise the Python CLI rewrite is built around:
-# an existing, real Ansible-installed Ubersmith (major version 4) can be
-# upgraded in place by the NEW Python CLI's `upgrade` command, and that
-# doing so does not clobber site-specific admin customizations to
-# docker-compose.override.yml.
+# an existing, real Ansible-installed Ubersmith can be upgraded in place by
+# the NEW Python CLI's `upgrade` command, and that doing so does not clobber
+# site-specific admin customizations to docker-compose.override.yml.
+#
+# Seeds a major version 5 install (not 4): the last major-4 release's images
+# (e.g. ghcr.io/teamubersmith/redis7:4.6.4-r4) are no longer published in the
+# registry ("manifest unknown" on pull), so a 4.x-origin install can no
+# longer be reliably seeded in CI. 4.x-to-5.x upgrade testing is out of
+# scope as a result -- this instead proves a same-major-version (5.x -> 5.x)
+# upgrade, which still exercises real upgrade mechanics end-to-end
+# (container cycling through maintenance mode, template re-render, the
+# override-file legacy fixups, updatedb.php, keyring backup, image pruning,
+# the license-update and compose-override reminders, which both still fire
+# since the installed version is well past their 4.3.0/4.6.0 thresholds).
+# Only the caching_sha2_password migration is a no-op here, since the seeded
+# version is already >= 5.2.0.
 
 on:
   push:
@@ -43,27 +55,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y python3-venv expect
 
-      # Seeds a real, old (major version 4) install using the OLD Ansible
-      # installer, exactly as test-install-ubuntu-24.04.yml does, but
-      # targeting version 4 so the upgrade exercises real version-gated
-      # migrations (caching_sha2_password, license reminder, sql_mode,
-      # legacy docker-compose.override.yml fixups, etc.) instead of a no-op.
-      #
-      # run_install.exp hardcodes "5" as the answer to the "Choose which
-      # version of Ubersmith to install (4 or 5)" prompt, so a dedicated
-      # copy (run_install_v4.exp) answering "4" is used instead.
+      # Seeds a real install using the OLD Ansible installer, exactly as
+      # test-install-ubuntu-24.04.yml does (ubersmith_major_version=5 --
+      # see the note at the top of this file for why not 4).
       #
       # Plain `sudo env ...` (not `sudo -E`) is used so HOME is reset to
       # /root for this run -- matching the plain `sudo` used later for
       # `ubersmith-installer upgrade`, so both commands agree on where
       # ~/.ubersmith_installer.ini (ansible_user_dir-relative) lives.
-      - name: Run OLD Ansible installer non-interactively (ubersmith_major_version=4)
+      - name: Run OLD Ansible installer non-interactively (ubersmith_major_version=5)
         run: |
           sudo env \
             ANSIBLE_NOCOLOR=1 \
             ANSIBLE_FORCE_COLOR=0 \
             UBERSMITH_INTERACTIVE=false \
-            expect .github/scripts/run_install_v4.exp
+            expect .github/scripts/run_install.exp
 
       - name: Verify old install's containers are up
         run: docker ps --format '{{.Names}}\t{{.Status}}'
