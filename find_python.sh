@@ -13,7 +13,7 @@ PYTHON_BIN=""
 NEWEST_VERSION=""
 
 # Newest-first candidate list. Add new minor versions here as they're supported.
-CANDIDATES=(python3.13 python3.12 python3.11)
+CANDIDATES=(python3.14 python3.13 python3.12 python3.11)
 
 for pybin in "${CANDIDATES[@]}"; do
     command -v "$pybin" &> /dev/null || continue
@@ -21,6 +21,15 @@ for pybin in "${CANDIDATES[@]}"; do
     NEWEST_VERSION=$("$pybin" -c 'import sys; print(".".join(map(str, sys.version_info[:3])))')
     break
 done
+
+# Fall back to plain python3 in case it's newer than every version-suffixed
+# binary we know to look for (e.g. a future release not yet in CANDIDATES).
+if [ -z "$PYTHON_BIN" ] && command -v python3 &> /dev/null; then
+    if python3 -c 'import sys; exit(0 if sys.version_info >= (3, 11) else 1)' 2>/dev/null; then
+        PYTHON_BIN=python3
+        NEWEST_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:3])))')
+    fi
+fi
 
 if [ -z "$PYTHON_BIN" ]; then
     if command -v python3 &> /dev/null; then
