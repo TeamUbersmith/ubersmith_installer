@@ -29,10 +29,10 @@ jobs:
             install: apt-get update && apt-get install -y python3 python3-venv
           - name: centos
             image: quay.io/centos/centos:stream10
-            install: dnf install -y python3.11 python3.11-pip
+            install: dnf install -y python3 python3-pip-wheel
           - name: alma
             image: almalinux:latest
-            install: dnf install -y python3.11 python3.11-pip
+            install: dnf install -y python3
           - name: rocky
             image: rockylinux:9
             install: dnf install -y python3.11 python3.11-pip
