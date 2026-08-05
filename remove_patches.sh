@@ -6,13 +6,11 @@ set -e
 
 export PATH="$HOME/.local/bin:$HOME/.local/ubersmith_venv/bin:$PATH"
 
-rm -rf $HOME/.local/ubersmith_venv
+if [ ! -d "$HOME/.local/ubersmith_venv" ]; then
+    source ./find_python.sh
+fi
 
-# Requires python3-venv on Ubuntu
-echo "Creating Ubersmith Python virtual environment..."
-python3 -m venv $HOME/.local/ubersmith_venv
-
-source $HOME/.local/ubersmith_venv/bin/activate
+source "$HOME"/.local/ubersmith_venv/bin/activate
 
 echo "Installing Dependencies..."
 pip3 install --disable-pip-version-check -q -r requirements_pip.txt

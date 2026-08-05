@@ -1,0 +1,60 @@
+---
+name: Test find_python.sh
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - find_python.sh
+      - .github/workflows/test-find-python.yml
+  pull_request:
+    paths:
+      - find_python.sh
+      - .github/workflows/test-find-python.yml
+
+jobs:
+  test:
+    name: find_python.sh (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ubuntu
+            image: ubuntu:latest
+            install: apt-get update && apt-get install -y python3 python3-venv
+          - name: debian
+            image: debian:latest
+            install: apt-get update && apt-get install -y python3 python3-venv
+          - name: centos
+            image: quay.io/centos/centos:stream
+            install: dnf install -y python3.11 python3.11-pip
+          - name: alma
+            image: almalinux:latest
+            install: dnf install -y python3.11 python3.11-pip
+          - name: rocky
+            image: rockylinux:latest
+            install: dnf install -y python3.11 python3.11-pip
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Verify Docker is available
+        run: docker version
+
+      - name: Pull ${{ matrix.name }} image
+        run: docker pull "${{ matrix.image }}"
+
+      - name: Run find_python.sh in ${{ matrix.name }}
+        run: |
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}:/workspace:ro" \
+            -w /workspace \
+            "${{ matrix.image }}" \
+            bash -c '
+              set -eux
+              ${{ matrix.install }}
+              bash ./find_python.sh
+              test -x "$HOME/.local/ubersmith_venv/bin/python3"
+              "$HOME/.local/ubersmith_venv/bin/python3" -c "import sys; assert sys.version_info >= (3, 11)"
+            '
