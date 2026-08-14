@@ -4,7 +4,17 @@ This directory (`ubersmith_installer/`) contains an in-progress, ground-up rewri
 
 ## Usage
 
-Requires Python 3.9+. Install the CLI from the repo root:
+Requires Python 3.9+. On Debian/Ubuntu (and other distros following PEP 668), a plain `pip install`
+outside a virtual environment fails with `error: externally-managed-environment` -- create a venv
+first, the same way `install_ubersmith.sh` bootstraps one today:
+
+```bash
+python3 -m venv ~/.local/ubersmith_venv
+source ~/.local/ubersmith_venv/bin/activate
+```
+
+Then, from the repo root, install the CLI (into that venv, or any other Python environment you
+already manage):
 
 ```bash
 pip install -e .
@@ -12,7 +22,8 @@ pip install -e .
 
 This installs an `ubersmith-installer` command with one subcommand per playbook. Run
 `ubersmith-installer --help` for the full list, or `ubersmith-installer <command> --help` for any
-individual command's flags.
+individual command's flags. If you open a new shell later, re-run the `source .../activate` line
+above before using `ubersmith-installer` again.
 
 **Install Ubersmith** (interactively -- prompts for version, install directory, virtual host(s),
 admin email, and whether to request a Let's Encrypt certificate, exactly like `install_ubersmith.sh`
