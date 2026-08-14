@@ -6,25 +6,20 @@ This directory (`ubersmith_installer/`) contains an in-progress, ground-up rewri
 
 Requires Python 3.9+. On Debian/Ubuntu (and other distros following PEP 668), a plain `pip install`
 outside a virtual environment fails with `error: externally-managed-environment` -- create a venv
-first, the same way `install_ubersmith.sh` bootstraps one today:
+first, the same way `install_ubersmith.sh` bootstraps one today.
 
-```bash
-python3 -m venv ~/.local/ubersmith_venv
-```
-
-On Ubuntu, the venv module itself isn't part of the base `python3` package -- if the command above
-fails with `The virtual environment was not created successfully because ensurepip is not
-available`, install the matching `python3-venv` package first (the exact package name is tied to
-your `python3` version, e.g. `python3.12-venv` on Ubuntu 24.04 -- the error message itself will tell
-you the exact package name to use):
+On Ubuntu, the venv module itself isn't part of the base `python3` package, so install the matching
+`python3-venv` package before creating one (the exact package name is tied to your `python3`
+version, e.g. `python3.12-venv` on Ubuntu 24.04):
 
 ```bash
 sudo apt install python3-venv
 ```
 
-Then retry the `python3 -m venv` command above, and activate the new environment:
+Then create and activate the venv:
 
 ```bash
+python3 -m venv ~/.local/ubersmith_venv
 source ~/.local/ubersmith_venv/bin/activate
 ```
 
