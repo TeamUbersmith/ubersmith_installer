@@ -1,6 +1,6 @@
 # Ubersmith Installer (Python CLI) - Work in Progress
 
-This directory (`ubersmith_installer/`) contains an in-progress, ground-up rewrite of the Ubersmith installer as a Python command-line application, replacing the existing Ansible-based playbooks under `roles/`. Docker and Docker Compose remain the runtime for Ubersmith itself; only the installation and configuration tooling is being reimplemented. The existing Ansible installer under `roles/` remains the supported installation method until this rewrite reaches parity.
+This repository's `ubersmith_installer/` subdirectory contains an in-progress, ground-up rewrite of the Ubersmith installer as a Python command-line application, replacing the existing Ansible-based playbooks under `roles/`. Docker and Docker Compose remain the runtime for Ubersmith itself; only the installation and configuration tooling is being reimplemented. The existing Ansible installer under `roles/` remains the supported installation method until this rewrite reaches parity.
 
 ## Usage
 
@@ -23,12 +23,17 @@ python3 -m venv ~/.local/ubersmith_venv
 source ~/.local/ubersmith_venv/bin/activate
 ```
 
-Then, from the repo root, install the CLI (into that venv, or any other Python environment you
-already manage):
+Then install the CLI (into that venv, or any other Python environment you already manage) from the
+**root of your git checkout -- the directory containing `pyproject.toml`, not the
+`ubersmith_installer/` package subdirectory one level below it** (an easy directory to confuse,
+since they share a name):
 
 ```bash
 pip install -e .
 ```
+
+If you see `does not appear to be a Python project: neither 'setup.py' nor 'pyproject.toml' found`,
+you're one directory too deep -- run `cd ..` and retry.
 
 This installs an `ubersmith-installer` command with one subcommand per playbook. Run
 `ubersmith-installer --help` for the full list, or `ubersmith-installer <command> --help` for any
