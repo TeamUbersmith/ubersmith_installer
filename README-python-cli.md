@@ -10,6 +10,21 @@ first, the same way `install_ubersmith.sh` bootstraps one today:
 
 ```bash
 python3 -m venv ~/.local/ubersmith_venv
+```
+
+On Ubuntu, the venv module itself isn't part of the base `python3` package -- if the command above
+fails with `The virtual environment was not created successfully because ensurepip is not
+available`, install the matching `python3-venv` package first (the exact package name is tied to
+your `python3` version, e.g. `python3.12-venv` on Ubuntu 24.04 -- the error message itself will tell
+you the exact package name to use):
+
+```bash
+sudo apt install python3-venv
+```
+
+Then retry the `python3 -m venv` command above, and activate the new environment:
+
+```bash
 source ~/.local/ubersmith_venv/bin/activate
 ```
 
