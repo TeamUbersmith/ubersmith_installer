@@ -46,6 +46,7 @@ from pathlib import Path
 from typing import Callable, Mapping, Optional, Sequence
 
 import docker
+import pymysql
 
 from ubersmith_installer import docker_ops
 
@@ -542,7 +543,7 @@ def configure_uberapp_user_password(
     mysql_appliance_password: str,
     uberapp_user_password: str,
     *,
-    runner: Optional[Callable[[Sequence[str]], subprocess.CompletedProcess]] = None,
+    connect: Optional[Callable[..., "pymysql.connections.Connection"]] = None,
 ) -> None:
     """Update the appliance's uberapp/xml-rpc user password.
 
@@ -555,28 +556,37 @@ def configure_uberapp_user_password(
     login = %s`` with positional args ``[uberapp_user_password,
     "ubersmith"]``.
 
-    This shells out to the ``mysql`` CLI (rather than reimplementing a MySQL
-    wire-protocol client), matching the subprocess-based pattern used
-    throughout this module and ``migrations.py``. Only ever called during
-    install -- this task carries no ``upgrade``/``upgrade_only`` tag, so it
-    never runs again during an upgrade.
+    Uses PyMySQL (already a pinned dependency of the Ansible tool this
+    mirrors, via ``community.mysql.mysql_query``'s own PyMySQL requirement --
+    see ``requirements_pip.txt``) to connect directly over the wire protocol,
+    rather than shelling out to a ``mysql`` CLI binary: the host running this
+    installer has no other reason to have that CLI installed, so requiring it
+    would be a real, undocumented prerequisite gap. This also avoids passing
+    the database password as a plaintext command-line argument (visible to
+    other users on the host via `ps`), and uses a parameterized query instead
+    of manual SQL string escaping. Only ever called during install -- this
+    task carries no ``upgrade``/``upgrade_only`` tag, so it never runs again
+    during an upgrade.
     """
-    if runner is None:
-        runner = lambda cmd: subprocess.run(list(cmd), check=True, capture_output=True)
+    if connect is None:
+        connect = pymysql.connect
 
-    escaped_password = uberapp_user_password.replace("'", "''")
-    query = f"UPDATE user SET password = '{escaped_password}' WHERE login = 'ubersmith'"
-    cmd = [
-        "mysql",
-        "--host=127.0.0.1",
-        "--port=3307",
-        "--user=uberapp",
-        f"--password={mysql_appliance_password}",
-        "uberapp",
-        "-e",
-        query,
-    ]
-    runner(cmd)
+    connection = connect(
+        host="127.0.0.1",
+        port=3307,
+        user="uberapp",
+        password=mysql_appliance_password,
+        database="uberapp",
+    )
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE user SET password = %s WHERE login = %s",
+                (uberapp_user_password, "ubersmith"),
+            )
+        connection.commit()
+    finally:
+        connection.close()
 
 
 def run_upgrade_php(

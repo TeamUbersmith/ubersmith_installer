@@ -524,36 +524,60 @@ def test_step_up_mysql_57_raises_on_wait_timeout_but_still_starts_container():
 # --- configure_uberapp_user_password / run_upgrade_php -----------------------
 
 
-def test_configure_uberapp_user_password_invokes_expected_mysql_command():
-    runner = MagicMock()
+def test_configure_uberapp_user_password_connects_and_updates_expected_row():
+    connection = MagicMock()
+    cursor = connection.cursor.return_value.__enter__.return_value
+    connect = MagicMock(return_value=connection)
 
     appliance_ops.configure_uberapp_user_password(
-        "dbpassword123", "xmlrpcpassword456", runner=runner
+        "dbpassword123", "xmlrpcpassword456", connect=connect
     )
 
-    runner.assert_called_once()
-    (cmd,), _ = runner.call_args
-    assert cmd[0] == "mysql"
-    assert "--host=127.0.0.1" in cmd
-    assert "--port=3307" in cmd
-    assert "--user=uberapp" in cmd
-    assert "--password=dbpassword123" in cmd
-    assert "uberapp" in cmd
-    query = cmd[-1]
-    assert "xmlrpcpassword456" in query
-    assert "login = 'ubersmith'" in query
+    connect.assert_called_once_with(
+        host="127.0.0.1",
+        port=3307,
+        user="uberapp",
+        password="dbpassword123",
+        database="uberapp",
+    )
+    cursor.execute.assert_called_once_with(
+        "UPDATE user SET password = %s WHERE login = %s",
+        ("xmlrpcpassword456", "ubersmith"),
+    )
+    connection.commit.assert_called_once()
+    connection.close.assert_called_once()
 
 
-def test_configure_uberapp_user_password_escapes_single_quotes():
-    runner = MagicMock()
+def test_configure_uberapp_user_password_closes_connection_even_on_failure():
+    connection = MagicMock()
+    cursor = connection.cursor.return_value.__enter__.return_value
+    cursor.execute.side_effect = RuntimeError("boom")
+    connect = MagicMock(return_value=connection)
+
+    try:
+        appliance_ops.configure_uberapp_user_password(
+            "dbpassword123", "xmlrpcpassword456", connect=connect
+        )
+    except RuntimeError:
+        pass
+
+    connection.close.assert_called_once()
+
+
+def test_configure_uberapp_user_password_uses_parameterized_query_not_string_formatting():
+    # A password containing a single quote must not need any manual escaping
+    # -- it's passed as a bind parameter, not interpolated into the SQL text.
+    connection = MagicMock()
+    cursor = connection.cursor.return_value.__enter__.return_value
+    connect = MagicMock(return_value=connection)
 
     appliance_ops.configure_uberapp_user_password(
-        "dbpassword123", "weird'pass", runner=runner
+        "dbpassword123", "weird'pass", connect=connect
     )
 
-    (cmd,), _ = runner.call_args
-    query = cmd[-1]
-    assert "weird''pass" in query
+    query, params = cursor.execute.call_args[0]
+    assert "'" not in query
+    assert params == ("weird'pass", "ubersmith")
 
 
 def test_run_upgrade_php_invokes_expected_command(tmp_path):

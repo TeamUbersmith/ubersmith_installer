@@ -15,6 +15,7 @@ dependencies = [
     "distro>=1.9",
     "cryptography>=42",
     "requests>=2.31",
+    "PyMySQL>=1.1.2",
 ]
 
 [project.optional-dependencies]
