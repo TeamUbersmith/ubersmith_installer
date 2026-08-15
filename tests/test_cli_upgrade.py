@@ -125,6 +125,11 @@ def _patch_side_effecting_modules(monkeypatch, *, is_local_database=True, redis_
         "ubersmith_installer.cli.system_config.restart_systemd_journald",
         mocks["restart_systemd_journald"],
     )
+    # These tests simulate a Linux upgrade target regardless of the host
+    # actually running the test suite (which may itself be macOS).
+    monkeypatch.setattr(
+        "ubersmith_installer.cli.templates.get_os_family", lambda: "Debian"
+    )
     monkeypatch.setattr(
         "ubersmith_installer.cli.certbot.install_renewal_cron_task",
         mocks["install_renewal_cron_task"],

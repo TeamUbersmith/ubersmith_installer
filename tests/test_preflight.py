@@ -49,6 +49,24 @@ def test_supported_os_and_version_passes(monkeypatch):
     assert result.errors == []
 
 
+def test_darwin_skips_linux_distro_checks(monkeypatch):
+    # distro.id()/version() report nonsense on macOS ("darwin" isn't in
+    # _DISTRO_ID_TO_NAME) -- _check_os must bail out on platform.system()
+    # before ever consulting them, rather than treating an unsupported
+    # distro as an error.
+    monkeypatch.setattr(preflight.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(
+        preflight.distro, "id", lambda: (_ for _ in ()).throw(AssertionError("should not be called"))
+    )
+
+    result = preflight.run_preflight_checks(
+        docker_module=_ok_docker_module(), check_service_enabled=False
+    )
+
+    assert result.ok is True
+    assert result.errors == []
+
+
 def test_unsupported_os_fails(monkeypatch):
     monkeypatch.setattr(preflight.distro, "id", lambda: "fedora")
     monkeypatch.setattr(preflight.distro, "name", lambda: "Fedora")

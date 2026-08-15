@@ -147,14 +147,22 @@ def _parse_proc_meminfo() -> dict[str, int]:
 _FALLBACK_MEMTOTAL_MB = 4096
 
 
-def get_memtotal_mb() -> int:
+def get_memtotal_mb(docker_module=None) -> int:
     """Compute an ``ansible_memtotal_mb``-compatible value for the host.
 
     On Linux this reads ``MemTotal`` from ``/proc/meminfo`` (the same source
-    Ansible's ``setup`` module uses). On non-Linux hosts (e.g. macOS, used
-    for local development) it falls back to ``os.sysconf`` where available,
-    and otherwise a conservative hardcoded default, emitting a warning since
-    this value should not be relied upon in that case.
+    Ansible's ``setup`` module uses) -- accurate there because the Docker
+    daemon runs directly on that same host.
+
+    On Darwin (Docker Desktop for Mac), the daemon instead runs inside a VM
+    with its own, much smaller memory allocation, disjoint from the host's
+    physical RAM (e.g. a 24GB Mac with a 7.75GB Docker Desktop VM) -- reading
+    host memory there would size ``innodb_buffer_pool_size`` for memory the
+    containers can never actually have, causing mysqld to be OOM-killed on
+    init. So on non-Linux hosts this asks the Docker daemon directly via
+    ``client.info()['MemTotal']``, which reflects what containers can
+    actually use, falling back to ``os.sysconf`` (and then a conservative
+    hardcoded default) only if Docker itself can't be reached.
     """
     if platform.system() == "Linux":
         try:
@@ -162,6 +170,15 @@ def get_memtotal_mb() -> int:
             return round(meminfo["MemTotal"] / 1024)
         except (OSError, KeyError):
             pass
+    try:
+        if docker_module is None:
+            import docker as docker_module
+        client = docker_module.from_env()
+        mem_total = client.info().get("MemTotal")
+        if mem_total:
+            return round(mem_total / (1024 * 1024))
+    except Exception:  # noqa: BLE001 - any docker/connection error
+        pass
     try:
         pages = os.sysconf("SC_PHYS_PAGES")
         page_size = os.sysconf("SC_PAGE_SIZE")

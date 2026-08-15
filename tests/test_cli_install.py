@@ -43,6 +43,14 @@ def _patch_side_effecting_modules(monkeypatch):
     set_journald_retention = MagicMock()
     restart_systemd_journald = MagicMock()
 
+    # These tests simulate a Linux install target regardless of the host
+    # actually running the test suite (which may itself be macOS) -- pin
+    # get_os_family() so the journald calls' Darwin/Windows skip doesn't
+    # depend on where pytest happens to run.
+    monkeypatch.setattr(
+        "ubersmith_installer.cli.templates.get_os_family", lambda: "Debian"
+    )
+
     monkeypatch.setattr("ubersmith_installer.cli.docker_ops.pull_images", pull_images)
     monkeypatch.setattr("ubersmith_installer.cli.docker_ops.compose_up", compose_up)
     monkeypatch.setattr("ubersmith_installer.cli.docker_ops.scale_redis", scale_redis)

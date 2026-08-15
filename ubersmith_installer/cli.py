@@ -174,7 +174,13 @@ def _image_refs(release: dict, certbot_version: str) -> list[str]:
         f"{registry}/rsyslog:{tag}",
         f"ghcr.io/teamubersmith/certbot:{certbot_version}",
         "falcosecurity/falco-no-driver:latest",
-        "clamav/clamav:1.4_base",
+        # clamav/clamav:1.4_base has no arm64 manifest at all (confirmed via
+        # `docker manifest inspect`), so pulling it through the Docker SDK
+        # here (which doesn't know to request linux/amd64) fails outright on
+        # Apple Silicon. It's excluded from this pre-pull list -- same as
+        # the appliance's xtrabackup image -- and picked up by the later
+        # `docker compose up`, which honors the `platform: linux/amd64`
+        # pinned on the clamav service in docker-compose.yml.j2.
     ]
 
 
@@ -553,8 +559,9 @@ def install(
     # it up (best-effort: no-op with a warning on non-systemd hosts or
     # without root, same as the Ansible task's practical behavior).
     if not dry_run:
-        system_config.set_journald_retention()
-        system_config.restart_systemd_journald()
+        if templates.get_os_family() not in ("Darwin", "Windows"):
+            system_config.set_journald_retention()
+            system_config.restart_systemd_journald()
     else:
         click.secho(
             "Skipping systemd journal retention policy (--dry-run).", fg="yellow"
@@ -894,8 +901,9 @@ def upgrade(
     # too, for the same reason: it always runs immediately after an
     # equivalent full copy of ubersmith_start.sh).
     docker_ops.copy_static_files(ubersmith_home_path)
-    system_config.set_journald_retention()
-    system_config.restart_systemd_journald()
+    if templates.get_os_family() not in ("Darwin", "Windows"):
+        system_config.set_journald_retention()
+        system_config.restart_systemd_journald()
 
     # Narrow, in-place fixups to the EXISTING docker-compose.override.yml --
     # never wholesale re-rendered (see CRITICAL note in this command's

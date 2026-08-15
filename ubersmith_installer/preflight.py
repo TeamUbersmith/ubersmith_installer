@@ -70,6 +70,15 @@ class PreflightResult:
 
 
 def _check_os(result: PreflightResult) -> None:
+    # Not a real Ansible target (the source's `supported_os` list never
+    # included Darwin either), but the rendered templates already guard
+    # every Linux-only bit (journald logging, /etc/localtime mounts) behind
+    # `ansible_os_family != 'Darwin'`, and Docker Desktop for Mac runs the
+    # same Linux containers -- so there's nothing left here to gate on a
+    # Linux distribution/kernel version.
+    if platform.system() == "Darwin":
+        return
+
     distro_id = distro.id()
     distro_name = _DISTRO_ID_TO_NAME.get(distro_id.lower())
     version = distro.version()

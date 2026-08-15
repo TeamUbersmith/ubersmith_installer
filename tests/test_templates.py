@@ -4,6 +4,8 @@ These exercise the plain-Jinja2 rendering layer (not Ansible) against the
 three templates copied into ubersmith_installer/templates/.
 """
 
+from unittest.mock import MagicMock
+
 import yaml
 
 from ubersmith_installer import templates
@@ -97,6 +99,32 @@ def test_render_docker_compose_omits_journald_logging_on_darwin():
     parsed = yaml.safe_load(rendered)
 
     assert "logging" not in parsed["services"]["web"]
+
+
+def test_render_docker_compose_omits_falco_on_darwin():
+    rendered = templates.render_docker_compose(
+        _docker_compose_context(ansible_os_family="Darwin")
+    )
+    parsed = yaml.safe_load(rendered)
+
+    # falco monitors the real host's /proc and /etc via a privileged,
+    # apparmor-unconfined container -- meaningless (and likely unsupported)
+    # against Docker Desktop's internal Linux VM on macOS, so it's skipped
+    # entirely rather than just having its journald logging stripped.
+    assert "falco" not in parsed["services"]
+    assert "clamav" in parsed["services"]
+    assert "logging" not in parsed["services"]["clamav"]
+
+
+def test_render_docker_compose_includes_falco_off_darwin():
+    rendered = templates.render_docker_compose(
+        _docker_compose_context(ansible_os_family="Debian")
+    )
+    parsed = yaml.safe_load(rendered)
+
+    assert "falco" in parsed["services"]
+    assert parsed["services"]["falco"]["privileged"] is True
+    assert "logging" in parsed["services"]["clamav"]
 
 
 def test_render_docker_compose_includes_journald_logging_off_darwin():
@@ -282,6 +310,47 @@ def test_get_memfree_mb_does_not_exceed_memtotal_by_much():
     # MemAvailable/MemFree should never wildly exceed MemTotal; sanity check
     # rather than a strict invariant given the two are read independently.
     assert templates.get_memfree_mb() <= templates.get_memtotal_mb() * 1.1
+
+
+class _FakeDockerModule:
+    """Fake `docker` module for injection into get_memtotal_mb."""
+
+    def __init__(self, mem_total=None, raise_on_from_env=None):
+        self._mem_total = mem_total
+        self._raise_on_from_env = raise_on_from_env
+
+    def from_env(self):
+        if self._raise_on_from_env is not None:
+            raise self._raise_on_from_env
+        client = MagicMock()
+        client.info.return_value = {"MemTotal": self._mem_total}
+        return client
+
+
+def test_get_memtotal_mb_uses_docker_daemon_memory_on_darwin(monkeypatch):
+    # Docker Desktop for Mac runs the daemon inside a VM with its own,
+    # much smaller memory allocation than the host -- innodb_buffer_pool_size
+    # must be sized against that, not host RAM, or mysqld gets OOM-killed on
+    # init (this exact failure was reproduced on a 24GB Mac with a 7.75GB
+    # Docker Desktop VM).
+    monkeypatch.setattr(templates.platform, "system", lambda: "Darwin")
+    fake_docker = _FakeDockerModule(mem_total=8_321_429_504)  # ~7.75GiB
+
+    memtotal = templates.get_memtotal_mb(docker_module=fake_docker)
+
+    assert memtotal == 7936
+
+
+def test_get_memtotal_mb_falls_back_when_docker_unreachable(monkeypatch):
+    monkeypatch.setattr(templates.platform, "system", lambda: "Darwin")
+    fake_docker = _FakeDockerModule(raise_on_from_env=ConnectionError("no daemon"))
+
+    memtotal = templates.get_memtotal_mb(docker_module=fake_docker)
+
+    # Falls through to os.sysconf (or the hardcoded default) -- either way,
+    # still a sane positive value, not a crash.
+    assert isinstance(memtotal, int)
+    assert memtotal > 0
 
 
 def test_get_timezone_file_returns_real_looking_path():

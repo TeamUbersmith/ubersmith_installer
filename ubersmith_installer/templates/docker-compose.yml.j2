@@ -239,6 +239,7 @@ services:
       options:
         tag: ubersmith/certbot
 {% endif %}
+{% if ansible_os_family != 'Darwin' %}
   falco:
     image: falcosecurity/falco-no-driver:latest
     restart: unless-stopped
@@ -259,16 +260,23 @@ services:
     depends_on:
       web:
         condition: service_started
+{% endif %}
   clamav:
     image: clamav/clamav:1.4_base
+    # No arm64 manifest is published for this image -- force amd64 so
+    # Docker Desktop's emulation (Rosetta/QEMU) can still run it on Apple
+    # Silicon. A no-op on native amd64 hosts.
+    platform: linux/amd64
     restart: unless-stopped
     hostname: clamav.{{ container_domain }}
     volumes:
       - "clamav_signatures:/var/lib/clamav"
+{% if ansible_os_family != 'Darwin' %}
     logging:
       driver: journald
       options:
         tag: ubersmith/clamav
+{% endif %}
 volumes:
   clamav_signatures: {}
   database: {}
