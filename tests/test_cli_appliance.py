@@ -308,7 +308,9 @@ def test_install_appliance_full_flow_invokes_docker_and_password_config(tmp_path
     assert len(image_refs) == 3
 
     mocks["compose_pull"].assert_called_once_with(appliance_home)
-    mocks["compose_up"].assert_called_once_with(appliance_home)
+    mocks["compose_up"].assert_called_once_with(
+        appliance_home, services=["app_db", "app_web", "app_cron"]
+    )
     mocks["wait_for_containers_healthy"].assert_called_once_with()
 
     mocks["configure_uberapp_user_password"].assert_called_once()

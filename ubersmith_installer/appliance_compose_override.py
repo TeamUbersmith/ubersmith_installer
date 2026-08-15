@@ -1,12 +1,13 @@
 """Legacy in-place fixups for the appliance's docker-compose.override.yml.
 
 Mirrors two ``update_compose_override_template``-tagged tasks in
-``roles/appliance/tasks/main.yml``:
+``roles/appliance/tasks/main.yml``, with one deliberate deviation (see
+``update_compose_version``):
 
-    * "Update docker compose override file" (~line 138): replaces every
-      stale top-level ``version: '2'`` line with ``version: '3'``
-      (``ansible.builtin.replace`` -- replaces *every* match, not just the
-      first).
+    * "Update docker compose override file" (~line 138): Ansible replaces
+      every stale top-level ``version: '2'`` line with ``version: '3'``.
+      This port instead removes the line entirely -- see
+      ``update_compose_version`` below.
     * "Ensure http virtual host configuration line exists" (~line 149):
       ensures the apache ``sites-enabled`` bind-mount volume line is
       present, inserting it right after the ssl key volume line if it's
@@ -36,26 +37,32 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-#: Mirrors the `regexp`/`replace` used by the "Update docker compose
-#: override file" task (ansible.builtin.replace, backup: true). Unlike
-#: ubersmith's "remove version line" fixup (lineinfile, firstmatch, state:
-#: absent), this is a plain global find/replace -- every occurrence is
-#: rewritten, not just the first.
-_VERSION_2_RE = re.compile(r"version: '2'")
+#: Matches a stale top-level ``version: '2'`` or ``version: '3'`` line.
+#: Ansible's "Update docker compose override file" task only rewrites
+#: ``'2'`` to ``'3'``, but the base ``appliance-docker-compose.yml.j2``
+#: template no longer declares a ``version:`` key at all (removed to stop
+#: Docker Compose's "the attribute `version` is obsolete" warning), so any
+#: top-level version line left in the override -- '2' or '3' -- is now
+#: equally stale and is removed outright instead of bumped.
+_VERSION_LINE_RE = re.compile(r"^version: '[23]'\s*$\n?", re.MULTILINE)
 
 
 def update_compose_version(override_path: Path) -> bool:
-    """Replace every ``version: '2'`` with ``version: '3'`` in place.
+    """Remove any stale top-level ``version: '2'``/``version: '3'`` line.
 
-    Mirrors the "Update docker compose override file" task. Returns whether
-    the file was modified. No-ops (returns False) if `override_path`
-    doesn't exist.
+    Deliberate deviation from the "Update docker compose override file"
+    task, which rewrites ``'2'`` to ``'3'`` -- since the base compose
+    template no longer declares a ``version:`` key at all, bumping the
+    override's version would just leave a different stale line and keep
+    Docker Compose's obsolete-attribute warning firing. Removes every
+    matching line instead. Returns whether the file was modified. No-ops
+    (returns False) if `override_path` doesn't exist.
     """
     if not override_path.exists():
         return False
 
     text = override_path.read_text()
-    new_text, count = _VERSION_2_RE.subn("version: '3'", text)
+    new_text, count = _VERSION_LINE_RE.subn("", text)
     if count == 0:
         return False
 

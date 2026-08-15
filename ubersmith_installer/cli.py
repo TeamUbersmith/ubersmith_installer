@@ -1207,7 +1207,14 @@ def install_appliance(
         appliance_ops.compose_pull(appliance_home_path)
 
         click.echo("Starting appliance containers...")
-        appliance_ops.compose_up(appliance_home_path)
+        # Deliberate fix, not a faithful port: app_backup is a one-shot
+        # xtrabackup job (no `restart:` policy, unlike the other services),
+        # not a long-running service -- it has nothing to back up yet on a
+        # fresh install, so it's excluded from the initial `up` and left to
+        # run on its own schedule/trigger instead.
+        appliance_ops.compose_up(
+            appliance_home_path, services=["app_db", "app_web", "app_cron"]
+        )
         appliance_ops.wait_for_containers_healthy()
     else:
         click.secho(

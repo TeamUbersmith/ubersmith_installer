@@ -22,16 +22,19 @@ def _target_line() -> str:
     return f'      - "{APPLIANCE_HOME}/conf/httpd/sites-enabled:/etc/apache2/sites-enabled"'
 
 
-def test_update_compose_version_replaces_all_occurrences(tmp_path):
+def test_update_compose_version_removes_all_occurrences(tmp_path):
     path = tmp_path / "docker-compose.override.yml"
-    path.write_text("version: '2'\nservices:\n  app_web: {}\n# version: '2' in a comment too\n")
+    path.write_text(
+        "version: '2'\nservices:\n  app_web: {}\nversion: '3'\n"
+    )
 
     changed = appliance_compose_override.update_compose_version(path)
 
     assert changed is True
     text = path.read_text()
     assert "version: '2'" not in text
-    assert text.count("version: '3'") == 2
+    assert "version: '3'" not in text
+    assert text == "services:\n  app_web: {}\n"
 
 
 def test_update_compose_version_noop_when_absent(tmp_path):
@@ -125,7 +128,8 @@ def test_apply_legacy_override_fixups_runs_both_in_order(tmp_path):
 
     assert changed is True
     text = path.read_text()
-    assert "version: '3'" in text
+    assert "version: '2'" not in text
+    assert "version: '3'" not in text
     assert _target_line() in text
 
 
