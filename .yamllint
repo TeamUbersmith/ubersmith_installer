@@ -1,0 +1,18 @@
+---
+extends: default
+rules:
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: false
+  document-start: disable
+  # 190 gives a little headroom over ansible-lint's own 160-char default for
+  # the long lookup('ini', ...) expressions used throughout the upgrade/patch
+  # playbooks, without forcing manual rewraps that risk breaking the Jinja.
+  line-length:
+    max: 190
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true

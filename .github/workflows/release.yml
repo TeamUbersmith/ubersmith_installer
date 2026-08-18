@@ -1,3 +1,4 @@
+---
 name: Release
 
 permissions:
@@ -14,13 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
       - name: Build
         run: tar --exclude='./.git' --transform 's,^,ubersmith-installer-${{ github.ref_name }}/,' -zcf ../ubersmith-installer-${{ github.ref_name }}.tar.gz .
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-            name: Ubersmith Installer ${{ github.ref_name }}
-            files: ../ubersmith-installer-${{ github.ref_name }}.tar.gz
+          name: Ubersmith Installer ${{ github.ref_name }}
+          files: ../ubersmith-installer-${{ github.ref_name }}.tar.gz
       - name: Checksums
         uses: wangzuo/action-release-checksums@v1.0.1
