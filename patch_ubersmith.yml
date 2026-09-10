@@ -55,7 +55,7 @@
       ansible.builtin.set_fact:
         available_patches: "{{ all_patches | to_json | from_json | community.general.json_query(patch_name_query) }}"
       vars:
-        patch_name_query: "[?contains(name,'{{ ubersmith_version }}')].[id, name, html_url, assets[].browser_download_url | [0]]"
+        patch_name_query: "[?contains(name,'{{ ubersmith_version }}')].[id, name, html_url, assets[].browser_download_url | [0], body]"
 
     - name: Prompt for patch selection
       ansible.builtin.pause:
@@ -65,6 +65,12 @@
           {% for _patch in available_patches %}
           {{ loop.index }}) Name: {{ _patch[1] }}
              URL : {{ _patch[2] }}
+          {% if _patch[4] %}
+             Description:
+          {% for _line in _patch[4].splitlines() %}
+               {{ _line }}
+          {% endfor %}
+          {% endif %}
 
           {% endfor %}
 
