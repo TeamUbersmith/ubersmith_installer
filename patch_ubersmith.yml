@@ -66,10 +66,7 @@
           {{ loop.index }}) Name: {{ _patch[1] }}
              URL : {{ _patch[2] }}
           {% if _patch[4] %}
-             Description:
-          {% for _line in _patch[4].splitlines() %}
-               {{ _line }}
-          {% endfor %}
+             Description: {{ _patch[4].splitlines()[0] }}
           {% endif %}
 
           {% endfor %}
