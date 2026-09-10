@@ -57,30 +57,29 @@
       vars:
         patch_name_query: "[?contains(name,'{{ ubersmith_version }}')].[id, name, html_url, assets[].browser_download_url | [0]]"
 
-    - name: Prompt for patch id
+    - name: Prompt for patch selection
       ansible.builtin.pause:
         prompt: |2-
 
           === Available Patches for Ubersmith {{ ubersmith_version }} ===
           {% for _patch in available_patches %}
-          Name: {{ _patch[1] }}
-          URL : {{ _patch[2] }}
-          ID  : {{ _patch[0] }}
+          {{ loop.index }}) Name: {{ _patch[1] }}
+             URL : {{ _patch[2] }}
 
           {% endfor %}
 
-          Enter the patch ID to apply
-      register: patch_id
+          Enter the number of the patch to apply
+      register: patch_selection
 
-      # - name: debug patch input
-      #   ansible.builtin.debug:
-      #     msg: "{{ patch_id.user_input }}"
+    - name: Determine selected patch id
+      ansible.builtin.set_fact:
+        patch_id: "{{ available_patches[patch_selection.user_input | int - 1][0] }}"
 
     - name: Retrieve assets for selected patch
       ansible.builtin.set_fact:
         my_patch: "{{ lookup('url', release_url, headers={'Accept': 'application/vnd.github.v3+json'}) }}"
       vars:
-        release_url: "https://api.github.com/repos/TeamUbersmith/ubersmith-patches/releases/{{ patch_id.user_input }}"
+        release_url: "https://api.github.com/repos/TeamUbersmith/ubersmith-patches/releases/{{ patch_id }}"
 
     # - name: debug assets
     #   ansible.builtin.debug:
@@ -89,7 +88,7 @@
     # Create the directory structure required for Ubersmith to store patches
     - name: Create directory for requested patch
       ansible.builtin.file:
-        path: "{{ ubersmith_home }}/app/patches/{{ patch_id.user_input }}"
+        path: "{{ ubersmith_home }}/app/patches/{{ patch_id }}"
         state: directory
         owner: "{{ ansible_user_id }}"
         group: "{{ ansible_user_gid }}"
@@ -98,7 +97,7 @@
     - name: Retrieve selected patch
       ansible.builtin.unarchive:
         src: "{{ my_patch['assets'][0]['browser_download_url'] }}"
-        dest: "{{ ubersmith_home }}/app/patches/{{ patch_id.user_input }}"
+        dest: "{{ ubersmith_home }}/app/patches/{{ patch_id }}"
         remote_src: true
         list_files: true
       register: patch_files
@@ -125,12 +124,12 @@
     - name: Copy patch files into place
       community.docker.docker_container_exec:
         container: ubersmith-web-1
-        command: /bin/bash -c "cd /var/www/ubersmith_root/app/patches/{{ patch_id.user_input }}/; cp -a --suffix .bak --backup . ../../www/"
+        command: /bin/bash -c "cd /var/www/ubersmith_root/app/patches/{{ patch_id }}/; cp -a --suffix .bak --backup . ../../www/"
 
     - name: Write patch data to .patched file
       community.general.ini_file:
         path: "{{ ubersmith_home }}/.patched"
-        section: "Patch {{ patch_id.user_input }}"
+        section: "Patch {{ patch_id }}"
         option: "{{ item.key }}"
         value: "{{ item.value }}"
         owner: "{{ ansible_user_id }}"
