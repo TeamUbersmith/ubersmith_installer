@@ -105,6 +105,7 @@
     - { var: "ubersmith_home", val: "{{ ubersmith_home }}" }
     - { var: "virtual_host", val: "{{ virtual_host }}" }
     - { var: "admin_email", val: "{{ admin_email }}" }
+    - { var: "enable_ipv6", val: "{{ enable_ipv6 }}" }
   tags:
     - new_brand
 
@@ -126,6 +127,84 @@
     - ansible_os_family != "Windows"
   tags:
     - disable_mtas
+
+# Check if host supports IPv6
+- name: Check if host has IPv6 capability
+  block:
+    - name: Check IPv6 sysctl status
+      ansible.builtin.sysctl:
+        name: "net.ipv6.conf.all.disable_ipv6"
+        state: present
+      register: ipv6_disabled_check
+      when:
+        - ansible_os_family != "Darwin"
+        - ansible_os_family != "Windows"
+      failed_when: false
+
+    - name: Set IPv6 capability fact
+      ansible.builtin.set_fact:
+        ipv6_capable: "{{ ipv6_disabled_check.get('ansible_facts', {}).get('ansible_sysctl', {}).get('net.ipv6.conf.all.disable_ipv6', '1') == '0' }}"
+      when:
+        - ansible_os_family != "Darwin"
+        - ansible_os_family != "Windows"
+
+    - name: Set IPv6 capability to true for macOS/Windows
+      ansible.builtin.set_fact:
+        ipv6_capable: true
+      when:
+        - ansible_os_family == "Darwin" or ansible_os_family == "Windows"
+  tags:
+    - docker_ipv6
+
+- name: Warn if IPv6 requested but not available
+  ansible.builtin.pause:
+    prompt: |-
+      WARNING: IPv6 support was requested, but this host does not have IPv6 enabled.
+
+      To enable IPv6 on this host, run:
+        sysctl -w net.ipv6.conf.all.disable_ipv6=0
+
+      IPv6 configuration will be skipped for this installation.
+      Press CTRL+C to abort, or ENTER to continue without IPv6.
+  when:
+    - (enable_ipv6 | default('') | trim | lower) in ['y', 'yes']
+    - not ipv6_capable
+    - interactive
+  tags:
+    - docker_ipv6
+
+# Configure Docker daemon to support IPv6 if requested
+- name: Enable IPv6 support in Docker daemon
+  ansible.builtin.copy:
+    content: |
+      {
+        "ipv6": true,
+        "fixed-cidr-v6": "fd00::/80"
+      }
+    dest: "/etc/docker/daemon.json"
+    backup: true
+  when:
+    - (enable_ipv6 | default('') | trim | lower) in ['y', 'yes']
+    - ipv6_capable
+    - ansible_os_family != "Darwin"
+    - ansible_os_family != "Windows"
+  notify:
+    - restart docker
+  tags:
+    - docker_ipv6
+
+- name: Restart Docker daemon to apply IPv6 configuration
+  ansible.builtin.systemd_service:
+    state: restarted
+    name: docker
+    daemon_reload: true
+  when:
+    - (enable_ipv6 | default('') | trim | lower) in ['y', 'yes']
+    - ipv6_capable
+    - ansible_os_family != "Darwin"
+    - ansible_os_family != "Windows"
+  tags:
+    - docker_ipv6
 
 # Updates to docker-compose remove the project_container_index syntax
 - name: Alert admin to necessary license updates
@@ -861,6 +940,7 @@
   with_items:
     - { var: "ubersmith_installed_version", val: "{{ ubersmith_version }}" }
     - { var: "lets_encrypt_certificate", val: "{{ lets_encrypt_certificate }}" }
+    - { var: "enable_ipv6", val: "{{ enable_ipv6 }}" }
   tags:
     - upgrade
 
