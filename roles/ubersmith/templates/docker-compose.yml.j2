@@ -16,7 +16,7 @@ services:
         tag: ubersmith/solr
 {% endif %}
   db:
-    image: {{ registry }}/ps{{ ubersmith_release[ubersmith_major_version].mysql_version }}:{{ ubersmith_version }}-{{ containers_release_version }}
+    image: {{ registry }}/ps{{ ubersmith_release[ubersmith_config_version].mysql_version }}:{{ ubersmith_version }}-{{ containers_release_version }}
     hostname: database.{{ container_domain }}
     restart: unless-stopped
     ports:
@@ -37,7 +37,11 @@ services:
         tag: ubersmith/db
 {% endif %}
   web:
-    image: {{ registry }}/{{ ubersmith_release[ubersmith_major_version].containers.web_container_repo }}:{{ ubersmith_version }}-{{ containers_release_version }}
+{% if ubersmith_major_version == "cloud" %}
+    image: ghcr.io/teamubersmith/ubersmith:ubersmith-cloud-v0.0.1
+{% else %}
+    image: {{ registry }}/{{ ubersmith_release[ubersmith_config_version].containers.web_container_repo }}:{{ ubersmith_version }}-{{ containers_release_version }}
+{% endif %}
     hostname: {{ container_domain }}
     restart: unless-stopped
     environment:
@@ -72,7 +76,7 @@ services:
         tag: ubersmith/web
 {% endif %}
   php:
-    image: {{ registry }}/php{{ ubersmith_release[ubersmith_major_version].php_version }}:{{ ubersmith_version }}-{{ containers_release_version }}
+    image: {{ registry }}/php{{ ubersmith_release[ubersmith_config_version].php_version }}:{{ ubersmith_version }}-{{ containers_release_version }}
     hostname: {{ container_domain }}
     restart: unless-stopped
     volumes:
@@ -175,7 +179,7 @@ services:
     environment:
       REDIS_HOSTS: default:ubersmith-redis-data-1:6379:3
   backup:
-    image: {{ registry }}/xtrabackup{{ ubersmith_release[ubersmith_major_version].backup_version }}:{{ ubersmith_version }}-{{ containers_release_version }}
+    image: {{ registry }}/xtrabackup{{ ubersmith_release[ubersmith_config_version].backup_version }}:{{ ubersmith_version }}-{{ containers_release_version }}
     hostname: backups.{{ container_domain }}
     # entrypoint: /mysqldump.sh
     environment:
@@ -206,7 +210,7 @@ services:
        - "{{ ubersmith_home }}/conf/ssl/{{ container_domain }}.pem:/etc/nginx/ssl/server.crt"
        - "{{ ubersmith_home }}/conf/ssl/{{ container_domain }}.key:/etc/nginx/ssl/server.key"
   haproxy:
-    image: haproxy:{{ ubersmith_release[ubersmith_major_version].containers.haproxy_version }}
+    image: haproxy:{{ ubersmith_release[ubersmith_config_version].containers.haproxy_version }}
     volumes:
        - "{{ ubersmith_home }}/conf/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro"
     ports:
