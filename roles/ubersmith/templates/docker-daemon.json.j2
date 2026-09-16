@@ -1,0 +1,7 @@
+{
+{% if (enable_ipv6 | default('') | trim | lower) in ['y', 'yes'] and ipv6_capable %}
+  "ipv6": true,
+  "fixed-cidr-v6": "fd00::/80",
+{% endif %}
+  "userland-proxy": false
+}
