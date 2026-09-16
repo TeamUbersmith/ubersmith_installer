@@ -147,6 +147,17 @@
 	SetEnv MOD_HEADERS true
 </IfModule>
 
+# If Ubersmith is placed behind an external reverse proxy or load balancer
+# that terminates the connection before it reaches this host (so Apache
+# would otherwise log the proxy's IP instead of the real client IP),
+# uncomment the block below, ensure mod_remoteip is loaded in the web
+# container, and replace the RemoteIPTrustedProxy value with the actual
+# proxy/LB IP address(es) or CIDR(s).
+# <IfModule mod_remoteip.c>
+#   RemoteIPHeader X-Forwarded-For
+#   RemoteIPTrustedProxy 10.0.0.0/8
+# </IfModule>
+
 SSLUseStapling On
 SSLStaplingCache "shmcb:logs/ssl_stapling(32768)"
 ServerTokens Prod

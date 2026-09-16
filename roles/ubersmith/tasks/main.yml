@@ -132,18 +132,17 @@
 - name: Check if host has IPv6 capability
   block:
     - name: Check IPv6 sysctl status
-      ansible.builtin.sysctl:
-        name: "net.ipv6.conf.all.disable_ipv6"
-        state: present
+      ansible.builtin.command: cat /proc/sys/net/ipv6/conf/all/disable_ipv6
       register: ipv6_disabled_check
+      changed_when: false
+      failed_when: false
       when:
         - ansible_os_family != "Darwin"
         - ansible_os_family != "Windows"
-      failed_when: false
 
     - name: Set IPv6 capability fact
       ansible.builtin.set_fact:
-        ipv6_capable: "{{ ipv6_disabled_check.get('ansible_facts', {}).get('ansible_sysctl', {}).get('net.ipv6.conf.all.disable_ipv6', '1') == '0' }}"
+        ipv6_capable: "{{ (ipv6_disabled_check.stdout | default('1') | trim) == '0' }}"
       when:
         - ansible_os_family != "Darwin"
         - ansible_os_family != "Windows"
@@ -173,37 +172,25 @@
   tags:
     - docker_ipv6
 
-# Configure Docker daemon to support IPv6 if requested
-- name: Enable IPv6 support in Docker daemon
-  ansible.builtin.copy:
-    content: |
-      {
-        "ipv6": true,
-        "fixed-cidr-v6": "fd00::/80"
-      }
+# Disable Docker's userland-proxy so published ports rely solely on iptables
+# DNAT, which preserves the real client IP instead of the docker0/bridge
+# gateway address showing up in Apache/PHP logs. Also configures IPv6 when
+# requested and supported by the host (see the capability check above).
+# This task is intentionally untagged with upgrade/upgrade_only so it only
+# ever runs on a fresh install, never on upgrade_ubersmith.yml, since
+# restarting the Docker daemon restarts every container on the host.
+- name: Configure Docker daemon (client IP preservation, optional IPv6)
+  ansible.builtin.template:
+    src: docker-daemon.json.j2
     dest: "/etc/docker/daemon.json"
     backup: true
   when:
-    - (enable_ipv6 | default('') | trim | lower) in ['y', 'yes']
-    - ipv6_capable
     - ansible_os_family != "Darwin"
     - ansible_os_family != "Windows"
   notify:
     - restart docker
   tags:
-    - docker_ipv6
-
-- name: Restart Docker daemon to apply IPv6 configuration
-  ansible.builtin.systemd_service:
-    state: restarted
-    name: docker
-    daemon_reload: true
-  when:
-    - (enable_ipv6 | default('') | trim | lower) in ['y', 'yes']
-    - ipv6_capable
-    - ansible_os_family != "Darwin"
-    - ansible_os_family != "Windows"
-  tags:
+    - docker_daemon
     - docker_ipv6
 
 # Updates to docker-compose remove the project_container_index syntax
