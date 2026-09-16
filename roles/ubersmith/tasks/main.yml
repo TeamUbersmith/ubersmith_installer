@@ -132,18 +132,17 @@
 - name: Check if host has IPv6 capability
   block:
     - name: Check IPv6 sysctl status
-      ansible.builtin.sysctl:
-        name: "net.ipv6.conf.all.disable_ipv6"
-        state: present
+      ansible.builtin.command: cat /proc/sys/net/ipv6/conf/all/disable_ipv6
       register: ipv6_disabled_check
+      changed_when: false
+      failed_when: false
       when:
         - ansible_os_family != "Darwin"
         - ansible_os_family != "Windows"
-      failed_when: false
 
     - name: Set IPv6 capability fact
       ansible.builtin.set_fact:
-        ipv6_capable: "{{ ipv6_disabled_check.get('ansible_facts', {}).get('ansible_sysctl', {}).get('net.ipv6.conf.all.disable_ipv6', '1') == '0' }}"
+        ipv6_capable: "{{ (ipv6_disabled_check.stdout | default('1') | trim) == '0' }}"
       when:
         - ansible_os_family != "Darwin"
         - ansible_os_family != "Windows"
