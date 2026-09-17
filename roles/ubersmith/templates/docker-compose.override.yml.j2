@@ -50,6 +50,9 @@ services:
 {% if ansible_os_family != 'Darwin' %}
       TIMEZONE: {{ timezone_file.stat.lnk_source | replace ("/usr/share/zoneinfo/", "") | replace("Etc/", "") | replace("UCT", "UTC") }}
 {% endif %}
+{% if ubersmith_major_version == "cloud" %}
+      LARAVEL_APP_KEY: "base64:{{ lookup('ansible.builtin.pipe', 'openssl rand -base64 32') }}"
+{% endif %}
     #  DATABASE_HOST: "db"
     #  USAGE_DATABASE: usage
     #  USAGE_DATABASE_HOST: remote_db
