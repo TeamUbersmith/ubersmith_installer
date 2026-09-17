@@ -64,7 +64,6 @@ services:
       ALIPAY_ENABLE: 1
       OPENSSL_CIPHERS: {{ mozilla_ciphers.configurations.intermediate.ciphers.openssl | join(':') }}
 {% if ubersmith_major_version == "cloud" %}
-      LARAVEL_APP_KEY: "base64:{{ lookup('ansible.builtin.pipe', 'openssl rand -base64 32') }}"
       LARAVEL_APP_ENV: "production"
       LARAVEL_APP_DEBUG: "false"
       LARAVEL_REDIS_HOST: "ubersmith-redis-data-1"
