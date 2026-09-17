@@ -97,7 +97,7 @@
     # Route /api/v3 to Laravel
     RewriteCond %{REQUEST_URI} ^/api/v3
     RewriteRule ^(.*)$ fcgi://php:9000/var/www/ubersmith_root/app/laravel/public/index.php [L,QSA,P]
-{% else %}
+{% endif %}
 
     RedirectMatch 404 ^/app/.*$
 
@@ -113,7 +113,6 @@
     RewriteRule ^/(.*\.(?:php|ico)(/.*)?)$ fcgi://{{ fcgi_host }}:9000%{DOCUMENT_ROOT}/$1 [L,QSA,P]
 
     SetEnv MOD_REWRITE true
-{% endif %}
   </IfModule>
 
 </VirtualHost>
