@@ -52,7 +52,11 @@ services:
       LOCK_BACKEND: redis
       LOCK_SERVERS: "ubersmith-redis-1:6379:1,ubersmith-redis-2:6379:1,ubersmith-redis-3:6379:1"
       MAINTENANCE: "${MAINTENANCE}"
+{% if ubersmith_major_version == "cloud" %}
+      HTTPS_FORCE: 0
+{% else %}
       HTTPS_FORCE: 1
+{% endif %}
       REASON_LOG: 0
       STORAGE_BACKEND: redis
       REDIS_HOST: tcp://ubersmith-redis-data-1:6379?database=2
