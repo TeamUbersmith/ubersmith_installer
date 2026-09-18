@@ -44,6 +44,14 @@ services:
 {% endif %}
     hostname: {{ container_domain }}
     restart: unless-stopped
+{% if ubersmith_major_version == "cloud" %}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.ubersmith-api.rule=Host(`{{ container_domain }}`) && PathPrefix(`/api/v3`)
+      - traefik.http.routers.ubersmith-api.entrypoints=websecure
+      - traefik.http.routers.ubersmith-api.tls.certresolver=letsencrypt
+      - traefik.http.services.ubersmith-api.loadbalancer.server.port=80
+{% endif %}
     environment:
       MYSQL_USER: ubersmith
       MYSQL_DATABASE: ubersmith
@@ -68,6 +76,7 @@ services:
       ALIPAY_ENABLE: 1
       OPENSSL_CIPHERS: {{ mozilla_ciphers.configurations.intermediate.ciphers.openssl | join(':') }}
 {% if ubersmith_major_version == "cloud" %}
+      LARAVEL_APP_KEY: "base64:{{ lookup('ansible.builtin.pipe', 'openssl rand -base64 32') }}"
       LARAVEL_APP_ENV: "production"
       LARAVEL_APP_DEBUG: "false"
       LARAVEL_REDIS_HOST: "ubersmith-redis-data-1"
@@ -283,6 +292,55 @@ services:
       driver: journald
       options:
         tag: ubersmith/clamav
+{% if ubersmith_major_version == "cloud" %}
+  traefik:
+    image: traefik:v3.7
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      # DNS-01 challenge (kept for reference; requires NS1_API_KEY below)
+      # - --certificatesresolvers.letsencrypt.acme.dnschallenge=true
+      # - --certificatesresolvers.letsencrypt.acme.dnschallenge.provider=ns1
+      # HTTP-01 challenge
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.letsencrypt.acme.email=operations@ubersmith.com
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --accesslog=true
+      - --accesslog.format=json
+    # environment:
+    #   - NS1_API_KEY=${NS1_API_KEY}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-certs:/letsencrypt
+    restart: unless-stopped
+
+  ubersmith-new-ui:
+    image: ghcr.io/teamubersmith/ubersmith-new-ui:test
+    environment:
+      ORIGIN: https://{{ container_domain }}
+      PROTOCOL_HEADER: x-forwarded-proto
+      HOST_HEADER: x-forwarded-host
+      ADDRESS_HEADER: x-forwarded-for
+      API_BASE_URL: http://web/api/v3
+      LIVE_DOMAINS: customers,invoices,subscriptions,contacts,settings
+    depends_on:
+      - web
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.ubersmith-new-ui.rule=Host(`{{ container_domain }}`)
+      - traefik.http.routers.ubersmith-new-ui.entrypoints=websecure
+      - traefik.http.routers.ubersmith-new-ui.tls.certresolver=letsencrypt
+      - traefik.http.services.ubersmith-new-ui.loadbalancer.server.port=3000
+    restart: unless-stopped
+{% endif %}
 volumes:
   clamav_signatures: {}
   database: {}
@@ -292,3 +350,6 @@ volumes:
   search: {}
   webroot: {}
   pmm-data: {}
+{% if ubersmith_major_version == "cloud" %}
+  traefik-certs: {}
+{% endif %}
