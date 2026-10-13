@@ -84,6 +84,12 @@
       vars:
         release_url: "https://api.github.com/repos/TeamUbersmith/ubersmith-patches/releases/{{ patch_id }}"
 
+    # GitHub does not document a guaranteed order for the assets array, so
+    # don't assume assets[0] is the newest upload for this release.
+    - name: Determine newest asset for selected patch
+      ansible.builtin.set_fact:
+        latest_patch_asset: "{{ (my_patch['assets'] | sort(attribute='created_at'))[-1] }}"
+
     # - name: debug assets
     #   ansible.builtin.debug:
     #     msg: "{{ my_patch['assets'] }}"
@@ -99,7 +105,7 @@
 
     - name: Retrieve selected patch
       ansible.builtin.unarchive:
-        src: "{{ my_patch['assets'][0]['browser_download_url'] }}"
+        src: "{{ latest_patch_asset.browser_download_url }}"
         dest: "{{ ubersmith_home }}/app/patches/{{ patch_id }}"
         remote_src: true
         list_files: true
