@@ -33,6 +33,9 @@
     interactive: "{{ (lookup('env', 'UBERSMITH_INTERACTIVE') | default('true', true)) | bool }}"
     certificate_domains: "{{ virtual_host }}"
     notify_email: "{{ admin_email }}"
+    # Always back up the keyring on a fresh install; this is only made
+    # optional (and prompted for) on upgrade_ubersmith.yml.
+    backup_mysql_keyring: "yes"
 
   roles:
     - common

@@ -908,6 +908,8 @@
     volumes:
       - "ubersmith_database_keyring:/keyring"
       - "{{ ubersmith_home }}/backup:/backup"
+  when:
+    - (backup_mysql_keyring | default('no') | trim | lower) in ['y', 'yes']
   tags:
     - upgrade
     - mysql_config

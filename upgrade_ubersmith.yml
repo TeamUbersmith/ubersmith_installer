@@ -3,6 +3,14 @@
   hosts: local
   any_errors_fatal: true
 
+  vars_prompt:
+    - name: "backup_mysql_keyring"
+      prompt: |-
+        Back up the MySQL keyring file before upgrading?
+        Encrypted data is unrecoverable without the MySQL keyring file.
+      default: "no"
+      private: false
+
   pre_tasks:
     - name: Check for .ubersmith_installer.ini
       ansible.builtin.stat:
