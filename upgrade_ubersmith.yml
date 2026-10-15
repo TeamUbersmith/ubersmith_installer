@@ -36,6 +36,8 @@
     ubersmith_major_version: "5"
     lets_encrypt_certificate: "{{ lookup('ini', 'lets_encrypt_certificate section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini default=yes')
       }}"
+    enable_ipv6: "{{ lookup('ini', 'enable_ipv6 section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini default=no')
+      }}"
     interactive: true
 
   roles:
