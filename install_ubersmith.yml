@@ -5,7 +5,7 @@
 
   vars_prompt:
     - name: "ubersmith_major_version"
-      prompt: "Choose which version of Ubersmith to install (4 or 5)"
+      prompt: "Choose which version of Ubersmith to install (4, 5, or cloud)"
       default: "5"
       private: false
     - name: "ubersmith_home"

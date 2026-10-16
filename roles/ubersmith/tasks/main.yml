@@ -16,9 +16,10 @@
     source: pull
   with_items:
     - "{{ registry }}/solr:{{ ubersmith_version }}-{{ containers_release_version }}"
-    - "{{ registry }}/ps{{ ubersmith_release[ubersmith_major_version].mysql_version }}:{{ ubersmith_version }}-{{ containers_release_version }}"
-    - "{{ registry }}/{{ ubersmith_release[ubersmith_major_version].containers.web_container_repo }}:{{ ubersmith_version }}-{{ containers_release_version }}"
-    - "{{ registry }}/php{{ ubersmith_release[ubersmith_major_version].php_version }}:{{ ubersmith_version }}-{{ containers_release_version }}"
+    - "{{ registry }}/ps{{ ubersmith_release[ubersmith_config_version].mysql_version }}:{{ ubersmith_version }}-{{ containers_release_version }}"
+    - "{{ 'ghcr.io/teamubersmith/ubersmith:ubersmith-cloud-v0.0.1' if ubersmith_major_version == 'cloud' else
+        registry + '/' + ubersmith_release[ubersmith_config_version].containers.web_container_repo + ':' + ubersmith_version + '-' + containers_release_version }}"
+    - "{{ registry }}/php{{ ubersmith_release[ubersmith_config_version].php_version }}:{{ ubersmith_version }}-{{ containers_release_version }}"
     - "{{ registry }}/cron:{{ ubersmith_version }}-{{ containers_release_version }}"
     - "{{ registry }}/mail:{{ ubersmith_version }}-{{ containers_release_version }}"
     - "{{ registry }}/xinetd:{{ ubersmith_version }}-{{ containers_release_version }}"
@@ -283,7 +284,7 @@
 # required if this file is modified.
 - name: Create percona server configuration overrides
   ansible.builtin.template:
-    src: "ubersmith.cnf.{{ ubersmith_major_version }}.j2"
+    src: "ubersmith.cnf.{{ ubersmith_config_version }}.j2"
     dest: "{{ ubersmith_home }}/conf/mysql/ubersmith.cnf"
     owner: "{{ ansible_user_id }}"
     group: "{{ ansible_user_gid }}"
@@ -312,7 +313,7 @@
     regexp: "^sql_mode\\s*="
     line: 'sql_mode = "NO_ENGINE_SUBSTITUTION"'
     backup: true
-  when: ubersmith_major_version | int == 5
+  when: ubersmith_config_version | int == 5
   tags:
     - mysql_config
     - upgrade

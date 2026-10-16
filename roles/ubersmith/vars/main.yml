@@ -49,9 +49,16 @@ ubersmith_release:
       web_container_repo: "ubersmith"
       haproxy_version: 1.7-alpine
 
+# The "cloud" install option mirrors "5" for every setting except the web
+# service's image, which uses a pinned cloud-specific tag (see
+# docker-compose.yml.j2 and tasks/main.yml). ubersmith_config_version maps
+# "cloud" back to "5" so ubersmith_release lookups and version-gated
+# comparisons don't need a separate "cloud" entry duplicating "5".
+ubersmith_config_version: "{{ '5' if ubersmith_major_version == 'cloud' else ubersmith_major_version }}"
+
 ubersmith_installed_version: 4.0.0
-ubersmith_version: "{{ ubersmith_release[ubersmith_major_version].ubersmith_release_version }}"
-containers_release_version: "{{ ubersmith_release[ubersmith_major_version].containers.release_version }}"
+ubersmith_version: "{{ ubersmith_release[ubersmith_config_version].ubersmith_release_version }}"
+containers_release_version: "{{ ubersmith_release[ubersmith_config_version].containers.release_version }}"
 pmm_version: 2
 certbot_version: v3.2.0
 

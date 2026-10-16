@@ -78,9 +78,28 @@
       </Proxy>
   </IfModule>
 
+{% if ubersmith_major_version == "cloud" %}
+  # Static Scribe docs
+  Alias /api/v3/docs /var/www/ubersmith_root/app/laravel/public/docs
+  <Directory /var/www/ubersmith_root/app/laravel/public/docs>
+      DirectoryIndex index.html
+      Require all granted
+  </Directory>
+{% endif %}
+
   <IfModule mod_rewrite.c>
-    RedirectMatch 404 ^/app/.*$
     RewriteEngine On
+
+{% if ubersmith_major_version == "cloud" %}
+    # Skip static docs
+    RewriteRule ^/api/v3/docs(/.*)?$ - [L]
+
+    # Route /api/v3 to Laravel
+    RewriteCond %{REQUEST_URI} ^/api/v3
+    RewriteRule ^(.*)$ fcgi://php:9000/var/www/ubersmith_root/app/laravel/public/index.php [L,QSA,P]
+{% endif %}
+
+    RedirectMatch 404 ^/app/.*$
 
     RewriteCond %{REQUEST_URI} \.js\.php$
     RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f
@@ -94,7 +113,6 @@
     RewriteRule ^/(.*\.(?:php|ico)(/.*)?)$ fcgi://{{ fcgi_host }}:9000%{DOCUMENT_ROOT}/$1 [L,QSA,P]
 
     SetEnv MOD_REWRITE true
-
   </IfModule>
 
 </VirtualHost>
