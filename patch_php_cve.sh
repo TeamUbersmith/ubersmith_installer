@@ -168,6 +168,7 @@ confirm_images_published "$ubersmith_new_tag" "${ubersmith_image_repos[@]}"
 if bump_image_tag "$ubersmith_compose_file" "$ubersmith_new_tag" "${ubersmith_image_repos[@]}"; then
   echo "Updated ${ubersmith_image_repos[*]} to $ubersmith_new_tag"
   (cd "$UBERSMITH_HOME" && compose pull php mail cron rwhois)
+  (cd "$UBERSMITH_HOME" && compose rm -sf php mail cron rwhois)
   (cd "$UBERSMITH_HOME" && compose up -d --no-deps php mail cron rwhois)
 else
   echo "docker-compose.yml already references $ubersmith_new_tag (nothing to do)"
