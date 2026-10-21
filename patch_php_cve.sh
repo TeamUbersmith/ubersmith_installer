@@ -179,10 +179,10 @@ if [ "$running_version" != "$UBERSMITH_INSTALLED_VERSION" ]; then
   exit 1
 fi
 
-# Refuse to downgrade (or redundantly reapply) the running release.
+# Refuse to downgrade the running release.
 if [[ "$running_release" =~ ^r[0-9]+$ ]] && [[ "$ubersmith_target_release_version" =~ ^r[0-9]+$ ]]; then
-  if [ "${running_release#r}" -ge "${ubersmith_target_release_version#r}" ]; then
-    echo "Error: running php container is already $running_tag, which is not older than the target $UBERSMITH_INSTALLED_VERSION-$ubersmith_target_release_version. Refusing to proceed." >&2
+  if [ "${running_release#r}" -gt "${ubersmith_target_release_version#r}" ]; then
+    echo "Error: running php container is already $running_tag, newer than the target $UBERSMITH_INSTALLED_VERSION-$ubersmith_target_release_version. Refusing to downgrade." >&2
     exit 1
   fi
 fi
