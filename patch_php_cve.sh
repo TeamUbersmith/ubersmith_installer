@@ -55,6 +55,20 @@ if [ ! -f "$INSTALLER_INI" ]; then
   exit 1
 fi
 
+# compose <args...> -- the docker compose plugin if present, else the
+# legacy docker-compose binary (still in use on some 4.6.x hosts).
+if docker compose version > /dev/null 2>&1; then
+  COMPOSE=(docker compose)
+elif command -v docker-compose > /dev/null 2>&1; then
+  COMPOSE=(docker-compose)
+else
+  echo "Error: neither 'docker compose' nor 'docker-compose' is available" >&2
+  exit 1
+fi
+compose() {
+  "${COMPOSE[@]}" "$@"
+}
+
 # ini_get <section> <key>
 ini_get() {
   local section="$1" key="$2"
@@ -153,8 +167,8 @@ confirm_images_published "$ubersmith_new_tag" "${ubersmith_image_repos[@]}"
 
 if bump_image_tag "$ubersmith_compose_file" "$ubersmith_new_tag" "${ubersmith_image_repos[@]}"; then
   echo "Updated ${ubersmith_image_repos[*]} to $ubersmith_new_tag"
-  (cd "$UBERSMITH_HOME" && docker compose pull php mail cron rwhois)
-  (cd "$UBERSMITH_HOME" && docker compose up -d --no-deps php mail cron rwhois)
+  (cd "$UBERSMITH_HOME" && compose pull php mail cron rwhois)
+  (cd "$UBERSMITH_HOME" && compose up -d --no-deps php mail cron rwhois)
 else
   echo "docker-compose.yml already references $ubersmith_new_tag (nothing to do)"
 fi
