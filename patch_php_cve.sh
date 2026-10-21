@@ -10,26 +10,29 @@ set -euo pipefail
 REGISTRY="ghcr.io/teamubersmith"
 INSTALLER_INI="$HOME/.ubersmith_installer.ini"
 
-declare -A PHP_CVE_RELEASE_VERSIONS=(
-  ["4.6.1"]="r2"
-  ["4.6.2"]="r12"
-  ["4.6.3"]="r5"
-  ["4.6.4"]="r5"
-  ["5.0.0"]="r14"
-  ["5.0.1"]="r4"
-  ["5.0.2"]="r2"
-  ["5.0.3"]="r6"
-  ["5.1.0"]="r12"
-  ["5.1.1"]="r2"
-  ["5.1.2"]="r3"
-  ["5.1.3"]="r3"
-  ["5.1.4"]="r4"
-  ["5.2.0"]="r4"
-  ["5.2.1"]="r3"
-  ["5.2.2"]="r4"
-  ["5.2.3"]="r3"
-  ["5.3.0"]="r5"
-)
+# installed_version:release_version, one per line. Not a bash associative
+# array: some hosts old enough to need this script also have a bash too old
+# to support them (no declare -A before 4.0).
+PHP_CVE_RELEASE_VERSIONS="
+4.6.1:r2
+4.6.2:r12
+4.6.3:r5
+4.6.4:r5
+5.0.0:r14
+5.0.1:r4
+5.0.2:r2
+5.0.3:r6
+5.1.0:r12
+5.1.1:r2
+5.1.2:r3
+5.1.3:r3
+5.1.4:r4
+5.2.0:r4
+5.2.1:r3
+5.2.2:r4
+5.2.3:r3
+5.3.0:r5
+"
 
 PHP_BASED_IMAGE_REPOS=(mail cron xinetd)
 
@@ -100,9 +103,9 @@ target_release_version_for() {
   local installed_version="$1"
   if [ -n "$TARGET_RELEASE_VERSION_OVERRIDE" ]; then
     echo "$TARGET_RELEASE_VERSION_OVERRIDE"
-  else
-    echo "${PHP_CVE_RELEASE_VERSIONS[$installed_version]:-}"
+    return
   fi
+  printf '%s\n' "$PHP_CVE_RELEASE_VERSIONS" | awk -F: -v v="$installed_version" '$1==v{print $2}'
 }
 
 confirm_images_published() {
