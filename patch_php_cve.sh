@@ -171,11 +171,20 @@ if [ -z "$php_container_id" ]; then
   exit 1
 fi
 running_image=$(docker inspect --format '{{.Config.Image}}' "$php_container_id")
-running_version="${running_image##*:}"
-running_version="${running_version%-r*}"
+running_tag="${running_image##*:}"
+running_version="${running_tag%-r*}"
+running_release="${running_tag##*-}"
 if [ "$running_version" != "$UBERSMITH_INSTALLED_VERSION" ]; then
   echo "Error: ubersmith_installed_version in $INSTALLER_INI ($UBERSMITH_INSTALLED_VERSION) does not match the running php container's image ($running_image). Refusing to patch; check for a stale .ubersmith_installer.ini." >&2
   exit 1
+fi
+
+# Refuse to downgrade (or redundantly reapply) the running release.
+if [[ "$running_release" =~ ^r[0-9]+$ ]] && [[ "$ubersmith_target_release_version" =~ ^r[0-9]+$ ]]; then
+  if [ "${running_release#r}" -ge "${ubersmith_target_release_version#r}" ]; then
+    echo "Error: running php container is already $running_tag, which is not older than the target $UBERSMITH_INSTALLED_VERSION-$ubersmith_target_release_version. Refusing to proceed." >&2
+    exit 1
+  fi
 fi
 
 ubersmith_new_tag="${UBERSMITH_INSTALLED_VERSION}-${ubersmith_target_release_version}"
