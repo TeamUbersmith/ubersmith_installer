@@ -131,11 +131,11 @@ bump_image_tag() {
   return 0
 }
 
-echo "=== Ubersmith stack (installed version: $UBERSMITH_INSTALLED_VERSION) ==="
+echo "=== Ubersmith (installed version: $UBERSMITH_INSTALLED_VERSION) ==="
 
 ubersmith_target_release_version=$(target_release_version_for "$UBERSMITH_INSTALLED_VERSION")
 if [ -z "$ubersmith_target_release_version" ]; then
-  echo "Error: No known PHP CVE patch release_version for ubersmith_installed_version $UBERSMITH_INSTALLED_VERSION. Either this line hasn't been patched yet, or it's out of scope for this script. Contact support@ubersmith.com, or re-run with -r rN once you've confirmed the correct value." >&2
+  echo "Error: No known PHP CVE patch for Ubersmith $UBERSMITH_INSTALLED_VERSION. Contact support@ubersmith.com." >&2
   exit 1
 fi
 
