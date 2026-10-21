@@ -55,20 +55,6 @@ if [ ! -f "$INSTALLER_INI" ]; then
   exit 1
 fi
 
-# compose <args...> -- the docker compose plugin if present, else the
-# legacy docker-compose binary (still in use on some 4.6.x hosts).
-if docker compose version > /dev/null 2>&1; then
-  COMPOSE=(docker compose)
-elif command -v docker-compose > /dev/null 2>&1; then
-  COMPOSE=(docker-compose)
-else
-  echo "Error: neither 'docker compose' nor 'docker-compose' is available" >&2
-  exit 1
-fi
-compose() {
-  "${COMPOSE[@]}" "$@"
-}
-
 # ini_get <section> <key>
 ini_get() {
   local section="$1" key="$2"
@@ -94,6 +80,21 @@ if [ -z "$UBERSMITH_INSTALLED_VERSION" ]; then
   echo "Error: ubersmith_installed_version is not set in $INSTALLER_INI" >&2
   exit 1
 fi
+
+# compose <args...> -- 4.6.x hosts use the legacy docker-compose binary;
+# everything newer uses the docker compose plugin.
+if [[ "$UBERSMITH_INSTALLED_VERSION" == 4.6.* ]]; then
+  if ! command -v docker-compose > /dev/null 2>&1; then
+    echo "Error: ubersmith_installed_version is $UBERSMITH_INSTALLED_VERSION but docker-compose is not available" >&2
+    exit 1
+  fi
+  COMPOSE=(docker-compose)
+else
+  COMPOSE=(docker compose)
+fi
+compose() {
+  "${COMPOSE[@]}" "$@"
+}
 
 target_release_version_for() {
   local installed_version="$1"
