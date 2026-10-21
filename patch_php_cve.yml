@@ -1,0 +1,327 @@
+---
+# Targeted security patch for a PHP CVE (e.g. OPS-862).
+#
+# Unlike upgrade_ubersmith.yml, this does NOT re-render docker-compose.yml from
+# the role templates (that would re-template every service and implicitly
+# require an ubersmith_version bump). It only bumps the image tag on the
+# services that are actually built on a php8X base, leaving web/db/redis/solr/
+# backup/rsyslog/etc. exactly as they are.
+#
+# Services touched, and why:
+#   ubersmith docker-compose.yml: php, mail, cron, rwhois (image repo: xinetd)
+#   appliance docker-compose.yml: app_cron (image repo: appliance_cron)
+#
+# All four of mail/cron/xinetd/appliance_cron are hardcoded to build FROM
+# ghcr.io/teamubersmith/php84 regardless of which php_version a given
+# ubersmith_release line otherwise uses for its own "php" service — see
+# docker/{mail,cron,appliance_cron,xinetd}/Dockerfile in the containers repo.
+# So they always take the php84-line's target_release_version, never php82's.
+#
+# Interim mitigations (CVE-2026-109618 / CVE-2026-109619):
+#
+# Opt-in, off by default, applied before the image bump so they still land on a
+# host whose line has no published patch yet. Only ONE of the three mitigations
+# the PHP advisory lists can be delivered from here -- verified against PHP
+# 8.5.10 with a pool mimicking docker/php8X/conf/zubersmith.conf:
+#
+#   session.upload_progress.enabled = 0   -> WORKS from ubersmith.ini
+#   memory_limit = -1                     -> does NOT work, see below
+#   post_max_size = 32M                   -> does NOT work, see below
+#
+# ubersmith.ini is bind-mounted to /etc/php/$V/fpm/conf.d/20-ubersmith.ini, and
+# zubersmith.conf sets memory_limit and post_max_size via php_admin_value[] in
+# the FPM pool. Pool php_admin_value overrides conf.d, so writing those two here
+# is silently ineffective. They require a rebuilt image (containers repo), which
+# is what the image bump below delivers. session.upload_progress is not set in
+# the pool, so conf.d wins for that one.
+#
+# Usage:
+#   ./patch_php_cve.sh
+#   ./patch_php_cve.sh -e target_release_version=r6   # override the table below
+#   ./patch_php_cve.sh -e php_cve_mitigations=true    # also apply the mitigation
+#   ./patch_php_cve.sh -e php_cve_mitigations=true --tags mitigate   # mitigation only
+#   ./patch_php_cve.sh -e php_cve_mitigations=true -e php_cve_mitigation_state=absent \
+#       --tags mitigate                               # revert the mitigation
+
+- name: Apply a PHP CVE container patch
+  hosts: local
+  any_errors_fatal: true
+
+  pre_tasks:
+    - name: Check for .ubersmith_installer.ini
+      ansible.builtin.stat:
+        path: "{{ ansible_user_dir }}/.ubersmith_installer.ini"
+      register: installer_config
+
+    - name: Fail if installer configuration is not present
+      ansible.builtin.fail:
+        msg: "Ubersmith installer configuration file is not present, please run configure.sh"
+      when: not installer_config.stat.exists
+
+  vars:
+    registry: ghcr.io/teamubersmith
+
+    # Interim mitigation switches. Off by default: the mitigation is for hosts
+    # that cannot take the patched image yet, and is not a substitute for it.
+    php_cve_mitigations: false
+    php_cve_mitigation_state: present
+
+    # Last known-good containers.release_version per ubersmith_release_version,
+    # bumped by one, per the history in roles/ubersmith/vars/main.yml.
+    # Only lines >= 5.0.0 are covered for now. Keep this updated as each line
+    # is actually rebuilt and pushed -- a host whose installed version isn't a
+    # key here will fail cleanly below rather than guessing.
+    php_cve_release_versions:
+      "5.0.0": r14
+      "5.0.1": r4
+      "5.0.2": r2
+      "5.0.3": r3
+      "5.1.0": r10
+      "5.1.1": r2
+      "5.1.2": r3
+      "5.1.3": r3
+      "5.2.0": r4
+      "5.2.1": r3
+      "5.2.2": r4
+      "5.2.3": r3
+      "5.3.0": r5
+
+    # Image repos that are built on a php8X base and need the same bump as
+    # whichever php8X image this host's "php" service uses.
+    php_based_image_repos:
+      - mail
+      - cron
+      - xinetd
+      - appliance_cron
+
+    ubersmith_installed_version: "{{ lookup('ini', 'ubersmith_installed_version section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini default=') }}"
+    ubersmith_home: "{{ lookup('ini', 'ubersmith_home section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini default=') }}"
+    appliance_installed_version: "{{ lookup('ini', 'appliance_installed_version section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini default=') }}"
+    appliance_home: "{{ lookup('ini', 'appliance_home section=ubersmith_installer file={{ ansible_user_dir }}/.ubersmith_installer.ini default=') }}"
+
+    # Allow an explicit override via -e target_release_version=rN, otherwise
+    # look it up from the table above for whichever version(s) are installed.
+    ubersmith_target_release_version: "{{ target_release_version | default(php_cve_release_versions[ubersmith_installed_version] | default('')) }}"
+    appliance_target_release_version: "{{ target_release_version | default(php_cve_release_versions[appliance_installed_version] | default('')) }}"
+
+  tasks:
+    - name: Fail if neither ubersmith nor appliance is installed
+      ansible.builtin.fail:
+        msg: "Neither ubersmith_installed_version nor appliance_installed_version is set in .ubersmith_installer.ini"
+      when:
+        - ubersmith_installed_version == ''
+        - appliance_installed_version == ''
+
+    # --- Interim mitigation (CVE-2026-109619) ---
+    # Deliberately ahead of the image bump: a host whose release line has no
+    # published patch yet still gets this before the bump block fails out.
+    - name: Interim PHP CVE mitigation
+      tags: mitigate
+      when:
+        - php_cve_mitigations | bool
+        - ubersmith_installed_version != ''
+      block:
+        - name: Check for the deployed ubersmith.ini
+          ansible.builtin.stat:
+            path: "{{ ubersmith_home }}/conf/php/ubersmith.ini"
+          register: ubersmith_ini
+
+        - name: Fail if ubersmith.ini is missing
+          ansible.builtin.fail:
+            msg: >-
+              {{ ubersmith_home }}/conf/php/ubersmith.ini not found. This file is
+              written at install time and bind-mounted into the php container; without
+              it there is nowhere to apply the mitigation.
+          when: not ubersmith_ini.stat.exists
+
+        - name: Back up ubersmith.ini before editing
+          ansible.builtin.copy:
+            src: "{{ ubersmith_home }}/conf/php/ubersmith.ini"
+            dest: "{{ ubersmith_home }}/conf/php/ubersmith.ini.bak-{{ '%Y%m%d%H%M%S' | strftime }}"
+            remote_src: true
+            mode: preserve
+          when: php_cve_mitigation_state == 'present'
+
+        # ';' comment markers, not '#': PHP 7.0 dropped '#' comments in ini files.
+        - name: Apply the session.upload_progress mitigation
+          ansible.builtin.blockinfile:
+            path: "{{ ubersmith_home }}/conf/php/ubersmith.ini"
+            state: "{{ php_cve_mitigation_state }}"
+            marker: "; {mark} ANSIBLE MANAGED BLOCK - PHP CVE mitigation (OPS-862)"
+            block: |
+              ; CVE-2026-109619 - RCE via stale global state.
+              ; Interim mitigation only; the real fix is the patched image.
+              ; Must live in php.ini/conf.d or the FPM pool, never ini_set()
+              ; or a .user.ini, because it has to apply before request parsing.
+              session.upload_progress.enabled = 0
+          register: ubersmith_ini_patch
+
+        - name: Report the mitigation outcome
+          ansible.builtin.debug:
+            msg: >-
+              {{ ('session.upload_progress.enabled=0 ' ~
+                  ('applied to' if php_cve_mitigation_state == 'present' else 'removed from') ~
+                  ' ' ~ ubersmith_home ~ '/conf/php/ubersmith.ini')
+                 if ubersmith_ini_patch.changed else
+                 'ubersmith.ini already in the requested state (nothing to do)' }}
+
+        # The advisory requires every worker to be restarted, so a reload of the
+        # FPM master is not sufficient.
+        - name: Restart the php container so every worker picks up the new ini
+          ansible.builtin.command: docker compose restart php
+          args:
+            chdir: "{{ ubersmith_home }}"
+          changed_when: true
+          when: ubersmith_ini_patch.changed
+
+        - name: Verify the mitigation is actually live in the container
+          ansible.builtin.command: >-
+            docker compose exec -T php php -r
+            'echo ini_get("session.upload_progress.enabled") === "0" ? "OFF" : "ON";'
+          args:
+            chdir: "{{ ubersmith_home }}"
+          register: upload_progress_check
+          changed_when: false
+          failed_when:
+            - php_cve_mitigation_state == 'present'
+            - "'OFF' not in upload_progress_check.stdout"
+          when: ubersmith_ini_patch.changed
+
+        - name: Warn that memory_limit and post_max_size cannot be mitigated from here
+          ansible.builtin.debug:
+            msg: >-
+              The advisory also recommends memory_limit=-1 (with a container memory
+              limit as the availability boundary) and a lower post_max_size. Both are
+              set via php_admin_value[] in the FPM pool baked into the image, which
+              overrides conf.d, so they cannot be applied from ubersmith.ini. They
+              require the rebuilt image. Verified against PHP 8.5.10.
+          when: php_cve_mitigation_state == 'present'
+
+    # --- Ubersmith stack ---
+    - name: Ubersmith stack
+      tags: patch
+      when: ubersmith_installed_version != ''
+      block:
+        - name: Fail if no patched release_version is known for this ubersmith_installed_version
+          ansible.builtin.fail:
+            msg: >-
+              No known PHP CVE patch release_version for ubersmith_installed_version
+              {{ ubersmith_installed_version }}. Either this line hasn't been patched yet,
+              or it's older than 5.0.0 and out of scope for this script. Contact
+              support@ubersmith.com, or re-run with -e target_release_version=rN once
+              you've confirmed the correct value.
+          when: ubersmith_target_release_version == ''
+
+        - name: Determine which php8X image repo this host's compose file uses
+          ansible.builtin.shell: >-
+            grep -oE '{{ registry }}/php[0-9]+:' {{ ubersmith_home }}/docker-compose.yml | head -1 | sed -E 's#.*/(php[0-9]+):#\1#'
+          register: php_repo_detect
+          changed_when: false
+
+        - name: Fail if no php8X image could be detected
+          ansible.builtin.fail:
+            msg: "Could not find a {{ registry }}/phpNN image in {{ ubersmith_home }}/docker-compose.yml"
+          when: php_repo_detect.stdout == ''
+
+        - name: Set the new image tag
+          ansible.builtin.set_fact:
+            ubersmith_new_tag: "{{ ubersmith_installed_version }}-{{ ubersmith_target_release_version }}"
+            ubersmith_image_repos: "{{ [php_repo_detect.stdout] + (php_based_image_repos | select('ne', 'appliance_cron') | list) }}"
+
+        - name: Confirm the target images are actually published before touching anything
+          ansible.builtin.command: docker manifest inspect {{ registry }}/{{ item }}:{{ ubersmith_new_tag }}
+          loop: "{{ ubersmith_image_repos }}"
+          register: manifest_check
+          changed_when: false
+          failed_when: manifest_check.rc != 0
+
+        - name: Back up docker-compose.yml before editing
+          ansible.builtin.copy:
+            src: "{{ ubersmith_home }}/docker-compose.yml"
+            dest: "{{ ubersmith_home }}/docker-compose.yml.bak-{{ '%Y%m%d%H%M%S' | strftime }}"
+            remote_src: true
+            mode: preserve
+
+        - name: Bump the image tag for php8X-based services only
+          ansible.builtin.replace:
+            path: "{{ ubersmith_home }}/docker-compose.yml"
+            regexp: '^(\s*image:\s*{{ registry | regex_escape }}/(?:{{ ubersmith_image_repos | join("|") }}):)\S+$'
+            replace: '\1{{ ubersmith_new_tag }}'
+          register: ubersmith_compose_patch
+
+        - name: Report whether anything changed
+          ansible.builtin.debug:
+            msg: >-
+              {{ 'Updated ' ~ ubersmith_image_repos | join(', ') ~ ' to ' ~ ubersmith_new_tag
+                 if ubersmith_compose_patch.changed else
+                 'docker-compose.yml already references ' ~ ubersmith_new_tag ~ ' (nothing to do)' }}
+
+        - name: Pull the patched images
+          ansible.builtin.command: docker compose pull php mail cron rwhois
+          args:
+            chdir: "{{ ubersmith_home }}"
+          changed_when: true
+          when: ubersmith_compose_patch.changed
+
+        - name: Recreate only the patched services
+          ansible.builtin.command: docker compose up -d --no-deps php mail cron rwhois
+          args:
+            chdir: "{{ ubersmith_home }}"
+          changed_when: true
+          when: ubersmith_compose_patch.changed
+
+    # --- Appliance stack ---
+    - name: Appliance stack
+      tags: patch
+      when: appliance_installed_version != ''
+      block:
+        - name: Fail if no patched release_version is known for this appliance_installed_version
+          ansible.builtin.fail:
+            msg: >-
+              No known PHP CVE patch release_version for appliance_installed_version
+              {{ appliance_installed_version }}. Contact support@ubersmith.com, or re-run
+              with -e target_release_version=rN once you've confirmed the correct value.
+          when: appliance_target_release_version == ''
+
+        - name: Set the new appliance_cron image tag
+          ansible.builtin.set_fact:
+            appliance_new_tag: "{{ appliance_installed_version }}-{{ appliance_target_release_version }}"
+
+        - name: Confirm the appliance_cron image is actually published
+          ansible.builtin.command: docker manifest inspect {{ registry }}/appliance_cron:{{ appliance_new_tag }}
+          changed_when: false
+
+        - name: Back up appliance docker-compose.yml before editing
+          ansible.builtin.copy:
+            src: "{{ appliance_home }}/docker-compose.yml"
+            dest: "{{ appliance_home }}/docker-compose.yml.bak-{{ '%Y%m%d%H%M%S' | strftime }}"
+            remote_src: true
+            mode: preserve
+
+        - name: Bump the appliance_cron image tag
+          ansible.builtin.replace:
+            path: "{{ appliance_home }}/docker-compose.yml"
+            regexp: '^(\s*image:\s*{{ registry | regex_escape }}/appliance_cron:)\S+$'
+            replace: '\1{{ appliance_new_tag }}'
+          register: appliance_compose_patch
+
+        - name: Report whether anything changed
+          ansible.builtin.debug:
+            msg: >-
+              {{ 'Updated appliance_cron to ' ~ appliance_new_tag
+                 if appliance_compose_patch.changed else
+                 'appliance docker-compose.yml already references ' ~ appliance_new_tag ~ ' (nothing to do)' }}
+
+        - name: Pull the patched appliance_cron image
+          ansible.builtin.command: docker compose pull app_cron
+          args:
+            chdir: "{{ appliance_home }}"
+          changed_when: true
+          when: appliance_compose_patch.changed
+
+        - name: Recreate only app_cron
+          ansible.builtin.command: docker compose up -d --no-deps app_cron
+          args:
+            chdir: "{{ appliance_home }}"
+          changed_when: true
+          when: appliance_compose_patch.changed
