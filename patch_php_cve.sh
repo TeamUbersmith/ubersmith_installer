@@ -160,10 +160,34 @@ if [ -z "$php_repo" ]; then
   exit 1
 fi
 
+# Sanity check: the running php container's image version should match
+# ubersmith_installed_version. A mismatch means .ubersmith_installer.ini is
+# stale (e.g. a manual upgrade that didn't update it), and we'd compute the
+# wrong target tag.
+php_container_id=$(cd "$UBERSMITH_HOME" && compose ps -q php)
+if [ -z "$php_container_id" ]; then
+  echo "Error: No running php container found; is Ubersmith up?" >&2
+  exit 1
+fi
+running_image=$(docker inspect --format '{{.Config.Image}}' "$php_container_id")
+running_version="${running_image##*:}"
+running_version="${running_version%-r*}"
+if [ "$running_version" != "$UBERSMITH_INSTALLED_VERSION" ]; then
+  echo "Error: ubersmith_installed_version in $INSTALLER_INI ($UBERSMITH_INSTALLED_VERSION) does not match the running php container's image ($running_image). Refusing to patch; check for a stale .ubersmith_installer.ini." >&2
+  exit 1
+fi
+
 ubersmith_new_tag="${UBERSMITH_INSTALLED_VERSION}-${ubersmith_target_release_version}"
 ubersmith_image_repos=("$php_repo" "${PHP_BASED_IMAGE_REPOS[@]}")
 
 confirm_images_published "$ubersmith_new_tag" "${ubersmith_image_repos[@]}"
+
+echo "About to update ${ubersmith_image_repos[*]} to $ubersmith_new_tag and recreate php, mail, cron, and rwhois."
+read -r -p "Continue? [y/N] " confirm_patch
+if [[ ! "$confirm_patch" =~ ^[Yy] ]]; then
+  echo "Aborted; no changes made."
+  exit 0
+fi
 
 if bump_image_tag "$ubersmith_compose_file" "$ubersmith_new_tag" "${ubersmith_image_repos[@]}"; then
   echo "Updated ${ubersmith_image_repos[*]} to $ubersmith_new_tag"
