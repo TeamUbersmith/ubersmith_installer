@@ -174,10 +174,25 @@
           changed_when: true
           when: ubersmith_ini_patch.changed
 
+        # The php CLI reads /etc/php/$V/cli/conf.d, NOT the fpm conf.d where
+        # ubersmith.ini is mounted, so a plain `php -r ini_get(...)` always
+        # reports the CLI default ("1") regardless of the mitigation. Point
+        # PHP_INI_SCAN_DIR at the fpm conf.d to read the value that FPM sees.
         - name: Verify the mitigation is actually live in the container
-          ansible.builtin.command: >-
-            docker compose exec -T php php -r
-            'echo ini_get("session.upload_progress.enabled") === "0" ? "OFF" : "ON";'
+          ansible.builtin.command:
+            argv:
+              - docker
+              - compose
+              - exec
+              - -T
+              - php
+              - sh
+              - -c
+              - >-
+                for d in /etc/php/*/fpm/conf.d; do
+                PHP_INI_SCAN_DIR=$d php -r
+                'echo ini_get("session.upload_progress.enabled") === "0" ? "OFF" : "ON";';
+                done
           args:
             chdir: "{{ ubersmith_home }}"
           register: upload_progress_check
