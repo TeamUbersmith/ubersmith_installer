@@ -1,28 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Targeted security patch for a PHP CVE (e.g. OPS-862).
-#
-# Unlike upgrade_ubersmith.sh, this does NOT re-render docker-compose.yml from
-# the role templates (that would re-template every service and implicitly
-# require an ubersmith_version bump). It only bumps the image tag on the
-# services that are actually built on a php8X base, leaving web/db/redis/solr/
-# backup/rsyslog/etc. exactly as they are.
-#
-# Deliberately pure bash/sed/grep/docker, no ansible and no python -- this may
-# be run on hosts whose Python is too old for the installer's venv
-# (find_python.sh requires 3.11+), which is exactly the kind of host most
-# likely to need an urgent out-of-band CVE patch.
-#
-# Services touched, and why:
-#   ubersmith docker-compose.yml: php, mail, cron, rwhois (image repo: xinetd)
-#
-# All of mail/cron/xinetd are hardcoded to build FROM whichever php8X image
-# this host's "php" service uses -- see docker/{mail,cron,xinetd}/Dockerfile
-# in the containers repo.
-#
-# The appliance stack (app_cron / appliance_cron) is handled separately, not
-# by this script.
+# Bumps the php/mail/cron/rwhois image tags in docker-compose.yml.
 #
 # Usage:
 #   ./patch_php_cve.sh
@@ -31,10 +10,6 @@ set -euo pipefail
 REGISTRY="ghcr.io/teamubersmith"
 INSTALLER_INI="$HOME/.ubersmith_installer.ini"
 
-# Last known-good containers.release_version per ubersmith_release_version.
-# Keep this updated as each line is actually rebuilt and pushed -- a host
-# whose installed version isn't a key here will fail cleanly below rather
-# than guessing.
 declare -A PHP_CVE_RELEASE_VERSIONS=(
   ["4.6.1"]="r2"
   ["4.6.2"]="r12"
@@ -56,8 +31,6 @@ declare -A PHP_CVE_RELEASE_VERSIONS=(
   ["5.3.0"]="r5"
 )
 
-# Image repos that are built on a php8X base and need the same bump as
-# whichever php8X image this host's "php" service uses.
 PHP_BASED_IMAGE_REPOS=(mail cron xinetd)
 
 usage() {
@@ -82,8 +55,7 @@ if [ ! -f "$INSTALLER_INI" ]; then
   exit 1
 fi
 
-# ini_get <section> <key> -- reads a "key = value" line from a [section] block
-# in $INSTALLER_INI (the same file community.general.ini_file writes).
+# ini_get <section> <key>
 ini_get() {
   local section="$1" key="$2"
   awk -v section="[$section]" -v key="$key" '
@@ -132,9 +104,7 @@ confirm_images_published() {
 }
 
 # bump_image_tag <compose_file> <new_tag> <repo1> [<repo2> ...]
-# Always backs up the compose file first (matching the previous ansible
-# behavior), then rewrites only image: lines for the given repos under
-# $REGISTRY. Returns 0 if the file actually changed, 1 otherwise.
+# Returns 0 if the file actually changed, 1 otherwise.
 bump_image_tag() {
   local compose_file="$1" new_tag="$2"
   shift 2
