@@ -58,6 +58,11 @@ if [ ! -f "$INSTALLER_INI" ]; then
   exit 1
 fi
 
+if ! command -v curl > /dev/null 2>&1; then
+  echo "Error: curl is not available" >&2
+  exit 1
+fi
+
 # ini_get <section> <key>
 ini_get() {
   local section="$1" key="$2"
@@ -108,13 +113,32 @@ target_release_version_for() {
   printf '%s\n' "$PHP_CVE_RELEASE_VERSIONS" | awk -F: -v v="$installed_version" '$1==v{print $2}'
 }
 
+# image_exists <repo> <tag> -- queries the registry API directly via curl
+# rather than `docker manifest inspect`, whose auth/manifest-list handling
+# is inconsistent across older Docker CLI versions (confirmed broken
+# against ghcr.io on Docker 19.03, reporting "no such manifest" for an
+# image that genuinely exists).
+image_exists() {
+  local repo="$1" tag="$2"
+  local host="${REGISTRY%%/*}" org="${REGISTRY#*/}"
+  local token
+  token=$(curl -fs "https://${host}/token?scope=repository:${org}/${repo}:pull" | sed -E 's/.*"token":"([^"]+)".*/\1/') || return 1
+  [ -n "$token" ] || return 1
+  local http_code
+  http_code=$(curl -s -o /dev/null -w '%{http_code}' \
+    -H "Authorization: Bearer ${token}" \
+    -H "Accept: application/vnd.docker.distribution.manifest.v2+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.oci.image.manifest.v1+json,application/vnd.oci.image.index.v1+json" \
+    "https://${host}/v2/${org}/${repo}/manifests/${tag}")
+  [ "$http_code" = "200" ]
+}
+
 confirm_images_published() {
   local new_tag="$1"
   shift
   local repo
   for repo in "$@"; do
     echo "Confirming ${REGISTRY}/${repo}:${new_tag} is published..."
-    if ! DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "${REGISTRY}/${repo}:${new_tag}" > /dev/null; then
+    if ! image_exists "$repo" "$new_tag"; then
       echo "Error: ${REGISTRY}/${repo}:${new_tag} does not exist" >&2
       exit 1
     fi
