@@ -114,7 +114,7 @@ confirm_images_published() {
   local repo
   for repo in "$@"; do
     echo "Confirming ${REGISTRY}/${repo}:${new_tag} is published..."
-    if ! docker manifest inspect "${REGISTRY}/${repo}:${new_tag}" > /dev/null; then
+    if ! DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "${REGISTRY}/${repo}:${new_tag}" > /dev/null; then
       echo "Error: ${REGISTRY}/${repo}:${new_tag} does not exist" >&2
       exit 1
     fi
