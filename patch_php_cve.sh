@@ -122,7 +122,11 @@ confirm_images_published() {
 }
 
 # bump_image_tag <compose_file> <new_tag> <repo1> [<repo2> ...]
-# Returns 0 if the file actually changed, 1 otherwise.
+# Rewrites the whole image reference (registry + repo + tag) to
+# $REGISTRY/<repo>:<new_tag>, regardless of what registry the line
+# currently points at -- installs that predate the quay.io -> ghcr.io
+# migration still reference the old registry, and the patched images only
+# exist under $REGISTRY. Returns 0 if the file actually changed, 1 otherwise.
 bump_image_tag() {
   local compose_file="$1" new_tag="$2"
   shift 2
@@ -131,14 +135,11 @@ bump_image_tag() {
   pattern=$(printf '%s|' "${repos[@]}")
   pattern="${pattern%|}"
 
-  local escaped_registry
-  escaped_registry=$(printf '%s' "$REGISTRY" | sed -e 's/[.[\*^$()+?{|]/\\&/g')
-
   cp -p "$compose_file" "${compose_file}.bak-$(date +%Y%m%d%H%M%S)"
 
   local tmp
   tmp=$(mktemp)
-  sed -E "s#^([[:space:]]*image:[[:space:]]*${escaped_registry}/(${pattern}):)[^[:space:]]+\$#\1${new_tag}#" "$compose_file" > "$tmp"
+  sed -E "s#^([[:space:]]*image:[[:space:]]*)[^[:space:]]*/(${pattern}):[^[:space:]]+\$#\1${REGISTRY}/\2:${new_tag}#" "$compose_file" > "$tmp"
 
   if cmp -s "$compose_file" "$tmp"; then
     rm -f "$tmp"
@@ -158,9 +159,12 @@ if [ -z "$ubersmith_target_release_version" ]; then
 fi
 
 ubersmith_compose_file="${UBERSMITH_HOME}/docker-compose.yml"
-php_repo=$(grep -oE "${REGISTRY}/php[0-9]+:" "$ubersmith_compose_file" | head -1 | sed -E 's#.*/(php[0-9]+):#\1#')
+# Match the repo name regardless of which registry currently serves it --
+# installs that predate the quay.io -> ghcr.io migration still reference
+# quay.io/ubersmith/phpNN here, not $REGISTRY.
+php_repo=$(grep -oE "/php[0-9]+:" "$ubersmith_compose_file" | head -1 | sed -E 's#/(php[0-9]+):#\1#') || true
 if [ -z "$php_repo" ]; then
-  echo "Error: Could not find a ${REGISTRY}/phpNN image in $ubersmith_compose_file" >&2
+  echo "Error: Could not find a phpNN image in $ubersmith_compose_file" >&2
   exit 1
 fi
 
@@ -168,7 +172,7 @@ fi
 # ubersmith_installed_version. A mismatch means .ubersmith_installer.ini is
 # stale (e.g. a manual upgrade that didn't update it), and we'd compute the
 # wrong target tag.
-php_container_id=$(cd "$UBERSMITH_HOME" && compose ps -q php)
+php_container_id=$(cd "$UBERSMITH_HOME" && compose ps -q php) || true
 if [ -z "$php_container_id" ]; then
   echo "Error: No running php container found; is Ubersmith up?" >&2
   exit 1
