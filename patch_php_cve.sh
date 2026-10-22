@@ -145,25 +145,32 @@ confirm_images_published() {
   done
 }
 
-# bump_image_tag <compose_file> <new_tag> <repo1> [<repo2> ...]
+# bump_image_tag <compose_file> <new_tag> <php_repo> <other_repo1> [<other_repo2> ...]
 # Rewrites the whole image reference (registry + repo + tag) to
-# $REGISTRY/<repo>:<new_tag>, regardless of what registry the line
-# currently points at -- installs that predate the quay.io -> ghcr.io
-# migration still reference the old registry, and the patched images only
-# exist under $REGISTRY. Returns 0 if the file actually changed, 1 otherwise.
+# $REGISTRY/<repo>:<new_tag>, regardless of what registry or repo name the
+# line currently uses -- installs old enough to need this patch have used
+# several: quay.io/ubersmith/php:7.3 (bare, no version number in the repo
+# name at all), quay.io/ubersmith/php73:X.Y.Z.0, and the current
+# ghcr.io/teamubersmith/php73:X.Y.Z-rN. The php service is matched by its
+# generic "php[0-9]*" shape and always rewritten to the canonical
+# <php_repo> passed in; the others are matched by their literal (stable)
+# names. Returns 0 if the file actually changed, 1 otherwise.
 bump_image_tag() {
-  local compose_file="$1" new_tag="$2"
-  shift 2
-  local repos=("$@")
-  local pattern
-  pattern=$(printf '%s|' "${repos[@]}")
-  pattern="${pattern%|}"
+  local compose_file="$1" new_tag="$2" php_repo="$3"
+  shift 3
+  local other_repos=("$@")
+  local other_pattern
+  other_pattern=$(printf '%s|' "${other_repos[@]}")
+  other_pattern="${other_pattern%|}"
 
   cp -p "$compose_file" "${compose_file}.bak-$(date +%Y%m%d%H%M%S)"
 
   local tmp
   tmp=$(mktemp)
-  sed -E "s#^([[:space:]]*image:[[:space:]]*)[^[:space:]]*/(${pattern}):[^[:space:]]+\$#\1${REGISTRY}/\2:${new_tag}#" "$compose_file" > "$tmp"
+  sed -E \
+    -e "s#^([[:space:]]*image:[[:space:]]*)[^[:space:]]*/php[0-9]*:[^[:space:]]+\$#\1${REGISTRY}/${php_repo}:${new_tag}#" \
+    -e "s#^([[:space:]]*image:[[:space:]]*)[^[:space:]]*/(${other_pattern}):[^[:space:]]+\$#\1${REGISTRY}/\2:${new_tag}#" \
+    "$compose_file" > "$tmp"
 
   if cmp -s "$compose_file" "$tmp"; then
     rm -f "$tmp"
@@ -183,14 +190,23 @@ if [ -z "$ubersmith_target_release_version" ]; then
 fi
 
 ubersmith_compose_file="${UBERSMITH_HOME}/docker-compose.yml"
-# Match the repo name regardless of which registry currently serves it --
-# installs that predate the quay.io -> ghcr.io migration still reference
-# quay.io/ubersmith/phpNN here, not $REGISTRY.
-php_repo=$(grep -oE "/php[0-9]+:" "$ubersmith_compose_file" | head -1 | sed -E 's#/(php[0-9]+):#\1#') || true
-if [ -z "$php_repo" ]; then
-  echo "Error: Could not find a phpNN image in $ubersmith_compose_file" >&2
+if [ ! -f "$ubersmith_compose_file" ]; then
+  echo "Error: $ubersmith_compose_file not found" >&2
   exit 1
 fi
+
+# The php image repo has used several names over the years in the compose
+# file itself (bare "php", "php73", "php82", ...), so it's determined here
+# from the installed major version instead -- same mapping as
+# roles/ubersmith/vars/main.yml's ubersmith_release table.
+case "$UBERSMITH_INSTALLED_VERSION" in
+  4.*) php_repo="php73" ;;
+  5.*) php_repo="php84" ;;
+  *)
+    echo "Error: Don't know which php image repo to use for ubersmith_installed_version $UBERSMITH_INSTALLED_VERSION" >&2
+    exit 1
+    ;;
+esac
 
 # Sanity check: the running php container's image version should match
 # ubersmith_installed_version. A mismatch means .ubersmith_installer.ini is
@@ -214,7 +230,9 @@ fi
 if [[ "$running_tag" =~ -r([0-9]+)$ ]]; then
   running_release="r${BASH_REMATCH[1]}"
 fi
-if [ "$running_version" != "$UBERSMITH_INSTALLED_VERSION" ]; then
+# Some legacy tags (e.g. "7.3") carry no Ubersmith version at all -- just
+# the php language version -- so there's nothing to compare in that case.
+if [ -n "$running_version" ] && [ "$running_version" != "$UBERSMITH_INSTALLED_VERSION" ]; then
   echo "Error: ubersmith_installed_version in $INSTALLER_INI ($UBERSMITH_INSTALLED_VERSION) does not match the running php container's image ($running_image). Refusing to patch; check for a stale .ubersmith_installer.ini." >&2
   exit 1
 fi
