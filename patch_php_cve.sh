@@ -179,8 +179,17 @@ if [ -z "$php_container_id" ]; then
 fi
 running_image=$(docker inspect --format '{{.Config.Image}}' "$php_container_id")
 running_tag="${running_image##*:}"
-running_version="${running_tag%-r*}"
-running_release="${running_tag##*-}"
+# The version is always a leading major.minor.revision; what follows it has
+# varied (current: "-rN", legacy quay.io-era: ".0"). Only the release number
+# is needed beyond that, and only if present.
+running_version=""
+running_release=""
+if [[ "$running_tag" =~ ^([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+  running_version="${BASH_REMATCH[1]}"
+fi
+if [[ "$running_tag" =~ -r([0-9]+)$ ]]; then
+  running_release="r${BASH_REMATCH[1]}"
+fi
 if [ "$running_version" != "$UBERSMITH_INSTALLED_VERSION" ]; then
   echo "Error: ubersmith_installed_version in $INSTALLER_INI ($UBERSMITH_INSTALLED_VERSION) does not match the running php container's image ($running_image). Refusing to patch; check for a stale .ubersmith_installer.ini." >&2
   exit 1
