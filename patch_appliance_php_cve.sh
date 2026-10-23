@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Bumps the appliance image tag in docker-compose.yml.
+# Bumps the appliance and appliance_cron image tags in docker-compose.yml.
 #
 # Usage:
 #   ./patch_appliance_php_cve.sh
-#   ./patch_appliance_php_cve.sh -r r6   # override the version table below
+#   ./patch_appliance_php_cve.sh -r r6   # override both version tables below
 
 REGISTRY="ghcr.io/teamubersmith"
 INSTALLER_INI="$HOME/.ubersmith_installer.ini"
-APPLIANCE_REPO="appliance"
 
 # installed_version:release_version, one per line. Not a bash associative
 # array: some hosts old enough to need this script also have a bash too old
 # to support them (no declare -A before 4.0).
-APPLIANCE_PHP_CVE_RELEASE_VERSIONS="
+#
+# appliance and appliance_cron are independently versioned -- their
+# release numbers for the same installed_version are not always equal.
+APPLIANCE_RELEASE_VERSIONS="
 5.0.0:r14
 5.0.3:r5
 5.1.0:r12
@@ -23,11 +25,20 @@ APPLIANCE_PHP_CVE_RELEASE_VERSIONS="
 5.3.0:r5
 "
 
+APPLIANCE_CRON_RELEASE_VERSIONS="
+5.0.0:r14
+5.0.3:r6
+5.1.0:r12
+5.1.1:r2
+5.1.4:r4
+5.3.0:r5
+"
+
 usage() {
   cat <<EOF
 Usage: $0 [-r target_release_version]
 
-  -r VERSION   Override the release_version table above (e.g. r6)
+  -r VERSION   Override both release_version tables above (e.g. r6)
 EOF
 }
 
@@ -85,13 +96,14 @@ compose() {
   docker compose "$@"
 }
 
+# target_release_version_for <table> <installed_version>
 target_release_version_for() {
-  local installed_version="$1"
+  local table="$1" installed_version="$2"
   if [ -n "$TARGET_RELEASE_VERSION_OVERRIDE" ]; then
     echo "$TARGET_RELEASE_VERSION_OVERRIDE"
     return
   fi
-  printf '%s\n' "$APPLIANCE_PHP_CVE_RELEASE_VERSIONS" | awk -F: -v v="$installed_version" '$1==v{print $2}'
+  printf '%s\n' "$table" | awk -F: -v v="$installed_version" '$1==v{print $2}'
 }
 
 # image_exists <repo> <tag> -- queries the registry API directly via curl
@@ -141,11 +153,35 @@ bump_image_tag() {
   return 0
 }
 
+# running_version_of <container_id> -- echoes "version release" (release
+# may be empty) parsed from the container's image tag. The version is
+# always a leading major.minor.revision; the release number is needed
+# too, but only if present.
+running_version_of() {
+  local container_id="$1"
+  local running_image running_tag version="" release=""
+  running_image=$(docker inspect --format '{{.Config.Image}}' "$container_id")
+  running_tag="${running_image##*:}"
+  if [[ "$running_tag" =~ ^([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+    version="${BASH_REMATCH[1]}"
+  fi
+  if [[ "$running_tag" =~ -r([0-9]+)$ ]]; then
+    release="r${BASH_REMATCH[1]}"
+  fi
+  echo "$running_image $version $release"
+}
+
 echo "=== Appliance (installed version: $APPLIANCE_INSTALLED_VERSION) ==="
 
-appliance_target_release_version=$(target_release_version_for "$APPLIANCE_INSTALLED_VERSION")
+appliance_target_release_version=$(target_release_version_for "$APPLIANCE_RELEASE_VERSIONS" "$APPLIANCE_INSTALLED_VERSION")
 if [ -z "$appliance_target_release_version" ]; then
   echo "Error: No known PHP CVE patch for Appliance $APPLIANCE_INSTALLED_VERSION. Contact support@ubersmith.com." >&2
+  exit 1
+fi
+
+appliance_cron_target_release_version=$(target_release_version_for "$APPLIANCE_CRON_RELEASE_VERSIONS" "$APPLIANCE_INSTALLED_VERSION")
+if [ -z "$appliance_cron_target_release_version" ]; then
+  echo "Error: No known PHP CVE patch for Appliance Cron $APPLIANCE_INSTALLED_VERSION. Contact support@ubersmith.com." >&2
   exit 1
 fi
 
@@ -155,7 +191,7 @@ if [ ! -f "$appliance_compose_file" ]; then
   exit 1
 fi
 
-# Sanity check: the running app_web container's image version should match
+# Sanity check: the running containers' image versions should match
 # appliance_installed_version. A mismatch means .ubersmith_installer.ini is
 # stale (e.g. a manual upgrade that didn't update it), and we'd compute the
 # wrong target tag.
@@ -164,47 +200,68 @@ if [ -z "$app_web_container_id" ]; then
   echo "Error: No running app_web container found; is the Appliance up?" >&2
   exit 1
 fi
-running_image=$(docker inspect --format '{{.Config.Image}}' "$app_web_container_id")
-running_tag="${running_image##*:}"
-# The version is always a leading major.minor.revision; the release number
-# is needed too, but only if present.
-running_version=""
-running_release=""
-if [[ "$running_tag" =~ ^([0-9]+\.[0-9]+\.[0-9]+) ]]; then
-  running_version="${BASH_REMATCH[1]}"
-fi
-if [[ "$running_tag" =~ -r([0-9]+)$ ]]; then
-  running_release="r${BASH_REMATCH[1]}"
-fi
-if [ -n "$running_version" ] && [ "$running_version" != "$APPLIANCE_INSTALLED_VERSION" ]; then
-  echo "Error: appliance_installed_version in $INSTALLER_INI ($APPLIANCE_INSTALLED_VERSION) does not match the running app_web container's image ($running_image). Refusing to patch; check for a stale .ubersmith_installer.ini." >&2
+read -r running_web_image running_web_version running_web_release < <(running_version_of "$app_web_container_id")
+if [ -n "$running_web_version" ] && [ "$running_web_version" != "$APPLIANCE_INSTALLED_VERSION" ]; then
+  echo "Error: appliance_installed_version in $INSTALLER_INI ($APPLIANCE_INSTALLED_VERSION) does not match the running app_web container's image ($running_web_image). Refusing to patch; check for a stale .ubersmith_installer.ini." >&2
   exit 1
 fi
 
-# Refuse to downgrade the running release.
-if [[ "$running_release" =~ ^r[0-9]+$ ]] && [[ "$appliance_target_release_version" =~ ^r[0-9]+$ ]]; then
-  if [ "${running_release#r}" -gt "${appliance_target_release_version#r}" ]; then
-    echo "Error: running app_web container is already $running_tag, newer than the target $APPLIANCE_INSTALLED_VERSION-$appliance_target_release_version. Refusing to downgrade." >&2
+app_cron_container_id=$(cd "$APPLIANCE_HOME" && compose ps -q app_cron) || true
+if [ -z "$app_cron_container_id" ]; then
+  echo "Error: No running app_cron container found; is the Appliance up?" >&2
+  exit 1
+fi
+read -r running_cron_image running_cron_version running_cron_release < <(running_version_of "$app_cron_container_id")
+if [ -n "$running_cron_version" ] && [ "$running_cron_version" != "$APPLIANCE_INSTALLED_VERSION" ]; then
+  echo "Error: appliance_installed_version in $INSTALLER_INI ($APPLIANCE_INSTALLED_VERSION) does not match the running app_cron container's image ($running_cron_image). Refusing to patch; check for a stale .ubersmith_installer.ini." >&2
+  exit 1
+fi
+
+# Refuse to downgrade either running release.
+if [[ "$running_web_release" =~ ^r[0-9]+$ ]] && [[ "$appliance_target_release_version" =~ ^r[0-9]+$ ]]; then
+  if [ "${running_web_release#r}" -gt "${appliance_target_release_version#r}" ]; then
+    echo "Error: running app_web container is already $running_web_release, newer than the target $appliance_target_release_version. Refusing to downgrade." >&2
+    exit 1
+  fi
+fi
+if [[ "$running_cron_release" =~ ^r[0-9]+$ ]] && [[ "$appliance_cron_target_release_version" =~ ^r[0-9]+$ ]]; then
+  if [ "${running_cron_release#r}" -gt "${appliance_cron_target_release_version#r}" ]; then
+    echo "Error: running app_cron container is already $running_cron_release, newer than the target $appliance_cron_target_release_version. Refusing to downgrade." >&2
     exit 1
   fi
 fi
 
 appliance_new_tag="${APPLIANCE_INSTALLED_VERSION}-${appliance_target_release_version}"
+appliance_cron_new_tag="${APPLIANCE_INSTALLED_VERSION}-${appliance_cron_target_release_version}"
 
-confirm_image_published "$APPLIANCE_REPO" "$appliance_new_tag"
+confirm_image_published "appliance" "$appliance_new_tag"
+confirm_image_published "appliance_cron" "$appliance_cron_new_tag"
 
-echo "About to update $APPLIANCE_REPO to $appliance_new_tag and recreate app_web."
+echo "About to update appliance to $appliance_new_tag and appliance_cron to $appliance_cron_new_tag, then recreate app_web and app_cron."
 read -r -p "Continue? [y/N] " confirm_patch
 if [[ ! "$confirm_patch" =~ ^[Yy] ]]; then
   echo "Aborted; no changes made."
   exit 0
 fi
 
-if bump_image_tag "$appliance_compose_file" "$APPLIANCE_REPO" "$appliance_new_tag"; then
-  echo "Updated $APPLIANCE_REPO to $appliance_new_tag"
-  (cd "$APPLIANCE_HOME" && compose pull app_web)
-  (cd "$APPLIANCE_HOME" && compose rm -sf app_web)
-  (cd "$APPLIANCE_HOME" && compose up -d --no-deps app_web)
+appliance_changed=1
+bump_image_tag "$appliance_compose_file" "appliance" "$appliance_new_tag" && appliance_changed=0 || true
+appliance_cron_changed=1
+bump_image_tag "$appliance_compose_file" "appliance_cron" "$appliance_cron_new_tag" && appliance_cron_changed=0 || true
+
+if [ "$appliance_changed" -eq 0 ]; then
+  echo "Updated appliance to $appliance_new_tag"
 else
-  echo "docker-compose.yml already references $appliance_new_tag (nothing to do)"
+  echo "docker-compose.yml already references appliance:$appliance_new_tag (nothing to do)"
+fi
+if [ "$appliance_cron_changed" -eq 0 ]; then
+  echo "Updated appliance_cron to $appliance_cron_new_tag"
+else
+  echo "docker-compose.yml already references appliance_cron:$appliance_cron_new_tag (nothing to do)"
+fi
+
+if [ "$appliance_changed" -eq 0 ] || [ "$appliance_cron_changed" -eq 0 ]; then
+  (cd "$APPLIANCE_HOME" && compose pull app_web app_cron)
+  (cd "$APPLIANCE_HOME" && compose rm -sf app_web app_cron)
+  (cd "$APPLIANCE_HOME" && compose up -d --no-deps app_web app_cron)
 fi
