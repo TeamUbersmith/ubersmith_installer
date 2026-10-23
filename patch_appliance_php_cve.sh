@@ -191,6 +191,17 @@ if [ ! -f "$appliance_compose_file" ]; then
   exit 1
 fi
 
+# Older installs still carry the top-level "version:" key, which compose
+# now just warns about on every invocation ("obsolete, it will be
+# ignored"). Strip it once so the rest of this run (and future runs) are
+# quiet.
+if grep -qE '^version:[[:space:]]*["'"'"'][0-9.]+["'"'"']?[[:space:]]*$' "$appliance_compose_file"; then
+  cp -p "$appliance_compose_file" "${appliance_compose_file}.bak-$(date +%Y%m%d%H%M%S)"
+  tmp=$(mktemp)
+  grep -vE '^version:[[:space:]]*["'"'"'][0-9.]+["'"'"']?[[:space:]]*$' "$appliance_compose_file" > "$tmp"
+  mv "$tmp" "$appliance_compose_file"
+fi
+
 # Sanity check: the running containers' image versions should match
 # appliance_installed_version. A mismatch means .ubersmith_installer.ini is
 # stale (e.g. a manual upgrade that didn't update it), and we'd compute the
