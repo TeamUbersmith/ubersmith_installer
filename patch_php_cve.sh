@@ -197,11 +197,14 @@ fi
 
 # The php image repo has used several names over the years in the compose
 # file itself (bare "php", "php73", "php82", ...), so it's determined here
-# from the installed major version instead -- same mapping as
-# roles/ubersmith/vars/main.yml's ubersmith_release table.
+# from the installed version instead. NOT just a major-version split --
+# verified against roles/ubersmith/vars/main.yml's history and the actual
+# published images: the "5" line used php82 through 5.0.3 before moving to
+# php84 at 5.1.0.
 case "$UBERSMITH_INSTALLED_VERSION" in
-  4.*) php_repo="php73" ;;
-  5.*) php_repo="php84" ;;
+  4.6.1|4.6.2|4.6.3|4.6.4) php_repo="php73" ;;
+  5.0.0|5.0.1|5.0.2|5.0.3) php_repo="php82" ;;
+  5.1.*|5.2.*|5.3.*) php_repo="php84" ;;
   *)
     echo "Error: Don't know which php image repo to use for ubersmith_installed_version $UBERSMITH_INSTALLED_VERSION" >&2
     exit 1
