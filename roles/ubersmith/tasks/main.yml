@@ -179,6 +179,16 @@
 # This task is intentionally untagged with upgrade/upgrade_only so it only
 # ever runs on a fresh install, never on upgrade_ubersmith.yml, since
 # restarting the Docker daemon restarts every container on the host.
+#
+# Skipped under rootless. A rootless daemon never reads /etc/docker/daemon.json
+# - its config lives at ~/.config/docker/daemon.json - so writing this file
+# would be inert while still notifying a handler that cannot succeed against a
+# user-session unit. The setting is also contrary to rootless operation:
+# RootlessKit's port forwarding IS the userland proxy this disables.
+#
+# Consequence worth knowing: a rootless deployment gets no client IP
+# preservation from this mechanism, so Apache/PHP logs show the RootlessKit
+# gateway address rather than the real client.
 - name: Configure Docker daemon (client IP preservation, optional IPv6)
   ansible.builtin.template:
     src: docker-daemon.json.j2
@@ -187,6 +197,7 @@
   when:
     - ansible_os_family != "Darwin"
     - ansible_os_family != "Windows"
+    - not (docker_is_rootless | default(false))
   notify:
     - restart docker
   tags:
@@ -388,9 +399,21 @@
 # Create a self signed certificate for temporary use to secure HTTP and SMTP traffic.
 # These files should be replaced with a certificate and key provided by an authorized CA.
 # The 'web' and 'mail' containers need to be restarted if these files are modified.
+#
+# owner/group are set explicitly, as they are everywhere else that writes under
+# ubersmith_home. Without them these three tasks inherit the identity of whoever
+# runs the playbook - normally root - while the rest of the tree is created as
+# ansible_user_id. That mismatch is invisible under a rootful daemon but fatal
+# under a rootless one: a host file owned by UID 0 falls outside the unprivileged
+# user's subuid range, so it appears inside the container as 65534:65534
+# ("nobody") and a 0600 private key is then unreadable even by container root.
+# Apache fails with "AH02574: Init: Can't open server private key file" and the
+# web container restart-loops.
 - name: Create private keys rsa 4096 bits
   community.crypto.openssl_privatekey:
     path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.key"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_gid }}"
   with_items: "{{ virtual_hosts }}"
   tags:
     - selfsigned
@@ -403,6 +426,8 @@
     organization_name: Ubersmith
     organizational_unit_name: Hosting
     common_name: "{{ item }}"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_gid }}"
   with_items: "{{ virtual_hosts }}"
   tags:
     - selfsigned
@@ -414,6 +439,8 @@
     privatekey_path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.key"
     csr_path: "{{ ubersmith_home }}/conf/ssl/{{ item }}.csr"
     provider: selfsigned
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_gid }}"
   with_items: "{{ virtual_hosts }}"
   tags:
     - selfsigned

@@ -189,7 +189,22 @@ services:
     image: {{ registry }}/rsyslog:{{ ubersmith_version }}-{{ containers_release_version }}
     hostname: rsyslog.{{ container_domain }}
     volumes:
-      - "{{ ubersmith_home }}/logs/rsyslog/:/var/run/rsyslog/dev/"
+      # Mounted at /var/lib/rsyslog/dev/ rather than /var/run/rsyslog/dev/ so
+      # the log socket lands inside a path the host AppArmor profile permits.
+      # Rootless Docker cannot apply an AppArmor profile of its own, so on any
+      # host running rsyslog itself, /etc/apparmor.d/usr.sbin.rsyslogd confines
+      # this container's rsyslogd by executable path. That profile allows
+      # creating a socket at /dev/log, /var/lib/*/dev/log and
+      # /var/spool/postfix/dev/log, but nothing under /var/run or /run - so the
+      # old target failed with "cannot create '/var/run/rsyslog/dev/log'" and
+      # php, which mounts that socket as /dev/log, silently lost syslog.
+      # See OPS-873.
+      #
+      # The HOST side of this mount is unchanged, so the php mount above and
+      # the on-disk layout are unaffected. The rsyslog image listens on both
+      # the old and the new path, so the image and this template can roll out
+      # in either order without breaking rootful deployments.
+      - "{{ ubersmith_home }}/logs/rsyslog/:/var/lib/rsyslog/dev/"
 {% if ansible_os_family != 'Darwin' %}
     logging:
       driver: journald
