@@ -179,6 +179,16 @@
 # This task is intentionally untagged with upgrade/upgrade_only so it only
 # ever runs on a fresh install, never on upgrade_ubersmith.yml, since
 # restarting the Docker daemon restarts every container on the host.
+#
+# Skipped under rootless. A rootless daemon never reads /etc/docker/daemon.json
+# - its config lives at ~/.config/docker/daemon.json - so writing this file
+# would be inert while still notifying a handler that cannot succeed against a
+# user-session unit. The setting is also contrary to rootless operation:
+# RootlessKit's port forwarding IS the userland proxy this disables.
+#
+# Consequence worth knowing: a rootless deployment gets no client IP
+# preservation from this mechanism, so Apache/PHP logs show the RootlessKit
+# gateway address rather than the real client.
 - name: Configure Docker daemon (client IP preservation, optional IPv6)
   ansible.builtin.template:
     src: docker-daemon.json.j2
@@ -187,6 +197,7 @@
   when:
     - ansible_os_family != "Darwin"
     - ansible_os_family != "Windows"
+    - not (docker_is_rootless | default(false))
   notify:
     - restart docker
   tags:

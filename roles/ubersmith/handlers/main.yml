@@ -1,6 +1,13 @@
 ---
+# Skipped under rootless: the daemon is a `systemctl --user` unit owned by an
+# unprivileged user, so this system-scope restart cannot reach it. Against a
+# masked system docker.service it fails outright ("Unit docker.service is
+# masked"), and because the play runs with any_errors_fatal that aborts the
+# whole install. The only task that notifies this handler is already skipped
+# under rootless, so this guard is belt-and-braces for any future notifier.
 - name: restart docker
   ansible.builtin.systemd_service:
     name: docker
     state: restarted
     daemon_reload: true
+  when: not (docker_is_rootless | default(false))
