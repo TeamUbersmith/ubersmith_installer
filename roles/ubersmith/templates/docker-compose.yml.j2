@@ -188,8 +188,9 @@ services:
   rsyslog:
     image: {{ registry }}/rsyslog:{{ ubersmith_version }}-{{ containers_release_version }}
     hostname: rsyslog.{{ container_domain }}
+    restart: unless-stopped
     volumes:
-      - "{{ ubersmith_home }}/logs/rsyslog/:/var/run/rsyslog/dev/"
+      - "{{ ubersmith_home }}/logs/rsyslog/:/var/lib/rsyslog/dev/"
 {% if ansible_os_family != 'Darwin' %}
     logging:
       driver: journald

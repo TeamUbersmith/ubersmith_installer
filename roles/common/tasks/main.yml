@@ -99,7 +99,31 @@
   tags:
     - upgrade
 
+# A rootless daemon is owned by an unprivileged user's systemd instance
+# (`systemctl --user`), not by the system one. Every system-level Docker task
+# below is therefore either meaningless or actively harmful against it:
+# enabling the system docker.service starts a SECOND, rootful daemon at next
+# boot that contends with the rootless one for the same published ports.
+#
+# The daemon already told us which mode it is in - `docker info` reports
+# `name=rootless` under SecurityOptions, and `docker_result` above is the
+# output of exactly that call, so this costs no extra round trip.
+#
+# Guarded on `docker_result is defined` and consumed with `| default(false)`
+# so that any tag selection which skips the detection leaves the previous
+# behaviour untouched.
+- name: Detect whether the Docker daemon is running in rootless mode
+  ansible.builtin.set_fact:
+    docker_is_rootless: >-
+      {{ 'name=rootless' in (docker_result.host_info.SecurityOptions
+                             | default([]) | join(',')) }}
+  when: docker_result is defined
+  tags:
+    - always
+
 # Enable the Docker service in the event the installer / sysadmin did not.
+# Skipped under rootless: there is no system docker.service to enable, and
+# enabling one would introduce a competing rootful daemon.
 - name: Ensure the docker service is enabled
   ansible.builtin.service:
     name: docker
@@ -111,3 +135,4 @@
   when:
     - ansible_os_family != "Darwin"
     - ansible_os_family != "Windows"
+    - not (docker_is_rootless | default(false))
