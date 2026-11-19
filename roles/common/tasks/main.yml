@@ -1,9 +1,9 @@
 ---
-- name: Verify that Ubersmith Version is either "4" or "5"
+- name: Verify that Ubersmith Version is "4", "5", or "cloud"
   ansible.builtin.assert:
     that:
-      - ubersmith_major_version == "4" or ubersmith_major_version == "5"
-    fail_msg: "The Ubersmith Version requested is not '4' or '5'. It is set to {{ ubersmith_major_version }}."
+      - ubersmith_major_version == "4" or ubersmith_major_version == "5" or ubersmith_major_version == "cloud"
+    fail_msg: "The Ubersmith Version requested is not '4', '5', or 'cloud'. It is set to {{ ubersmith_major_version }}."
 
 - name: Output Current Timezone
   ansible.builtin.pause:

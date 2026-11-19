@@ -16,9 +16,10 @@
     source: pull
   with_items:
     - "{{ registry }}/solr:{{ ubersmith_version }}-{{ containers_release_version }}"
-    - "{{ registry }}/ps{{ ubersmith_release[ubersmith_major_version].mysql_version }}:{{ ubersmith_version }}-{{ containers_release_version }}"
-    - "{{ registry }}/{{ ubersmith_release[ubersmith_major_version].containers.web_container_repo }}:{{ ubersmith_version }}-{{ containers_release_version }}"
-    - "{{ registry }}/php{{ ubersmith_release[ubersmith_major_version].php_version }}:{{ ubersmith_version }}-{{ containers_release_version }}"
+    - "{{ registry }}/ps{{ ubersmith_release[ubersmith_config_version].mysql_version }}:{{ ubersmith_version }}-{{ containers_release_version }}"
+    - "{{ 'ghcr.io/teamubersmith/ubersmith:ubersmith-cloud-v0.0.1' if ubersmith_major_version == 'cloud' else
+        registry + '/' + ubersmith_release[ubersmith_config_version].containers.web_container_repo + ':' + ubersmith_version + '-' + containers_release_version }}"
+    - "{{ registry }}/php{{ ubersmith_release[ubersmith_config_version].php_version }}:{{ ubersmith_version }}-{{ containers_release_version }}"
     - "{{ registry }}/cron:{{ ubersmith_version }}-{{ containers_release_version }}"
     - "{{ registry }}/mail:{{ ubersmith_version }}-{{ containers_release_version }}"
     - "{{ registry }}/xinetd:{{ ubersmith_version }}-{{ containers_release_version }}"
@@ -278,12 +279,76 @@
     - new_brand
     - vhost
 
+- name: Add LARAVEL_PUBLIC_ROOT define to existing vhost
+  ansible.builtin.lineinfile:
+    path: "{{ ubersmith_home }}/conf/httpd/sites-enabled/{{ item }}.conf"
+    regexp: '^Define LARAVEL_PUBLIC_ROOT'
+    insertbefore: '^<VirtualHost \*:80>'
+    line: 'Define LARAVEL_PUBLIC_ROOT /var/www/ubersmith_root/app/laravel/public'
+    backup: true
+  with_items: "{{ virtual_hosts }}"
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - upgrade_only
+    - mcp_vhost_patch
+
+- name: Add Laravel/API v3 and MCP routing to existing vhost :80
+  ansible.builtin.replace:
+    path: "{{ ubersmith_home }}/conf/httpd/sites-enabled/{{ item }}.conf"
+    regexp: '(  SetEnvIf Content-Type "\(\.\*\)" HTTP_CONTENT_TYPE=\$1\n)\n(  <IfModule mod_rewrite\.c>\n)(    RedirectMatch 404 \^/app/\.\*\$\n)(    RewriteEngine On\n)\n'
+    replace: '\1\n  <IfModule mod_proxy_fcgi.c>\n      <Proxy fcgi://php:9000>\n          ProxySet timeout=300\n      </Proxy>\n      <Proxy fcgi://php:9001>\n          ProxySet timeout=300\n      </Proxy>\n  </IfModule>\n\n  # Static Scribe docs\n  Alias /api/v3/docs /var/www/ubersmith_root/app/laravel/public/docs\n  <Directory /var/www/ubersmith_root/app/laravel/public/docs>\n      DirectoryIndex index.html\n      Require all granted\n  </Directory>\n\n\2\3\4\n    # MCP tool calls: API v3 requests sent by the MCP server, in the mcp-tools pool\n    RewriteCond %{HTTP:X-Ubersmith-Mcp} !^$\n    RewriteCond %{REQUEST_URI} ^/api/v3/\n    RewriteRule ^(.*)$ fcgi://php:9001${LARAVEL_PUBLIC_ROOT}/index.php [L,QSA,P]\n\n    # Anything else carrying the MCP header is not a tool call\n    RewriteCond %{HTTP:X-Ubersmith-Mcp} !^$\n    RewriteRule ^ - [R=404,L]\n\n    # MCP server (Laravel): the request that waits on its tool calls, in the default pool\n    RewriteRule ^/mcp/?$ fcgi://php:9000${LARAVEL_PUBLIC_ROOT}/index.php [L,QSA,P]\n\n    # Skip static docs\n    RewriteRule ^/api/v3/docs(/.*)?$ - [L]\n\n    # Route /api/v3 to Laravel\n    RewriteCond %{REQUEST_URI} ^/api/v3\n    RewriteRule ^(.*)$ fcgi://php:9000${LARAVEL_PUBLIC_ROOT}/index.php [L,QSA,P]\n\n'
+    backup: true
+  with_items: "{{ virtual_hosts }}"
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - upgrade_only
+    - mcp_vhost_patch
+
+- name: Add Laravel/API v3 and MCP routing to existing vhost :443
+  ansible.builtin.replace:
+    path: "{{ ubersmith_home }}/conf/httpd/sites-enabled/{{ item }}.conf"
+    regexp: '(      <Proxy fcgi://php:9000>\n          ProxySet timeout=300\n      </Proxy>\n)(  </IfModule>\n)\n(  # Static Scribe docs\n  Alias /api/v3/docs /var/www/ubersmith_root/app/laravel/public/docs\n  <Directory /var/www/ubersmith_root/app/laravel/public/docs>\n      DirectoryIndex index\.html\n      Require all granted\n  </Directory>\n)\n(  <IfModule mod_rewrite\.c>\n    RewriteEngine On\n)\n(    # Skip static docs\n    RewriteRule \^/api/v3/docs\(/\.\*\)\?\$ - \[L\]\n\n    # Route /api/v3 to Laravel\n    RewriteCond %\{REQUEST_URI\} \^/api/v3\n)    RewriteRule \^\(\.\*\)\$ fcgi://php:9000/var/www/ubersmith_root/app/laravel/public/index\.php \[L,QSA,P\]\n'
+    replace: '\1      <Proxy fcgi://php:9001>\n          ProxySet timeout=300\n      </Proxy>\n\2\n\3\n\4\n    # MCP tool calls: API v3 requests sent by the MCP server, in the mcp-tools pool\n    RewriteCond %{HTTP:X-Ubersmith-Mcp} !^$\n    RewriteCond %{REQUEST_URI} ^/api/v3/\n    RewriteRule ^(.*)$ fcgi://php:9001${LARAVEL_PUBLIC_ROOT}/index.php [L,QSA,P]\n\n    # Anything else carrying the MCP header is not a tool call\n    RewriteCond %{HTTP:X-Ubersmith-Mcp} !^$\n    RewriteRule ^ - [R=404,L]\n\n    # MCP server (Laravel): the request that waits on its tool calls, in the default pool\n    RewriteRule ^/mcp/?$ fcgi://php:9000${LARAVEL_PUBLIC_ROOT}/index.php [L,QSA,P]\n\n\5    RewriteRule ^(.*)$ fcgi://php:9000${LARAVEL_PUBLIC_ROOT}/index.php [L,QSA,P]\n'
+    backup: true
+  with_items: "{{ virtual_hosts }}"
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - upgrade_only
+    - mcp_vhost_patch
+
+- name: Check whether the vhost file has the new MCP routing
+  ansible.builtin.command: "grep -q 'MCP tool calls' {{ ubersmith_home }}/conf/httpd/sites-enabled/{{ item }}.conf"
+  register: mcp_vhost_patch_check
+  with_items: "{{ virtual_hosts }}"
+  changed_when: false
+  failed_when: false
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - upgrade_only
+    - mcp_vhost_patch
+
+- name: Warn if a vhost file could not be automatically patched
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: {{ ubersmith_home }}/conf/httpd/sites-enabled/{{ item.item }}.conf does not match
+      the expected pre-patch layout (likely hand-edited) and was NOT updated with the
+      Laravel/API v3 docs passthrough or MCP routing required by UB-1818. Review and apply
+      that routing to this file manually.
+  loop: "{{ mcp_vhost_patch_check.results | default([]) }}"
+  when:
+    - ubersmith_major_version == "cloud"
+    - item.rc is defined
+    - item.rc != 0
+  tags:
+    - upgrade_only
+    - mcp_vhost_patch
+
 # The Percona Server configuration file is created on the local filesystem to facilitate
 # editing without having to enter the container. A restart of the 'db' container is
 # required if this file is modified.
 - name: Create percona server configuration overrides
   ansible.builtin.template:
-    src: "ubersmith.cnf.{{ ubersmith_major_version }}.j2"
+    src: "ubersmith.cnf.{{ ubersmith_config_version }}.j2"
     dest: "{{ ubersmith_home }}/conf/mysql/ubersmith.cnf"
     owner: "{{ ansible_user_id }}"
     group: "{{ ansible_user_gid }}"
@@ -312,7 +377,7 @@
     regexp: "^sql_mode\\s*="
     line: 'sql_mode = "NO_ENGINE_SUBSTITUTION"'
     backup: true
-  when: ubersmith_major_version | int == 5
+  when: ubersmith_config_version | int == 5
   tags:
     - mysql_config
     - upgrade
