@@ -279,6 +279,77 @@
     - new_brand
     - vhost
 
+# Upgrades don't re-render the vhost (the task above is new_brand/vhost only), so
+# existing cloud installs need the UB-1818 Laravel/API v3 + MCP routing patched into
+# their already-deployed vhost file. Each regexp below targets the exact pre-patch
+# text and is idempotent: once patched (or on a fresh install that already has the
+# new routing) the old text is gone, so it matches zero times and changes nothing.
+- name: Patch existing vhost with LARAVEL_PUBLIC_ROOT define (UB-1818)
+  ansible.builtin.replace:
+    path: "{{ ubersmith_home }}/conf/httpd/sites-enabled/{{ item }}.conf"
+    regexp: '\A(?!Define LARAVEL_PUBLIC_ROOT)(<VirtualHost \*:80>\n)'
+    replace: 'Define LARAVEL_PUBLIC_ROOT /var/www/ubersmith_root/app/laravel/public\n\n\1'
+    backup: true
+  with_items: "{{ virtual_hosts }}"
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - upgrade_only
+    - mcp_vhost_patch
+
+- name: Patch existing vhost :80 with Laravel/API v3 docs passthrough and MCP routing (UB-1818)
+  ansible.builtin.replace:
+    path: "{{ ubersmith_home }}/conf/httpd/sites-enabled/{{ item }}.conf"
+    regexp: '(  SetEnvIf Content-Type "\(\.\*\)" HTTP_CONTENT_TYPE=\$1\n)\n(  <IfModule mod_rewrite\.c>\n)(    RedirectMatch 404 \^/app/\.\*\$\n)(    RewriteEngine On\n)\n'
+    replace: '\1\n  <IfModule mod_proxy_fcgi.c>\n      <Proxy fcgi://php:9000>\n          ProxySet timeout=300\n      </Proxy>\n      <Proxy fcgi://php:9001>\n          ProxySet timeout=300\n      </Proxy>\n  </IfModule>\n\n  # Static Scribe docs\n  Alias /api/v3/docs /var/www/ubersmith_root/app/laravel/public/docs\n  <Directory /var/www/ubersmith_root/app/laravel/public/docs>\n      DirectoryIndex index.html\n      Require all granted\n  </Directory>\n\n\2\3\4\n    # MCP tool calls: API v3 requests sent by the MCP server, in the mcp-tools pool\n    RewriteCond %{HTTP:X-Ubersmith-Mcp} !^$\n    RewriteCond %{REQUEST_URI} ^/api/v3/\n    RewriteRule ^(.*)$ fcgi://php:9001${LARAVEL_PUBLIC_ROOT}/index.php [L,QSA,P]\n\n    # Anything else carrying the MCP header is not a tool call\n    RewriteCond %{HTTP:X-Ubersmith-Mcp} !^$\n    RewriteRule ^ - [R=404,L]\n\n    # MCP server (Laravel): the request that waits on its tool calls, in the default pool\n    RewriteRule ^/mcp/?$ fcgi://php:9000${LARAVEL_PUBLIC_ROOT}/index.php [L,QSA,P]\n\n    # Skip static docs\n    RewriteRule ^/api/v3/docs(/.*)?$ - [L]\n\n    # Route /api/v3 to Laravel\n    RewriteCond %{REQUEST_URI} ^/api/v3\n    RewriteRule ^(.*)$ fcgi://php:9000${LARAVEL_PUBLIC_ROOT}/index.php [L,QSA,P]\n\n'
+    backup: true
+  with_items: "{{ virtual_hosts }}"
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - upgrade_only
+    - mcp_vhost_patch
+
+- name: Patch existing vhost :443 with the mcp-tools pool and MCP routing (UB-1818)
+  ansible.builtin.replace:
+    path: "{{ ubersmith_home }}/conf/httpd/sites-enabled/{{ item }}.conf"
+    regexp: '(      <Proxy fcgi://php:9000>\n          ProxySet timeout=300\n      </Proxy>\n)(  </IfModule>\n)\n(  # Static Scribe docs\n  Alias /api/v3/docs /var/www/ubersmith_root/app/laravel/public/docs\n  <Directory /var/www/ubersmith_root/app/laravel/public/docs>\n      DirectoryIndex index\.html\n      Require all granted\n  </Directory>\n)\n(  <IfModule mod_rewrite\.c>\n    RewriteEngine On\n)\n(    # Skip static docs\n    RewriteRule \^/api/v3/docs\(/\.\*\)\?\$ - \[L\]\n\n    # Route /api/v3 to Laravel\n    RewriteCond %\{REQUEST_URI\} \^/api/v3\n)    RewriteRule \^\(\.\*\)\$ fcgi://php:9000/var/www/ubersmith_root/app/laravel/public/index\.php \[L,QSA,P\]\n'
+    replace: '\1      <Proxy fcgi://php:9001>\n          ProxySet timeout=300\n      </Proxy>\n\2\n\3\n\4\n    # MCP tool calls: API v3 requests sent by the MCP server, in the mcp-tools pool\n    RewriteCond %{HTTP:X-Ubersmith-Mcp} !^$\n    RewriteCond %{REQUEST_URI} ^/api/v3/\n    RewriteRule ^(.*)$ fcgi://php:9001${LARAVEL_PUBLIC_ROOT}/index.php [L,QSA,P]\n\n    # Anything else carrying the MCP header is not a tool call\n    RewriteCond %{HTTP:X-Ubersmith-Mcp} !^$\n    RewriteRule ^ - [R=404,L]\n\n    # MCP server (Laravel): the request that waits on its tool calls, in the default pool\n    RewriteRule ^/mcp/?$ fcgi://php:9000${LARAVEL_PUBLIC_ROOT}/index.php [L,QSA,P]\n\n\5    RewriteRule ^(.*)$ fcgi://php:9000${LARAVEL_PUBLIC_ROOT}/index.php [L,QSA,P]\n'
+    backup: true
+  with_items: "{{ virtual_hosts }}"
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - upgrade_only
+    - mcp_vhost_patch
+
+# The three patches above are no-ops (by design) against a vhost file that doesn't
+# match their expected pre-patch text - which also happens if the file was hand-edited.
+# Detect that case and report it instead of silently leaving the vhost unpatched.
+- name: Check whether the vhost file now has the UB-1818 MCP routing
+  ansible.builtin.command: "grep -q 'MCP tool calls' {{ ubersmith_home }}/conf/httpd/sites-enabled/{{ item }}.conf"
+  register: mcp_vhost_patch_check
+  with_items: "{{ virtual_hosts }}"
+  changed_when: false
+  failed_when: false
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - upgrade_only
+    - mcp_vhost_patch
+
+- name: Warn if a vhost file could not be automatically patched for UB-1818
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: {{ ubersmith_home }}/conf/httpd/sites-enabled/{{ item.item }}.conf does not match
+      the expected pre-patch layout (likely hand-edited) and was NOT updated with the
+      Laravel/API v3 docs passthrough or MCP routing required by UB-1818. Review and apply
+      that routing to this file manually.
+  loop: "{{ mcp_vhost_patch_check.results | default([]) }}"
+  when:
+    - ubersmith_major_version == "cloud"
+    - item.rc is defined
+    - item.rc != 0
+  tags:
+    - upgrade_only
+    - mcp_vhost_patch
+
 # The Percona Server configuration file is created on the local filesystem to facilitate
 # editing without having to enter the container. A restart of the 'db' container is
 # required if this file is modified.
