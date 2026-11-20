@@ -14,23 +14,23 @@ INSTALLER_INI="$HOME/.ubersmith_installer.ini"
 # array: some hosts old enough to need this script also have a bash too old
 # to support them (no declare -A before 4.0).
 PHP_CVE_RELEASE_VERSIONS="
-4.6.1:r2
-4.6.2:r12
-4.6.3:r5
-4.6.4:r5
-5.0.0:r14
-5.0.1:r4
-5.0.2:r2
-5.0.3:r6
-5.1.0:r12
-5.1.1:r2
-5.1.2:r3
-5.1.3:r3
-5.1.4:r4
-5.2.0:r4
-5.2.1:r3
-5.2.2:r4
-5.2.3:r3
+4.6.1:r3
+4.6.2:r13
+4.6.3:r6
+4.6.4:r6
+5.0.0:r15
+5.0.1:r5
+5.0.2:r3
+5.0.3:r7
+5.1.0:r13
+5.1.1:r3
+5.1.2:r4
+5.1.3:r4
+5.1.4:r5
+5.2.0:r5
+5.2.1:r4
+5.2.2:r5
+5.2.3:r4
 5.3.0:r5
 "
 
