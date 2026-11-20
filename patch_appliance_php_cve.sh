@@ -31,7 +31,7 @@ APPLIANCE_CRON_RELEASE_VERSIONS="
 5.1.0:r13
 5.1.1:r3
 5.1.4:r5
-5.3.0:r5
+5.3.0:r6
 "
 
 usage() {
