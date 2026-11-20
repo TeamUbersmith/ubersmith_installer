@@ -26,12 +26,12 @@ APPLIANCE_RELEASE_VERSIONS="
 "
 
 APPLIANCE_CRON_RELEASE_VERSIONS="
-5.0.0:r14
-5.0.3:r6
-5.1.0:r12
-5.1.1:r2
-5.1.4:r4
-5.3.0:r5
+5.0.0:r15
+5.0.3:r7
+5.1.0:r13
+5.1.1:r3
+5.1.4:r5
+5.3.0:r6
 "
 
 usage() {
