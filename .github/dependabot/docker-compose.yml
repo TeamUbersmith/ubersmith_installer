@@ -1,0 +1,13 @@
+# Not used at runtime. Dependabot's docker-compose updater can't parse the
+# Jinja2 templates in roles/ubersmith/templates/, so this file mirrors their
+# image pins in plain, valid YAML purely so Dependabot has something to scan
+# and propose version/digest bumps against.
+#
+# When a bump PR lands here, apply the same image + digest change to
+# roles/ubersmith/templates/docker-compose.yml.j2 and the matching entry in
+# the image pull list in roles/ubersmith/tasks/main.yml.
+services:
+  busybox:
+    image: busybox:1.38.0@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4
+  falco:
+    image: falcosecurity/falco:0.45.2@sha256:1562a643953f938e02f47319b5214d93a235f11f646d60e9b8a516fd5a64698e

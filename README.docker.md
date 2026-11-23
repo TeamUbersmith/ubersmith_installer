@@ -187,7 +187,7 @@ The application uses:
 ### Security Services
 
 #### falco
-- **Image**: `falcosecurity/falco:0.45.2`
+- **Image**: `falcosecurity/falco:0.45.2` (digest-pinned; see compose file for the full `@sha256:` reference)
 - **Purpose**: Runtime security monitoring and threat detection
 - **Features**:
   - Monitors system calls and container activity
@@ -247,7 +247,7 @@ The application uses:
   - `db`
 
 #### redis-backup
-- **Image**: `busybox:1.38.0`
+- **Image**: `busybox:1.38.0` (digest-pinned; see compose file for the full `@sha256:` reference)
 - **Purpose**: Redis data backup utility
 - **Features**:
   - Creates compressed backup archives

@@ -162,7 +162,7 @@ services:
     volumes:
       - redis:/data
   redis-backup:
-    image: busybox:1.38.0
+    image: busybox:1.38.0@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4
     command: >
       sh -c "tar -czf /backup/ubersmith_redis_backup.tar.gz -C /data ."
     volumes:
@@ -234,7 +234,7 @@ services:
         tag: ubersmith/certbot
 {% endif %}
   falco:
-    image: falcosecurity/falco:0.45.2
+    image: falcosecurity/falco:0.45.2@sha256:1562a643953f938e02f47319b5214d93a235f11f646d60e9b8a516fd5a64698e
     restart: unless-stopped
     hostname: falco.{{ container_domain }}
     privileged: true
