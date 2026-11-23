@@ -23,10 +23,10 @@
     - "{{ registry }}/mail:{{ ubersmith_version }}-{{ containers_release_version }}"
     - "{{ registry }}/xinetd:{{ ubersmith_version }}-{{ containers_release_version }}"
     - "{{ registry }}/redis7:{{ ubersmith_version }}-{{ containers_release_version }}"
-    - "busybox:latest"
+    - "busybox:1.38.0"
     - "{{ registry }}/rsyslog:{{ ubersmith_version }}-{{ containers_release_version }}"
     - "ghcr.io/teamubersmith/certbot:{{ certbot_version }}"
-    - "falcosecurity/falco-no-driver:latest"
+    - "falcosecurity/falco:0.45.2"
     - "clamav/clamav:1.4_base"
   tags:
     - upgrade

@@ -184,20 +184,10 @@ The application uses:
 - **Volumes**:
   - Host directory for log sockets
 
-#### redis-commander
-- **Image**: `rediscommander/redis-commander:latest`
-- **Purpose**: Web-based Redis management interface
-- **Ports**: 
-  - `8081` - Web interface
-- **Configuration**:
-  - Connects to `redis-data` instance
-  - Database 3 (plugin logs) by default
-- **Restart Policy**: `no` (manual start)
-
 ### Security Services
 
 #### falco
-- **Image**: `falcosecurity/falco-no-driver:latest`
+- **Image**: `falcosecurity/falco:0.45.2`
 - **Purpose**: Runtime security monitoring and threat detection
 - **Features**:
   - Monitors system calls and container activity
@@ -257,7 +247,7 @@ The application uses:
   - `db`
 
 #### redis-backup
-- **Image**: `busybox:latest`
+- **Image**: `busybox:1.38.0`
 - **Purpose**: Redis data backup utility
 - **Features**:
   - Creates compressed backup archives
@@ -277,7 +267,6 @@ All services communicate through a default Docker bridge network created by Dock
   - `25` (mail) - SMTP server
   - `4321` (rwhois) - RWhois protocol
   - `127.0.0.1:3306` (db) - MySQL (localhost only)
-  - `8081` (redis-commander) - Redis management (optional)
 
 ### Service Discovery
 Services use Docker's internal DNS for name resolution. For example:
