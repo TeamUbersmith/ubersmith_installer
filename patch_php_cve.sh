@@ -31,7 +31,7 @@ PHP_CVE_RELEASE_VERSIONS="
 5.2.1:r4
 5.2.2:r5
 5.2.3:r4
-5.3.0:r6
+5.3.0:r7
 "
 
 PHP_BASED_IMAGE_REPOS=(mail cron xinetd)
