@@ -30,9 +30,19 @@ jobs:
 
       - name: Smoke test HTTPS endpoint
         run: |
-          curl -k -sS -o /dev/null -w '%{http_code}\n' \
-            --resolve ubersmith.ci.test:443:127.0.0.1 \
-            https://ubersmith.ci.test/ | grep -qE '^(200|30[123])$'
+          for i in $(seq 1 30); do
+            code="$(curl -k -sS -o /dev/null -w '%{http_code}' \
+              --resolve ubersmith.ci.test:443:127.0.0.1 \
+              https://ubersmith.ci.test/ || true)"
+            if echo "$code" | grep -qE '^(200|30[123])$'; then
+              echo "Got HTTP $code on attempt $i"
+              exit 0
+            fi
+            echo "Attempt $i: got '$code', retrying in 10s..."
+            sleep 10
+          done
+          echo "Smoke test did not succeed after retries"
+          exit 1
 
       - name: Dump logs on failure
         if: failure()
