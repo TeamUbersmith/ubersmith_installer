@@ -18,6 +18,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y python3-venv expect
 
+      # TEMPORARY: diagnosing why `interactive` evaluates true on this runner
+      # image even though UBERSMITH_INTERACTIVE=false is set, unlike the
+      # otherwise-identical ubuntu-24.04 workflow. Remove once root-caused.
+      - name: Debug sudo env propagation
+        env:
+          UBERSMITH_INTERACTIVE: "false"
+        run: |
+          echo "unsudo'd: UBERSMITH_INTERACTIVE=[$UBERSMITH_INTERACTIVE]"
+          sudo -V | head -1
+          sudo -E bash -c 'echo "sudo -E: UBERSMITH_INTERACTIVE=[$UBERSMITH_INTERACTIVE]"'
+          sudo -E env | grep -i UBERSMITH || echo "sudo -E env: UBERSMITH_INTERACTIVE not present"
+
       - name: Run installer non-interactively via expect
         env:
           ANSIBLE_NOCOLOR: "1"
