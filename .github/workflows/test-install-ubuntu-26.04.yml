@@ -18,14 +18,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y python3-venv expect
 
-      # TEMPORARY: confirming the `sudo env VAR=val ...` workaround for
-      # sudo-rs (default on ubuntu-26.04) ignoring `-E`. Remove once confirmed.
-      - name: Debug sudo env propagation
-        env:
-          UBERSMITH_INTERACTIVE: "false"
-        run: |
-          sudo env "UBERSMITH_INTERACTIVE=$UBERSMITH_INTERACTIVE" bash -c 'echo "sudo env: UBERSMITH_INTERACTIVE=[$UBERSMITH_INTERACTIVE]"'
-
+      # ubuntu-26.04 ships sudo-rs by default, which ignores `-E` ("preserving
+      # the entire environment is not supported"). Set the vars explicitly via
+      # `sudo env VAR=val ...` instead, which works under both sudo and sudo-rs.
       - name: Run installer non-interactively via expect
         env:
           ANSIBLE_NOCOLOR: "1"
