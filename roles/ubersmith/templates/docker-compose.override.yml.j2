@@ -89,9 +89,6 @@ services:
   backup:
     environment:
       MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
-  redis-commander:
-    ports:
-      - "8081"
 {% if (enable_ipv6 | default('') | trim | lower) in ['y', 'yes'] %}
 networks:
   default:

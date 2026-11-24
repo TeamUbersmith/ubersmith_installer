@@ -23,10 +23,10 @@
     - "{{ registry }}/mail:{{ ubersmith_version }}-{{ containers_release_version }}"
     - "{{ registry }}/xinetd:{{ ubersmith_version }}-{{ containers_release_version }}"
     - "{{ registry }}/redis7:{{ ubersmith_version }}-{{ containers_release_version }}"
-    - "busybox:latest"
+    - "busybox:1.38.0@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4"
     - "{{ registry }}/rsyslog:{{ ubersmith_version }}-{{ containers_release_version }}"
     - "ghcr.io/teamubersmith/certbot:{{ certbot_version }}"
-    - "falcosecurity/falco-no-driver:latest"
+    - "falcosecurity/falco:0.45.2@sha256:1562a643953f938e02f47319b5214d93a235f11f646d60e9b8a516fd5a64698e"
     - "clamav/clamav:1.4_base"
   tags:
     - upgrade
@@ -761,7 +761,7 @@
 - name: Make sure UID/GID 1001 owns the database files
   community.docker.docker_container:
     name: busybox
-    image: "busybox"
+    image: "busybox:1.38.0@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4"
     container_default_behavior: compatibility
     command: "chown -R 1001:1001 /mysql"
     user: root
@@ -897,7 +897,7 @@
 - name: Make a backup of the mysql keyring
   community.docker.docker_container:
     name: busybox
-    image: "busybox"
+    image: "busybox:1.38.0@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4"
     container_default_behavior: compatibility
     command: "tar cvf /backup/component_keyring_file.{{ ansible_date_time.epoch }}.tar /keyring; chmod 0600 /backup/*.tar"
     user: root
