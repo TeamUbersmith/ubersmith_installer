@@ -608,6 +608,29 @@
     - ansible_os_family != "Darwin"
     - ansible_os_family != "Windows"
 
+# Cloud only: the new UI (BFF) authenticates to the API with a service account
+# token, created once via artisan and never rotated by the installer (rotating
+# invalidates the old token and breaks the UI until the new value is deployed).
+# Read back any token from a previous run so it's available on the first
+# render of docker-compose.yml below.
+- name: Check for existing BFF service account token
+  ansible.builtin.stat:
+    path: "{{ ubersmith_home }}/.bff_service_account_token"
+  register: bff_token_file
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - upgrade
+
+- name: Read existing BFF service account token
+  ansible.builtin.set_fact:
+    bff_service_account_token: "{{ lookup('file', ubersmith_home + '/.bff_service_account_token') }}"
+  no_log: true
+  when:
+    - ubersmith_major_version == "cloud"
+    - bff_token_file.stat.exists
+  tags:
+    - upgrade
+
 # Create the main Docker Compose file, which defines Ubersmith services as containers
 # and includes their configurations. This file may change with every release.
 - name: Create docker compose file
@@ -971,6 +994,85 @@
   tags:
     - upgrade
     - maintenance_disable
+
+# Cloud only: bring the API v3 (Laravel) schema up to date. Safe to run
+# unconditionally; artisan migrate only applies pending migrations.
+- name: Run Laravel API v3 migrations
+  community.docker.docker_container_exec:
+    container: ubersmith-php-1
+    user: "1000"
+    command: "php {{ ubersmith_root }}/app/laravel/artisan migrate --force"
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - upgrade
+
+# Cloud only: create the BFF service account token the first time there isn't
+# one on disk yet (see the check/read near the top of this file).
+- name: Generate BFF service account token
+  community.docker.docker_container_exec:
+    container: ubersmith-php-1
+    user: "1000"
+    command: "php {{ ubersmith_root }}/app/laravel/artisan internal:service-account-token bff"
+  register: bff_token_output
+  no_log: true
+  when:
+    - ubersmith_major_version == "cloud"
+    - not bff_token_file.stat.exists
+  tags:
+    - upgrade
+
+- name: Persist BFF service account token
+  ansible.builtin.copy:
+    content: "{{ bff_token_output.stdout | trim }}"
+    dest: "{{ ubersmith_home }}/.bff_service_account_token"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_gid }}"
+    mode: "0600"
+  no_log: true
+  when:
+    - ubersmith_major_version == "cloud"
+    - not bff_token_file.stat.exists
+  tags:
+    - upgrade
+
+- name: Set BFF service account token fact
+  ansible.builtin.set_fact:
+    bff_service_account_token: "{{ bff_token_output.stdout | trim }}"
+  no_log: true
+  when:
+    - ubersmith_major_version == "cloud"
+    - not bff_token_file.stat.exists
+  tags:
+    - upgrade
+
+# Only needed the first time the token is generated: earlier renders of
+# docker-compose.yml happened before it existed, so re-render now that
+# bff_service_account_token is set and recreate ubersmith-new-ui with it.
+- name: Update docker compose file with BFF service account token
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ ubersmith_home }}/docker-compose.yml"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_gid }}"
+    mode: "0600"
+  vars:
+    container_domain: "{{ main_virtual_host }}"
+  when:
+    - ubersmith_major_version == "cloud"
+    - not bff_token_file.stat.exists
+  tags:
+    - upgrade
+
+- name: Start ubersmith-new-ui with service account token
+  ansible.builtin.command: docker compose up -d --no-color ubersmith-new-ui
+  args:
+    chdir: "{{ ubersmith_home }}"
+  changed_when: true
+  when:
+    - ubersmith_major_version == "cloud"
+    - not bff_token_file.stat.exists
+  tags:
+    - upgrade
 
 # Back up MySQL keyring
 - name: Make a backup of the mysql keyring

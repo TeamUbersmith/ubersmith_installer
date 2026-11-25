@@ -50,6 +50,7 @@ services:
       - traefik.http.routers.ubersmith-api.rule=Host(`{{ container_domain }}`) && PathPrefix(`/api/v3`)
       - traefik.http.routers.ubersmith-api.entrypoints=websecure
       - traefik.http.routers.ubersmith-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.ubersmith-api.service=ubersmith-api
       - traefik.http.services.ubersmith-api.loadbalancer.server.port=80
       - traefik.http.routers.ubersmith-classic.rule=Host(`{{ container_domain }}`)
       - traefik.http.routers.ubersmith-classic.entrypoints=classic
@@ -338,7 +339,11 @@ services:
       HOST_HEADER: x-forwarded-host
       ADDRESS_HEADER: x-forwarded-for
       API_BASE_URL: http://web/api/v3
-      LIVE_DOMAINS: customers,invoices,subscriptions,contacts,settings
+      LIVE_DOMAINS: customers,invoices,subscriptions,contacts,settings,conversations
+{% if bff_service_account_token is defined and bff_service_account_token %}
+      INTERNAL_API_TOKEN: "{{ bff_service_account_token }}"
+{% endif %}
+      AI_MCP_URL: http://web/mcp
     depends_on:
       - web
     labels:
