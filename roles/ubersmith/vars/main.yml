@@ -12,6 +12,14 @@ php_upload_max_filesize: 16M
 php_post_max_size: 50M
 
 php_version: 8.4
+
+# UB-1818: cloud-only php-fpm pools (see zubersmith.pool.conf.j2). Each active
+# AI chat holds a [www] worker for the duration of the chat while its tool
+# calls run in mcp-tools, so [www] needs more headroom than the classic
+# default of 15.
+php_www_pool_max_children: 20
+php_mcp_tools_pool_max_children: 8
+
 old_php_versions:
   - 5.6
   - 7.1

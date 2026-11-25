@@ -422,6 +422,23 @@
   tags:
     - php_ini
 
+# UB-1818: the php image's own pool.d/zubersmith.conf only defines [www],
+# with no mcp-tools pool for MCP tool-call requests. Rather than wait on a
+# new php image release, bind-mount a replacement pool file over it (see
+# docker-compose.override.yml.j2) that keeps [www] and adds [mcp-tools].
+- name: Create zubersmith pool.d file
+  ansible.builtin.template:
+    src: zubersmith.pool.conf.j2
+    dest: "{{ ubersmith_home }}/conf/php/zubersmith.conf"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_gid }}"
+    mode: "0644"
+    backup: true
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - php_ini
+    - upgrade
+
 # The xinetd configuration file for rwhois  is created on the local filesystem to
 # facilitate editing without having to enter the container. A restart of the 'rwhois'
 # container is required if this file is modified.
@@ -708,6 +725,21 @@
     replace: "/usr/local/apache2/conf/sites-enabled"
     regexp: "/etc/apache2/sites-enabled"
     backup: true
+  tags:
+    - upgrade_only
+    - update_compose_override_template
+
+# UB-1818: for existing cloud installs, add the zubersmith.conf bind-mount
+# (mcp-tools pool) to docker-compose.override.yml, which upgrades otherwise
+# never touch.
+- name: Add zubersmith pool.d bind-mount to docker compose override file
+  ansible.builtin.lineinfile:
+    path: "{{ ubersmith_home }}/docker-compose.override.yml"
+    regexp: 'conf/php/zubersmith\.conf:/etc/php/.*/fpm/pool\.d/zubersmith\.conf'
+    insertafter: 'conf/php/ubersmith\.ini:/etc/php/.*/fpm/conf\.d/20-ubersmith\.ini'
+    line: "      - \"{{ ubersmith_home }}/conf/php/zubersmith.conf:/etc/php/{{ php_version }}/fpm/pool.d/zubersmith.conf\""
+    backup: true
+  when: ubersmith_major_version == "cloud"
   tags:
     - upgrade_only
     - update_compose_override_template

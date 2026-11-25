@@ -31,7 +31,9 @@ services:
       - "{{ timezone_file.stat.lnk_source }}:/etc/localtime"
 {% endif %}
       - "{{ ubersmith_home }}/conf/php/ubersmith.ini:/etc/php/{{ php_version }}/fpm/conf.d/20-ubersmith.ini"
-  #     - "{{ ubersmith_home }}/conf/php/www.conf:/etc/php/{{ php_version }}/fpm/pool.d/www.conf"
+{% if ubersmith_major_version == "cloud" %}
+      - "{{ ubersmith_home }}/conf/php/zubersmith.conf:/etc/php/{{ php_version }}/fpm/pool.d/zubersmith.conf"
+{% endif %}
   web:
 {% if ubersmith_major_version == "cloud" %}
     expose:
