@@ -38,7 +38,7 @@ services:
 {% endif %}
   web:
 {% if ubersmith_major_version == "cloud" %}
-    image: ghcr.io/teamubersmith/ubersmith:ubersmith-cloud-v0.0.1
+    image: ghcr.io/teamubersmith/ubersmith:ubersmith-cloud-2026.10.29
 {% else %}
     image: {{ registry }}/{{ ubersmith_release[ubersmith_config_version].containers.web_container_repo }}:{{ ubersmith_version }}-{{ containers_release_version }}
 {% endif %}
@@ -81,6 +81,7 @@ services:
       LARAVEL_APP_DEBUG: "false"
       LARAVEL_REDIS_HOST: "ubersmith-redis-data-1"
       LARAVEL_REDIS_PORT: "6379"
+      SETUP_DISABLE: 1
 {% endif %}
     volumes:
       - "logs:/var/www/ubersmith_root/logs"
@@ -323,7 +324,7 @@ services:
     restart: unless-stopped
 
   ubersmith-new-ui:
-    image: ghcr.io/teamubersmith/ubersmith-new-ui:test
+    image: ghcr.io/teamubersmith/ubersmith-new-ui:ubersmith-cloud-2026.10.29
     environment:
       ORIGIN: https://{{ container_domain }}
       PROTOCOL_HEADER: x-forwarded-proto
