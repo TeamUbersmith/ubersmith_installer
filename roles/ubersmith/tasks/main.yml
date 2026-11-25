@@ -32,6 +32,17 @@
   tags:
     - upgrade
 
+- name: Pull cloud-only images
+  community.docker.docker_image:
+    name: "{{ item }}"
+    source: pull
+  with_items:
+    - "ghcr.io/teamubersmith/ubersmith-new-ui:ubersmith-cloud-2026.10.29"
+    - "traefik:v3.7"
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - upgrade
+
 # Backups are important, but especially with database version changes in 5.0.0
 - name: Print administrator reminders
   ansible.builtin.pause:
@@ -845,7 +856,10 @@
 # Retrieve Ubersmith images from the repository and start containers
 # docker compose up -d --quiet-pull --no-color web cron db php solr mail rwhois redis redis-data
 - name: Update and start ubersmith containers
-  ansible.builtin.command: docker compose up -d --quiet-pull --no-color web cron db php solr mail rsyslog rwhois redis-data
+  ansible.builtin.command: >-
+    docker compose up -d --quiet-pull --no-color
+    web cron db php solr mail rsyslog rwhois redis-data
+    {{ 'traefik ubersmith-new-ui' if ubersmith_major_version == 'cloud' else '' }}
   args:
     chdir: "{{ ubersmith_home }}"
   environment:
