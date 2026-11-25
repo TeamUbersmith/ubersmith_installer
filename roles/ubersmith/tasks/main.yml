@@ -16,9 +16,10 @@
     source: pull
   with_items:
     - "{{ registry }}/solr:{{ ubersmith_version }}-{{ containers_release_version }}"
-    - "{{ registry }}/ps{{ ubersmith_release[ubersmith_major_version].mysql_version }}:{{ ubersmith_version }}-{{ containers_release_version }}"
-    - "{{ registry }}/{{ ubersmith_release[ubersmith_major_version].containers.web_container_repo }}:{{ ubersmith_version }}-{{ containers_release_version }}"
-    - "{{ registry }}/php{{ ubersmith_release[ubersmith_major_version].php_version }}:{{ ubersmith_version }}-{{ containers_release_version }}"
+    - "{{ registry }}/ps{{ ubersmith_release[ubersmith_config_version].mysql_version }}:{{ ubersmith_version }}-{{ containers_release_version }}"
+    - "{{ 'ghcr.io/teamubersmith/ubersmith:ubersmith-cloud-2026.10.29' if ubersmith_major_version == 'cloud' else
+        registry + '/' + ubersmith_release[ubersmith_config_version].containers.web_container_repo + ':' + ubersmith_version + '-' + containers_release_version }}"
+    - "{{ registry }}/php{{ ubersmith_release[ubersmith_config_version].php_version }}:{{ ubersmith_version }}-{{ containers_release_version }}"
     - "{{ registry }}/cron:{{ ubersmith_version }}-{{ containers_release_version }}"
     - "{{ registry }}/mail:{{ ubersmith_version }}-{{ containers_release_version }}"
     - "{{ registry }}/xinetd:{{ ubersmith_version }}-{{ containers_release_version }}"
@@ -28,6 +29,17 @@
     - "ghcr.io/teamubersmith/certbot:{{ certbot_version }}"
     - "falcosecurity/falco:0.45.2@sha256:1562a643953f938e02f47319b5214d93a235f11f646d60e9b8a516fd5a64698e"
     - "clamav/clamav:1.4_base"
+  tags:
+    - upgrade
+
+- name: Pull cloud-only images
+  community.docker.docker_image:
+    name: "{{ item }}"
+    source: pull
+  with_items:
+    - "ghcr.io/teamubersmith/ubersmith-new-ui:ubersmith-cloud-2026.10.29"
+    - "traefik:v3.7"
+  when: ubersmith_major_version == "cloud"
   tags:
     - upgrade
 
@@ -278,12 +290,76 @@
     - new_brand
     - vhost
 
+- name: Add LARAVEL_PUBLIC_ROOT define to existing vhost
+  ansible.builtin.lineinfile:
+    path: "{{ ubersmith_home }}/conf/httpd/sites-enabled/{{ item }}.conf"
+    regexp: '^Define LARAVEL_PUBLIC_ROOT'
+    insertbefore: '^<VirtualHost \*:80>'
+    line: 'Define LARAVEL_PUBLIC_ROOT /var/www/ubersmith_root/app/laravel/public'
+    backup: true
+  with_items: "{{ virtual_hosts }}"
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - upgrade_only
+    - mcp_vhost_patch
+
+- name: Add Laravel/API v3 and MCP routing to existing vhost :80
+  ansible.builtin.replace:
+    path: "{{ ubersmith_home }}/conf/httpd/sites-enabled/{{ item }}.conf"
+    regexp: '(  SetEnvIf Content-Type "\(\.\*\)" HTTP_CONTENT_TYPE=\$1\n)\n(  <IfModule mod_rewrite\.c>\n)(    RedirectMatch 404 \^/app/\.\*\$\n)(    RewriteEngine On\n)\n'
+    replace: '\1\n  <IfModule mod_proxy_fcgi.c>\n      <Proxy fcgi://php:9000>\n          ProxySet timeout=300\n      </Proxy>\n      <Proxy fcgi://php:9001>\n          ProxySet timeout=300\n      </Proxy>\n  </IfModule>\n\n  # Static Scribe docs\n  Alias /api/v3/docs /var/www/ubersmith_root/app/laravel/public/docs\n  <Directory /var/www/ubersmith_root/app/laravel/public/docs>\n      DirectoryIndex index.html\n      Require all granted\n  </Directory>\n\n\2\3\4\n    # MCP tool calls: API v3 requests sent by the MCP server, in the mcp-tools pool\n    RewriteCond %{HTTP:X-Ubersmith-Mcp} !^$\n    RewriteCond %{REQUEST_URI} ^/api/v3/\n    RewriteRule ^(.*)$ fcgi://php:9001${LARAVEL_PUBLIC_ROOT}/index.php [L,QSA,P]\n\n    # Anything else carrying the MCP header is not a tool call\n    RewriteCond %{HTTP:X-Ubersmith-Mcp} !^$\n    RewriteRule ^ - [R=404,L]\n\n    # MCP server (Laravel): the request that waits on its tool calls, in the default pool\n    RewriteRule ^/mcp/?$ fcgi://php:9000${LARAVEL_PUBLIC_ROOT}/index.php [L,QSA,P]\n\n    # Skip static docs\n    RewriteRule ^/api/v3/docs(/.*)?$ - [L]\n\n    # Route /api/v3 to Laravel\n    RewriteCond %{REQUEST_URI} ^/api/v3\n    RewriteRule ^(.*)$ fcgi://php:9000${LARAVEL_PUBLIC_ROOT}/index.php [L,QSA,P]\n\n'
+    backup: true
+  with_items: "{{ virtual_hosts }}"
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - upgrade_only
+    - mcp_vhost_patch
+
+- name: Add Laravel/API v3 and MCP routing to existing vhost :443
+  ansible.builtin.replace:
+    path: "{{ ubersmith_home }}/conf/httpd/sites-enabled/{{ item }}.conf"
+    regexp: '(      <Proxy fcgi://php:9000>\n          ProxySet timeout=300\n      </Proxy>\n)(  </IfModule>\n)\n(  # Static Scribe docs\n  Alias /api/v3/docs /var/www/ubersmith_root/app/laravel/public/docs\n  <Directory /var/www/ubersmith_root/app/laravel/public/docs>\n      DirectoryIndex index\.html\n      Require all granted\n  </Directory>\n)\n(  <IfModule mod_rewrite\.c>\n    RewriteEngine On\n)\n(    # Skip static docs\n    RewriteRule \^/api/v3/docs\(/\.\*\)\?\$ - \[L\]\n\n    # Route /api/v3 to Laravel\n    RewriteCond %\{REQUEST_URI\} \^/api/v3\n)    RewriteRule \^\(\.\*\)\$ fcgi://php:9000/var/www/ubersmith_root/app/laravel/public/index\.php \[L,QSA,P\]\n'
+    replace: '\1      <Proxy fcgi://php:9001>\n          ProxySet timeout=300\n      </Proxy>\n\2\n\3\n\4\n    # MCP tool calls: API v3 requests sent by the MCP server, in the mcp-tools pool\n    RewriteCond %{HTTP:X-Ubersmith-Mcp} !^$\n    RewriteCond %{REQUEST_URI} ^/api/v3/\n    RewriteRule ^(.*)$ fcgi://php:9001${LARAVEL_PUBLIC_ROOT}/index.php [L,QSA,P]\n\n    # Anything else carrying the MCP header is not a tool call\n    RewriteCond %{HTTP:X-Ubersmith-Mcp} !^$\n    RewriteRule ^ - [R=404,L]\n\n    # MCP server (Laravel): the request that waits on its tool calls, in the default pool\n    RewriteRule ^/mcp/?$ fcgi://php:9000${LARAVEL_PUBLIC_ROOT}/index.php [L,QSA,P]\n\n\5    RewriteRule ^(.*)$ fcgi://php:9000${LARAVEL_PUBLIC_ROOT}/index.php [L,QSA,P]\n'
+    backup: true
+  with_items: "{{ virtual_hosts }}"
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - upgrade_only
+    - mcp_vhost_patch
+
+- name: Check whether the vhost file has the new MCP routing
+  ansible.builtin.command: "grep -q 'MCP tool calls' {{ ubersmith_home }}/conf/httpd/sites-enabled/{{ item }}.conf"
+  register: mcp_vhost_patch_check
+  with_items: "{{ virtual_hosts }}"
+  changed_when: false
+  failed_when: false
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - upgrade_only
+    - mcp_vhost_patch
+
+- name: Warn if a vhost file could not be automatically patched
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: {{ ubersmith_home }}/conf/httpd/sites-enabled/{{ item.item }}.conf does not match
+      the expected pre-patch layout (likely hand-edited) and was NOT updated with the
+      Laravel/API v3 docs passthrough or MCP routing required by UB-1818. Review and apply
+      that routing to this file manually.
+  loop: "{{ mcp_vhost_patch_check.results | default([]) }}"
+  when:
+    - ubersmith_major_version == "cloud"
+    - item.rc is defined
+    - item.rc != 0
+  tags:
+    - upgrade_only
+    - mcp_vhost_patch
+
 # The Percona Server configuration file is created on the local filesystem to facilitate
 # editing without having to enter the container. A restart of the 'db' container is
 # required if this file is modified.
 - name: Create percona server configuration overrides
   ansible.builtin.template:
-    src: "ubersmith.cnf.{{ ubersmith_major_version }}.j2"
+    src: "ubersmith.cnf.{{ ubersmith_config_version }}.j2"
     dest: "{{ ubersmith_home }}/conf/mysql/ubersmith.cnf"
     owner: "{{ ansible_user_id }}"
     group: "{{ ansible_user_gid }}"
@@ -312,7 +388,7 @@
     regexp: "^sql_mode\\s*="
     line: 'sql_mode = "NO_ENGINE_SUBSTITUTION"'
     backup: true
-  when: ubersmith_major_version | int == 5
+  when: ubersmith_config_version | int == 5
   tags:
     - mysql_config
     - upgrade
@@ -345,6 +421,23 @@
     mode: "0644"
   tags:
     - php_ini
+
+# UB-1818: the php image's own pool.d/zubersmith.conf only defines [www],
+# with no mcp-tools pool for MCP tool-call requests. Rather than wait on a
+# new php image release, bind-mount a replacement pool file over it (see
+# docker-compose.override.yml.j2) that keeps [www] and adds [mcp-tools].
+- name: Create zubersmith pool.d file
+  ansible.builtin.template:
+    src: zubersmith.pool.conf.j2
+    dest: "{{ ubersmith_home }}/conf/php/zubersmith.conf"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_gid }}"
+    mode: "0644"
+    backup: true
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - php_ini
+    - upgrade
 
 # The xinetd configuration file for rwhois  is created on the local filesystem to
 # facilitate editing without having to enter the container. A restart of the 'rwhois'
@@ -532,6 +625,29 @@
     - ansible_os_family != "Darwin"
     - ansible_os_family != "Windows"
 
+# Cloud only: the new UI (BFF) authenticates to the API with a service account
+# token, created once via artisan and never rotated by the installer (rotating
+# invalidates the old token and breaks the UI until the new value is deployed).
+# Read back any token from a previous run so it's available on the first
+# render of docker-compose.yml below.
+- name: Check for existing BFF service account token
+  ansible.builtin.stat:
+    path: "{{ ubersmith_home }}/.bff_service_account_token"
+  register: bff_token_file
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - upgrade
+
+- name: Read existing BFF service account token
+  ansible.builtin.set_fact:
+    bff_service_account_token: "{{ lookup('file', ubersmith_home + '/.bff_service_account_token') }}"
+  no_log: true
+  when:
+    - ubersmith_major_version == "cloud"
+    - bff_token_file.stat.exists
+  tags:
+    - upgrade
+
 # Create the main Docker Compose file, which defines Ubersmith services as containers
 # and includes their configurations. This file may change with every release.
 - name: Create docker compose file
@@ -609,6 +725,21 @@
     replace: "/usr/local/apache2/conf/sites-enabled"
     regexp: "/etc/apache2/sites-enabled"
     backup: true
+  tags:
+    - upgrade_only
+    - update_compose_override_template
+
+# UB-1818: for existing cloud installs, add the zubersmith.conf bind-mount
+# (mcp-tools pool) to docker-compose.override.yml, which upgrades otherwise
+# never touch.
+- name: Add zubersmith pool.d bind-mount to docker compose override file
+  ansible.builtin.lineinfile:
+    path: "{{ ubersmith_home }}/docker-compose.override.yml"
+    regexp: 'conf/php/zubersmith\.conf:/etc/php/.*/fpm/pool\.d/zubersmith\.conf'
+    insertafter: 'conf/php/ubersmith\.ini:/etc/php/.*/fpm/conf\.d/20-ubersmith\.ini'
+    line: "      - \"{{ ubersmith_home }}/conf/php/zubersmith.conf:/etc/php/{{ php_version }}/fpm/pool.d/zubersmith.conf\""
+    backup: true
+  when: ubersmith_major_version == "cloud"
   tags:
     - upgrade_only
     - update_compose_override_template
@@ -780,7 +911,10 @@
 # Retrieve Ubersmith images from the repository and start containers
 # docker compose up -d --quiet-pull --no-color web cron db php solr mail rwhois redis redis-data
 - name: Update and start ubersmith containers
-  ansible.builtin.command: docker compose up -d --quiet-pull --no-color web cron db php solr mail rsyslog rwhois redis-data
+  ansible.builtin.command: >-
+    docker compose up -d --quiet-pull --no-color
+    web cron db php solr mail rsyslog rwhois redis-data
+    {{ 'traefik ubersmith-new-ui' if ubersmith_major_version == 'cloud' else '' }}
   args:
     chdir: "{{ ubersmith_home }}"
   environment:
@@ -892,6 +1026,85 @@
   tags:
     - upgrade
     - maintenance_disable
+
+# Cloud only: bring the API v3 (Laravel) schema up to date. Safe to run
+# unconditionally; artisan migrate only applies pending migrations.
+- name: Run Laravel API v3 migrations
+  community.docker.docker_container_exec:
+    container: ubersmith-php-1
+    user: "1000"
+    command: "php {{ ubersmith_root }}/app/laravel/artisan migrate --force"
+  when: ubersmith_major_version == "cloud"
+  tags:
+    - upgrade
+
+# Cloud only: create the BFF service account token the first time there isn't
+# one on disk yet (see the check/read near the top of this file).
+- name: Generate BFF service account token
+  community.docker.docker_container_exec:
+    container: ubersmith-php-1
+    user: "1000"
+    command: "php {{ ubersmith_root }}/app/laravel/artisan internal:service-account-token bff"
+  register: bff_token_output
+  no_log: true
+  when:
+    - ubersmith_major_version == "cloud"
+    - not bff_token_file.stat.exists
+  tags:
+    - upgrade
+
+- name: Persist BFF service account token
+  ansible.builtin.copy:
+    content: "{{ bff_token_output.stdout | trim }}"
+    dest: "{{ ubersmith_home }}/.bff_service_account_token"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_gid }}"
+    mode: "0600"
+  no_log: true
+  when:
+    - ubersmith_major_version == "cloud"
+    - not bff_token_file.stat.exists
+  tags:
+    - upgrade
+
+- name: Set BFF service account token fact
+  ansible.builtin.set_fact:
+    bff_service_account_token: "{{ bff_token_output.stdout | trim }}"
+  no_log: true
+  when:
+    - ubersmith_major_version == "cloud"
+    - not bff_token_file.stat.exists
+  tags:
+    - upgrade
+
+# Only needed the first time the token is generated: earlier renders of
+# docker-compose.yml happened before it existed, so re-render now that
+# bff_service_account_token is set and recreate ubersmith-new-ui with it.
+- name: Update docker compose file with BFF service account token
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ ubersmith_home }}/docker-compose.yml"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_gid }}"
+    mode: "0600"
+  vars:
+    container_domain: "{{ main_virtual_host }}"
+  when:
+    - ubersmith_major_version == "cloud"
+    - not bff_token_file.stat.exists
+  tags:
+    - upgrade
+
+- name: Start ubersmith-new-ui with service account token
+  ansible.builtin.command: docker compose up -d --no-color ubersmith-new-ui
+  args:
+    chdir: "{{ ubersmith_home }}"
+  changed_when: true
+  when:
+    - ubersmith_major_version == "cloud"
+    - not bff_token_file.stat.exists
+  tags:
+    - upgrade
 
 # Back up MySQL keyring
 - name: Make a backup of the mysql keyring

@@ -1,0 +1,89 @@
+[www]
+; Ubersmith Specific Configuration
+user =
+group =
+
+listen = 9000
+; listen = 0.0.0.0:9000
+
+access.log    = /dev/stderr
+access.format = "[%n] %{REMOTE_ADDR}e - %u %t \"%m %r%Q%q\" %s %f %{mili}d %{kilo}M %C%%"
+catch_workers_output = yes
+security.limit_extensions = .php .ico
+
+pm.max_children = {{ php_www_pool_max_children }}
+pm.start_servers = 5
+pm.min_spare_servers = 5
+pm.max_spare_servers = 10
+
+ping.path = /ping
+ping.response = pong
+
+php_admin_value[error_log] = /dev/stderr
+php_admin_flag[log_errors] = on
+php_admin_value[memory_limit] = 512M
+
+;input handling
+php_admin_value[max_input_vars] = 2000
+
+;large file uploads
+php_admin_value[upload_max_filesize] = 40M
+php_admin_value[post_max_size] = 50M
+php_admin_value[max_input_time] = 600
+
+;i18n
+php_admin_value[mbstring.language] = "neutral"
+php_admin_value[mbstring.http_input] = "pass"
+php_admin_value[mbstring.http_output] = "pass"
+php_flag[mbstring.encoding_translation] = off
+
+;sessions
+php_flag[session.auto_start] = off
+php_flag[session.use_cookies] = on
+php_flag[session.use_only_cookies] = on
+php_flag[session.use_trans_sid] = off
+
+; UB-1818: dedicated pool for MCP tool-call requests (the X-Ubersmith-Mcp
+; header, routed by the Apache vhost), so a chat holding a [www] worker on
+; /mcp can't deadlock waiting on its own tool-call requests back into API v3.
+[mcp-tools]
+user =
+group =
+
+listen = 9001
+
+access.log    = /dev/stderr
+access.format = "[%n] %{REMOTE_ADDR}e - %u %t \"%m %r%Q%q\" %s %f %{mili}d %{kilo}M %C%%"
+catch_workers_output = yes
+security.limit_extensions = .php .ico
+
+pm = ondemand
+pm.max_children = {{ php_mcp_tools_pool_max_children }}
+pm.process_idle_timeout = 30s
+
+ping.path = /ping
+ping.response = pong
+
+php_admin_value[error_log] = /dev/stderr
+php_admin_flag[log_errors] = on
+php_admin_value[memory_limit] = 512M
+
+;input handling
+php_admin_value[max_input_vars] = 2000
+
+;large file uploads
+php_admin_value[upload_max_filesize] = 40M
+php_admin_value[post_max_size] = 50M
+php_admin_value[max_input_time] = 600
+
+;i18n
+php_admin_value[mbstring.language] = "neutral"
+php_admin_value[mbstring.http_input] = "pass"
+php_admin_value[mbstring.http_output] = "pass"
+php_flag[mbstring.encoding_translation] = off
+
+;sessions
+php_flag[session.auto_start] = off
+php_flag[session.use_cookies] = on
+php_flag[session.use_only_cookies] = on
+php_flag[session.use_trans_sid] = off
